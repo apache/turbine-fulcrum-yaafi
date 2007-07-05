@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Service Lifecycle</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="Incarnation">
+
+      <p>
+        The incarnation of a service covers the creation and configuration of a
+        service
+      </p>
+
+      <p>
+        The following methods are invoked:
+        <ul>
+            <li>Constructor()</li>
+            <li>LogEnabled.enableLogging(Logger)</li>
+            <li>Contextualizable.contextualize(Context)</li>
+            <li>Serviceable.service(ServiceManager)</li>
+            <li>Configurable.configure(Configuration)</li>
+            <li>Parameterizable.parameterize(Parameters)</li>
+            <li>Initializable.initialize()</li>
+            <li>Executable.execute()</li>
+            <li>Startable.start()</li>
+        </ul>
+      </p>
+
+      <p>
+        The good news are that you don't have to implement all these interfaces
+        if you have a simple service. The bad news are that you might need all of
+        this interfaces in a complex application ... :-)
+      </p>
+
+      <subsection name="Constructor()">
+          <p>
+            This doesn't come as a surprise
+          </p>
+      </subsection>
+
+      <subsection name="LogEnabled.enableLogging(Logger)">
+        <p>
+          Here you get the logger for your service implementation. This
+          is again an interface to an implementation of a logger provided
+          by the caller of the service framework. You can skip this interface
+          if you use org.apache.avalon.framework.logger.AbstractLogEnabled
+          as base class for your service.
+        </p>
+      </subsection>
+
+      <subsection name="Contextualizable.contextualize(Context)">
+        <p>
+          The context contains information about your application
+          environment including the current working directory and
+          the temporary directory. YAAFI provides you with different
+          context entries depending on the component type, e.g.
+          "phoenix" or "fortress".
+        </p>
+      </subsection>
+
+      <subsection name="Serviceable.service(ServiceManager)">
+        <p>
+          At this point you get a reference to the ServiceManager. This
+          is the right moment to lookup all dependent services just to make
+          sure that everything is fine.
+        </p>
+      </subsection>
+
+      <subsection name="Configurable.configure(Configuration)">
+        <p>
+          A common task is to access configuration information whereas
+          the Configuration instance is a light-weight XML DOM tree. This
+          means you can use nested XML files for the configuration of your
+          service.
+        </p>
+      </subsection>
+
+      <subsection name="Parameterizable.parameterize(Parameters)">
+        <p>
+          Quite frankly I'm not sure why this method is needed. The only
+          reason I can think of is a command-line application ...
+        </p>
+      </subsection>
+
+      <subsection name="Initializable.initialize()">
+        <p>
+          This method is used for initializing your service implementation
+          since you have all your configuration information by now,
+        </p>
+      </subsection>
+
+      <subsection name="Executable.execute()">
+        <p>
+          If the component implements Executable the execute method will be
+          invoked before the component instance is exposed to any other component.
+        </p>
+      </subsection>
+
+      <subsection name="Startable.start()">
+        <p>
+          The Startable interface is used by any component that is constantly
+          running for the duration of its life. This is the method to go if
+          you want to start a worker thread in the background.
+        </p>
+      </subsection>
+
+    </section>
+
+  </body>
+
+</document>

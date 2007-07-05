@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+<document>
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+    <release version="1.0.5-dev" date="as in SVN">
+      <action dev="sgoeschl" type="add">
+        Added componentConfiguration.properties to resolve custom properties
+		used for expanding the componentConfiguration.xml. Furthermore added
+		a resolver functionality to allow to use commons-configuration.
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added JamonInterceptorService to capture statistical performance data
+      </action>
+      <action dev="sgoeschl" type="update">
+        The SmartToStringBuilder was renamed to ArgumentStringBuilder
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added AdviceService to provide interceptors for any
+        arbitrary object.
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added SmartToStringBuilder to get more information out
+        of the LoggingInterceptorService.
+      </action>
+      <action dev="sgoeschl" type="fix">
+      	Fixed a few JavaDoc warnings
+      </action>
+      <action dev="sgoeschl" type="add">
+        Using the parent ServiceManager (if available) during
+        lookup() and hasService()
+      </action>
+      <action dev="sgoeschl" type="update">
+        Adding Fortress context variables to enable a smooth
+        transition when making all Fulcrum service compatible
+        to a Fortress container
+      </action>
+      <action dev="sgoeschl" type="update">
+        Incarnating service is done in two steps now. This
+        allows to declare the services in any order in the
+        roleConfiguration.xml
+      </action>
+      <action dev="sgoeschl" type="update">
+        Updating to avalon-framework-api/impl-4.3.0.jar
+      </action>
+      <action dev="sgoeschl" type="add">
+        Adding interceptor services to YAAFI. This allows
+        to add interceptors for the whole container or
+        individual services.
+      </action>
+      <action dev="sgoeschl" type="add">
+        Using ReadWriteLocks for reconfiguring YAAFI on the fly
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a "logger" attribute to the role configuration
+        file to simplify setting up Log4j loggers.
+      </action>
+      <action dev="sgoeschl" type="update">
+        For logging during initializing of a service we use
+        the parent logger (=container's logger) instead of the service
+        logger. This is an issue when writing CSV files otherwise the
+        layout is messed up.
+      </action>
+    </release>
+    <release version="1.0.4" date="2005-05-13">
+      <action dev="sgoeschl" type="add">
+        Added a simple tutorial
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Fixed bug in ShutdownService resulting in excessive CPU usage.
+      </action>
+      <action dev="sgoeschl" type="update">
+        Improved the implementation of BaseServiceImpl
+      </action>
+      <action dev="sgoeschl" type="add">
+        The CLI can be now configured using SystemProperties and the command
+        line.
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a getParameters() to the ServiceContainer interface. This
+        allows to retrieve the Avalon parameters easily.
+      </action>
+      <action dev="sgoeschl" type="add">
+        The YAAFI service container implements Parameterizable
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a Shutdown service to dispose the YAAFI container
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Updated Turbine integration found in the 'contrib' directory
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Updated CLI to make it fit for one of our products
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Removed CVS tags since it makes maintainance difficult
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Removed obsolete email address
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Fixed wrong default values for parameters file if no value was
+        defined.
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Fixed bug in ServiceManagerService - the static field was not
+        reset during a dispose() leading to a NPE in the second invocation.
+      </action>
+      <action dev="sgoeschl" type="add">
+        Transparent decryption of configuration files
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added reconfiuration service ro reconfigure YAAFI if the component
+        configuration file has changed
+      </action>
+      <action dev="sgoeschl" type="add">
+        Provide context mapping in the case that YAAFI is embedded in another
+        Avalon container (experimental)
+      </action>
+      <action dev="sgoeschl" type="add">
+        Improved bootstrapping of YAAFI using containerConfiguration.xml
+      </action>
+      <action dev="sgoeschl" type="add">
+        Decryption of configuration files
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added cryptography support based on JCE/JCA
+      </action>
+      <action dev="sgoeschl" type="add">
+        Using ServiceManagerConfig to capture the configuration
+        data for YAAFI
+      </action>
+      <action dev="sgoeschl" type="add">
+        Refactored some code into AvalonContextHelper and InputStreamLocator
+      </action>
+      <action dev="sgoeschl" type="add">
+        Parsing a "component-type" element for the future
+      </action>
+      <action dev="sgoeschl" type="add">
+        Parsing a "description" element of the role configuration file
+      </action>
+      <action dev="sgoeschl" type="update">
+        Improved creation of child logger to avoid overly long names by using the shorthand
+        instead of the class name
+      </action>
+      <action dev="sgoeschl" type="add">
+        Extending ServiceManagerService to store Parameters and Context
+      </action>
+      <action dev="sgoeschl" type="add">
+        Setting proper context to achive compatibility with Phoenix container. YAAFI
+        now works embedded into JAMES.
+      </action>
+    </release>
+    <release version="1.0.3" date="2004-11-24">
+      <action dev="sgoeschl" type="add">
+        Added a little bit of documentation
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Fixed most of the Eclipse complaints about coding conventions
+      </action>
+      <action dev="epugh" type="fix" due-to="Siegfried Goeschl">
+        Container was missing call to decomission objects, therefore
+        Disposeable interface never working.
+      </action>
+      <action dev="epugh" type="update">
+        Initial import to Fulcrum project.
+      </action>
+    </release>
+    <release version="1.0.2" date="2004-10-19">
+      <action dev="sgoeschl" type="update">
+        Using LogEnabled.enableLogging() and Configurable.configure() to create a service container
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Locating an absolute file should now also work with Windows
+      </action>
+      <action dev="sgoeschl" type="fix">
+        Removed log4j dpendency
+      </action>
+    </release>
+    <release version="1.0.1" date="2004-10-11">
+      <action dev="sgoeschl" type="update">
+        Refactored the source code to extract ServiceComponent and ServiceContainer interface
+      </action>
+      <action dev="sgoeschl" type="update">
+        Renamed the classes to org.apache.fulcrum.yaafi
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a ServiceManager service to keep track of the service manager singleton
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a ServiceManagerFactory to encapsulate the details of initializing YAAFI
+      </action>
+      <action dev="sgoeschl" type="add">
+        Added a simple SystemPropertyService since it is useful and does not introduce any new dependencies
+      </action>
+    </release>
+    <release version="1.0.0" date="2004-10-04">
+      <action dev="sgoeschl" type="fix">
+        Cleaned up the implementation
+      </action>
+    </release>
+  </body>
+</document>
+

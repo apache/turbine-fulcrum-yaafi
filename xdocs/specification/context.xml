@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Specification</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="Avalon Context">
+
+      <p>
+        The components are initialized with an Avalon Context if the implementation
+        class implements the Contextualizable interface.
+      </p>
+
+      <subsection name="Specification">
+        <table>
+          <tr>
+            <th>Item</th>
+            <th>Datatype</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>urn:avalon:home</td>
+            <td>File</td>
+            <td>
+              Defines the Merlin application root.
+            </td>
+          </tr>
+          <tr>
+            <td>urn:avalon:temp</td>
+            <td>File</td>
+            <td>
+              Define the Merlin temporary directory.
+            </td>
+          </tr>
+          <tr>
+            <td>urn:avalon:name</td>
+            <td>String</td>
+            <td>
+              Define the Merlin component name.
+            </td>
+          </tr>
+          <tr>
+            <td>urn:avalon:partition</td>
+            <td>String</td>
+            <td>
+              Define the Merlin partition name.
+            </td>
+          </tr>
+          <tr>
+            <td>urn:avalon:classloader</td>
+            <td>Classloader</td>
+            <td>
+              Define the Merlin component classloader.
+            </td>
+          </tr>
+          <tr>
+            <td>componentAppRoot</td>
+            <td>String</td>
+            <td>
+              The fully qualified name of the Merlin application root. This
+              entry exists only for backward compatibilty with existing
+              Fulcrum services and will be removed as soon as possible.
+            </td>
+          </tr>
+          <tr>
+            <td>component.id</td>
+            <td>String</td>
+            <td>
+              Fortress alias for "urn:avalon:partition"
+            </td>
+          </tr>
+          <tr>
+            <td>component.logger</td>
+            <td>String</td>
+            <td>
+              Fortress alias for "urn:avalon:name"
+            </td>
+          </tr>
+          <tr>
+            <td>context-root</td>
+            <td>File</td>
+            <td>
+              Fortress alias for "urn:avalon:home"
+            </td>
+          </tr>
+          <tr>
+            <td>impl.workDir</td>
+            <td>File</td>
+            <td>
+              Fortress alias for "urn:avalon:temp"
+            </td>
+          </tr>
+
+        </table>
+      </subsection>
+
+      <subsection name="Example">
+        <table>
+          <tr>
+            <th>Entry</th>
+            <th>Value</th>
+          </tr>
+          <tr>
+            <td>urn:avalon:home</td>
+            <td>W:\work\it20one\service\it20one-service-framework</td>
+          </tr>
+          <tr>
+            <td>urn:avalon:temp</td>
+            <td>C:\DOKUME~1\Sigi\LOKALE~1\Temp</td>
+          </tr>
+          <tr>
+            <td>urn:avalon:name</td>
+            <td>org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyService</td>
+          </tr>
+          <tr>
+            <td>urn:avalon:partition</td>
+            <td>root</td>
+          </tr>
+          <tr>
+            <td>urn:avalon:classloader</td>
+            <td>sun.misc.Launcher$AppClassLoader@e80a59</td>
+          </tr>
+          <tr>
+            <td>componentAppRoot</td>
+            <td>W:\work\it20one\service\it20one-service-framework</td>
+          </tr>
+          <tr>
+            <td>component.id</td>
+            <td>root</td>
+          </tr>
+          <tr>
+            <td>component.logger</td>
+            <td>org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyService</td>
+          </tr>
+          <tr>
+            <td>context-root</td>
+            <td>W:\work\it20one\service\it20one-service-framework</td>
+          </tr>
+          <tr>
+            <td>impl.workDir</td>
+            <td>C:\DOKUME~1\Sigi\LOKALE~1\Temp</td>
+          </tr>
+
+        </table>
+
+      </subsection>
+
+    </section>
+
+  </body>
+
+</document>

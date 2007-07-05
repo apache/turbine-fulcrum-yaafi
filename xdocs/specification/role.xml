@@ -1,0 +1,213 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Specification</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="Role Configuration">
+
+      <p>
+        The Role Configuration File is used to map the services to
+        implementation classes.
+      </p>
+
+      <subsection name="Specification">
+        <table>
+          <tr>
+            <th>Item</th>
+            <th>Datatype</th>
+            <th>Cardinality</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>role</td>
+            <td>Tree</td>
+            <td>[0..n]</td>
+            <td>
+              Metadata about a service component to be instantiated
+            </td>
+          </tr>
+          <tr>
+            <td>role@name</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The name of the service being used for the lookup. If
+              no value is defined then <b>role@default-class</b> will
+              be used.
+            </td>
+          </tr>
+          <tr>
+            <td>role@shorthand</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The shorthand for referencing the section in the Component
+              Configuration File. If no value is defined then
+              <b>role@name</b> will be used.
+            </td>
+          </tr>
+          <tr>
+            <td>role@default-class</td>
+            <td>String</td>
+            <td>1</td>
+            <td>
+              The implementation class of the service.
+            </td>
+          </tr>
+          <tr>
+            <td>role@early-init</td>
+            <td>Boolean</td>
+            <td>[0|1]</td>
+            <td>
+              Shall the service implementation class be instantiated
+              during startup of the container or on demand? If no
+              value is defined then <b>true</b> will be used.
+            </td>
+          </tr>
+          <tr>
+            <td>role@componentType</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The type of component whereas we currently support "avalon" only
+            </td>
+          </tr>
+          <tr>
+            <td>role@componentFlavour</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The flavour for the given component type either "phoenix", "fortress",
+              "merlin", "yaafi". If no value is defined then <b>yaffi</b> will be used.
+            </td>
+          </tr>
+          <tr>
+            <td>role@has-proxy</td>
+            <td>boolean</td>
+            <td>[0|1]</td>
+            <td>
+              Defines if an dynamic proxy will be used for the service instance. If
+              no value is defined thant <b>true</b> will be used.
+            </td>
+          </tr>
+          <tr>
+            <td>role@logger</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The name of the logging category for the service. The logging
+              catetegory being constructed is concatenated with the logging
+              category of the service container, e.g "YAAFI.MyLogCategory".
+            </td>
+          </tr>
+          <tr>
+            <td>role@description</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              A description what the service is actually doing.
+            </td>
+          </tr>
+          <tr>
+            <td>role/interceptors</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>
+              Contains a list of service specific interceptors
+            </td>
+          </tr>
+          <tr>
+            <td>role/interceptors/interceptor</td>
+            <td>String</td>
+            <td>[0..n]</td>
+            <td>
+              Contains the service name of an interceptor
+            </td>
+          </tr>
+        </table>
+      </subsection>
+
+      <subsection name="Example 1">
+        <source>
+          <![CDATA[
+
+<role-list>
+  <role
+    name="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyService"
+    shorthand="SystemPropertyService"
+    default-class="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyServiceImpl"
+  />
+</role-list>
+          ]]>
+        </source>
+      </subsection>
+
+      <subsection name="Example 2">
+        <source>
+          <![CDATA[
+
+<role-list>
+  <role
+    name="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyService"
+    shorthand="SystemPropertyService"
+    default-class="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyServiceImpl"
+    early-init="true"
+    component-type="merlin"
+    description="Copies name/value pairs into the SystemProperties"
+  />
+</role-list>
+          ]]>
+        </source>
+      </subsection>
+
+      <subsection name="Example 3">
+        <source>
+          <![CDATA[
+
+<role-list>
+  <role
+    name="org.apache.fulcrum.yaafi.TestComponent"
+    shorthand="test"
+    default-class="org.apache.fulcrum.yaafi.TestComponentImpl"
+    early-init="true"
+    component-type="merlin"
+    description="A simple test component">
+    <interceptors>
+      <interceptor>org.apache.fulcrum.yaafi.interceptor.performance.PerformanceInterceptorService</interceptor>
+      <interceptor>org.apache.fulcrum.yaafi.interceptor.logging.LoggingInterceptorService</interceptor>
+    </interceptors>
+  </role>
+</role-list>
+          ]]>
+        </source>
+      </subsection>
+
+    </section>
+
+  </body>
+
+</document>
