@@ -1,0 +1,229 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Specification</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="Container Configuration">
+
+      <p>
+        The Container Configuration File is used to bootstrap the
+        YAAFI container.
+      </p>
+
+      <subsection name="Specification">
+        <table>
+          <tr>
+            <th>Item</th>
+            <th>Datatype</th>
+            <th>Cardinality</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>containerType</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The type of Avalon container where YAAFI is instantiated,
+              either "phoenix", "fortress" or "merlin". If no value is
+              defined then <b>merlin</b> will be used.
+            </td>
+          </tr>
+          <tr>
+            <td>containerClazzName</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The class name of the YAAFI container to be instantiated. This
+              feature allows to use inheritance for customizing the container
+              functionality.
+            </td>
+          </tr>
+          <tr>
+            <td>componentRoles</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>Information about the role configuration file</td>
+          </tr>
+          <tr>
+            <td>componentRoles/location</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>The location of the component role file</td>
+          </tr>
+          <tr>
+            <td>componentRoles/isEncrypted</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              Is the component role file encrypted? The possible
+              values are ["true"|"false"|"auto"]
+            </td>
+          </tr>
+          <tr>
+            <td>componentConfiguration</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>Information about the component configuration file</td>
+          </tr>
+          <tr>
+            <td>componentConfiguration/location</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>The location of the component configuration file</td>
+          </tr>
+          <tr>
+            <td>componentConfiguration/isEncrypted</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              Is the component configuration file encrypted? The possible
+              values are ["true"|"false"|"auto"]
+            </td>
+          </tr>
+          <tr>
+            <td>componentConfigurationProperties</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>
+              Information about the component configuration proeprties used
+              to resolve variables in the componentConfiguration
+            </td>
+          </tr>
+          <tr>
+            <td>componentConfigurationProperties/location</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The location of the component configuration property file. The
+              default value is "/componentConfiguration.properties"
+            </td>
+          </tr>
+          <tr>
+            <td>componentConfigurationProperties/resolver</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              The resolver class name to load the componentConfiguration.properties.
+            </td>
+          </tr>
+          <tr>
+            <td>parameters</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>Information about the parameters file</td>
+          </tr>
+          <tr>
+            <td>parameters/location</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>The location of the parameters file</td>
+          </tr>
+          <tr>
+            <td>parameters/isEncrypted</td>
+            <td>String</td>
+            <td>[0|1]</td>
+            <td>
+              Is the parameters file encrypted? The possible
+              values are ["true"|"false"|"auto"]
+            </td>
+          </tr>
+          <tr>
+            <td>hasDynamicProxies</td>
+            <td>Boolean</td>
+            <td>[true|false]</td>
+            <td>
+              Enable the usage of dynamic proxies for the whole container. When
+          	  the no dynamic proxies are used no interceptors will be installed.
+            </td>
+          </tr>
+          <tr>
+            <td>interceptors</td>
+            <td>Tree</td>
+            <td>[0|1]</td>
+            <td>
+              Contains a list of container specific interceptors
+            </td>
+          </tr>
+          <tr>
+            <td>interceptors/interceptor</td>
+            <td>String</td>
+            <td>[0..n]</td>
+            <td>
+              Contains the service name of an interceptor
+            </td>
+          </tr>
+        </table>
+      </subsection>
+
+      <subsection name="Example 1">
+        <source>
+          <![CDATA[
+
+<fulcrum-yaafi>
+  <containerType>phoenix</containerType
+  <containerClazzName>org.apache.fulcrum.yaafi.framework.container.ServiceContainerImpl</containerClazzName>
+  <componentRoles>
+    <location>./src/test/TestRoleConfig.xml</location>
+    <isEncrypted>false</isEncrypted>
+  </componentRoles>
+  <componentConfiguration>
+    <location>./src/test/TestComponentConfig.xml</location>
+    <isEncrypted>false</isEncrypted>
+  </componentConfiguration>
+  <parameters>
+    <location>./src/test/TestParameters.properties</location>
+    <isEncrypted>false</isEncrypted>
+  </parameters>
+</fulcrum-yaafi>
+          ]]>
+        </source>
+      </subsection>
+
+      <subsection name="Example 2">
+        <source>
+          <![CDATA[
+<fulcrum-yaafi>
+  <componentRoles>
+    <location>./src/test/componentRoles.xml</location>
+  </componentRoles>
+  <componentConfiguration>
+    <location>./src/test/componentConfiguration.xml</location>
+  </componentConfiguration>
+  <interceptors>
+    <interceptor>org.apache.fulcrum.yaafi.interceptor.performance.PerformanceInterceptorService</interceptor>
+    <interceptor>org.apache.fulcrum.yaafi.interceptor.logging.LoggingInterceptorService</interceptor>
+  </interceptors>
+</fulcrum-yaafi>
+          ]]>
+        </source>
+      </subsection>
+
+    </section>
+
+  </body>
+
+</document>

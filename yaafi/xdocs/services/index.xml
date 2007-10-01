@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Services</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="YAAFI Services">
+
+      <p>
+
+        YAAFI comes already with the following services since they are generally useful and
+        do not add any dependencies
+
+        <table>
+          <tr>
+            <th>Name</th>
+            <th>Desciption</th>
+          </tr>
+          <tr>
+            <td><a href="servicemanagerservice.html">ServiceManagerService</a></td>
+            <td>
+              Keeps a reference to the YAAFI instance
+            </td>
+          </tr>
+          <tr>
+            <td><a href="systempropertyservice.html">SystemPropertyService</a></td>
+            <td>
+              Copies system properties during startup
+            </td>
+          </tr>
+          <tr>
+            <td><a href="reconfigurationservice.html">ReconfigurationService</a></td>
+            <td>
+              Automatic reconfiguration after changes of the configuration file
+            </td>
+          </tr>
+          <tr>
+            <td><a href="shutdownservice.html">ShutdownService</a></td>
+            <td>
+              Automatic shutdown after changes of an arbitrary configuration file
+            </td>
+          </tr>
+          <tr>
+            <td><a href="adviceservice.html">AdviceService</a></td>
+            <td>
+              Using dynamic proxies for arbtrary Java  object to add interceptor support
+            </td>
+          </tr>
+        </table>
+
+      </p>
+
+    </section>
+
+  </body>
+
+</document>

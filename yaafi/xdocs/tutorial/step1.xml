@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+-->
+
+<document>
+
+  <properties>
+    <title>Fulcrum YAAFI Avalon Container Tutorial Step 1</title>
+    <author email="siegfried.goeschl@it20one.at">Siegfried Goeschl</author>
+  </properties>
+
+  <body>
+
+    <section name="The Role Configuration File">
+
+      <p>
+        The role configuration file is a XML file containing configuration
+        information for the Avalon Service Container.
+      </p>
+
+      <subsection name="Adding the Avalon SystemProperty Service">
+        <p>
+          The following information is needed by the Avalon Service Container to
+          manage our service
+          <table>
+            <tr>
+              <th>Entry</th>
+              <th>Descriptoin</th>
+            </tr>
+            <tr>
+              <td>name</td>
+              <td>The name to lookup the service usually the interface class name</td>
+            </tr>
+            <tr>
+              <td>shorthand</td>
+              <td>The shorthand to lookup the configuration in the Compontent Configuration</td>
+            </tr>
+            <tr>
+              <td>default-class</td>
+              <td>The implementation class of the service</td>
+            </tr>
+          </table>
+          <source><![CDATA[
+
+<role-list>
+  <role
+    name="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyService"
+    shorthand="SystemPropertyService"
+    default-class="org.apache.fulcrum.yaafi.service.systemproperty.SystemPropertyServiceImpl"
+   />
+</role-list>
+          ]]></source>
+        </p>
+      </subsection>
+
+    </section>
+
+  </body>
+
+</document>
