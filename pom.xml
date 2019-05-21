@@ -31,11 +31,19 @@
 	<description>A light-weight Avalon container</description>
 	<url>http://turbine.apache.org/fulcrum/fulcrum-yaafi</url>
 
-	<scm>
-		<connection>scm:svn:http://svn.apache.org/repos/asf/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8</connection>
-		<developerConnection>scm:svn:https://svn.apache.org/repos/asf/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8</developerConnection>
-		<url>http://svn.apache.org/viewvc/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8</url>
-	</scm>
+  <!-- Required for staging to work -->
+  <distributionManagement>
+    <site>
+      <id>turbine.apache.org</id>
+      <url>https://turbine.apache.org/fulcrum/fulcrum-yaafi</url>
+    </site>
+  </distributionManagement>
+
+  <scm>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8/</connection>
+    <developerConnection>scm:svn: https://svn.apache.org/repos/asf/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8</developerConnection>
+    <url>http://svn.apache.org/viewvc/turbine/fulcrum/tags/fulcrum-yaafi-1.0.8</url>
+  </scm>
 
 	<developers>
 		<developer>
@@ -122,5 +130,9 @@
 
 	<properties>
 		<turbine.site.path>fulcrum/fulcrum-yaafi</turbine.site.path>
+        <turbine.scmPubCheckoutDirectory>${turbine.site.cache}/fulcrum/yaafi</turbine.scmPubCheckoutDirectory>
+        <turbine.site.cache>${project.build.directory}/turbine-sites</turbine.site.cache>
+        <siteContent.path>${project.build.directory}/staging</siteContent.path><!-- default stagingSiteURL -->
 	</properties>
+	
 </project>
