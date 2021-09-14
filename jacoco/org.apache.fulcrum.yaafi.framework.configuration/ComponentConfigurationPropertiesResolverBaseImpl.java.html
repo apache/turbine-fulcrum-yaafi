@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ComponentConfigurationPropertiesResolverBaseImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.configuration</a> &gt; <span class="el_source">ComponentConfigurationPropertiesResolverBaseImpl.java</span></div><h1>ComponentConfigurationPropertiesResolverBaseImpl.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.fulcrum.yaafi.framework.configuration;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+import org.apache.avalon.framework.configuration.Configurable;
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.Contextualizable;
+import org.apache.avalon.framework.logger.LogEnabled;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonYaafiConstants;
+import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;
+
+/**
+ * Base class to expand the value and all attributes. This class is intentend
+ * to be sub-classed if you hook up your own configuration mechanism.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+<span class="fc" id="L43">public abstract class ComponentConfigurationPropertiesResolverBaseImpl</span>
+	implements ComponentConfigurationPropertiesResolver, LogEnabled, Contextualizable, Configurable
+{
+    /** the logger of the container */
+    private Logger logger;
+
+    /** the Avalon context */
+    private Context context;
+
+    /** the container configuration */
+    private Configuration configuration;
+
+    /**
+     * @see org.apache.avalon.framework.logger.LogEnabled#enableLogging(org.apache.avalon.framework.logger.Logger)
+     * @param logger the logger instance 
+     */
+    public void enableLogging(Logger logger)
+    {
+<span class="fc" id="L61">        this.logger = logger;</span>
+<span class="fc" id="L62">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+     * @param context the Context to add
+     */
+    public void contextualize(Context context) throws ContextException
+    {
+<span class="fc" id="L70">        this.context = context;</span>
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+     * @param configuration the configuration object to use
+     */
+    public void configure(Configuration configuration) throws ConfigurationException
+    {
+<span class="fc" id="L79">        this.configuration = configuration;</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * @return Returns the logger.
+     */
+    protected Logger getLogger()
+    {
+<span class="fc" id="L87">        return logger;</span>
+    }
+
+    /**
+     * @return Returns the context.
+     */
+    protected Context getContext()
+    {
+<span class="fc" id="L95">        return context;</span>
+    }
+
+    /**
+     * @return the home directory of the application
+     */
+    protected File getApplicationRootDir()
+    {
+        try
+        {
+<span class="fc" id="L105">            return (File) this.getContext().get(AvalonYaafiConstants.URN_AVALON_HOME);</span>
+        }
+<span class="nc" id="L107">        catch(Exception e)</span>
+        {
+<span class="nc" id="L109">            throw new RuntimeException(e.getMessage());</span>
+        }
+    }
+
+    /**
+     * @return Returns the configuration.
+     */
+    protected Configuration getConfiguration()
+    {
+<span class="nc" id="L118">        return configuration;</span>
+    }
+
+    /**
+     * @return Returns the componentConfigurationPropertiesLocation.
+     */
+    protected String getLocation()
+    {
+<span class="fc" id="L126">        return configuration.getChild(&quot;location&quot;).getValue(COMPONENT_CONFIG_PROPERTIES_VALUE );</span>
+    }
+
+    /**
+     * Creates an InputStream using a Locator.
+     * @return the InputStrem or null if the resource was not found
+     * @param location the location of the file
+     * @throws IOException if file not found
+     */
+    protected InputStream createInputStream(String location) throws IOException
+    {
+<span class="fc" id="L137">        InputStreamLocator locator = new InputStreamLocator(this.getApplicationRootDir(), this.getLogger());</span>
+<span class="fc" id="L138">        return locator.locate(location);</span>
+    }
+
+    /**
+     * Add the Avalon context variables.
+     * @param properties properties to be set
+     * @throws ContextException if context not found
+     */
+    protected void addAvalonContext(Properties properties) throws ContextException
+    {
+<span class="fc" id="L148">        properties.put(</span>
+            AvalonYaafiConstants.URN_AVALON_NAME,
+<span class="fc" id="L150">            this.getContext().get(AvalonYaafiConstants.URN_AVALON_NAME)</span>
+            );
+
+<span class="fc" id="L153">        properties.put(</span>
+            AvalonYaafiConstants.URN_AVALON_PARTITION,
+<span class="fc" id="L155">            this.getContext().get(AvalonYaafiConstants.URN_AVALON_PARTITION)</span>
+            );
+
+<span class="fc" id="L158">        properties.put(</span>
+            AvalonYaafiConstants.URN_AVALON_HOME,
+<span class="fc" id="L160">            this.getContext().get(AvalonYaafiConstants.URN_AVALON_HOME)</span>
+            );
+
+<span class="fc" id="L163">        properties.put(</span>
+            AvalonYaafiConstants.URN_AVALON_TEMP,
+<span class="fc" id="L165">            this.getContext().get(AvalonYaafiConstants.URN_AVALON_TEMP)</span>
+            );
+<span class="fc" id="L167">    }</span>
+
+    
+    /**
+     * Set properties from a file location
+     * @param fileLocation file location of properties properties to be set
+     * @return the properties
+     * @throws Exception if unable to parse the properties file
+     */
+    protected Properties loadProperties(String fileLocation) throws Exception
+    {
+<span class="fc" id="L178">        Properties result = new Properties();</span>
+<span class="fc" id="L179">        InputStream is = this.createInputStream(fileLocation);</span>
+
+        try
+        {
+<span class="fc bfc" id="L183" title="All 2 branches covered.">            if(is != null)</span>
+            {
+<span class="fc" id="L185">		        result.load(is);</span>
+<span class="fc" id="L186">		        is.close();</span>
+<span class="fc" id="L187">		        is = null;</span>
+            }
+            else
+            {
+<span class="fc" id="L191">                this.getLogger().debug(&quot;Unable to load the following optional file :&quot; + fileLocation);</span>
+            }
+
+<span class="fc" id="L194">            return result;</span>
+        }
+<span class="nc" id="L196">        catch ( Exception e )</span>
+        {
+<span class="nc" id="L198">            String msg = &quot;Unable to parse the following file : &quot; + fileLocation;</span>
+<span class="nc" id="L199">            this.getLogger().error( msg , e );</span>
+<span class="nc" id="L200">            throw e;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

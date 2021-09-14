@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.service.baseservice</a> &gt; <span class="el_source">BaseServiceImpl.java</span></div><h1>BaseServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.service.baseservice;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.logger.AbstractLogEnabled;
+import org.apache.avalon.framework.parameters.ParameterException;
+import org.apache.avalon.framework.parameters.Parameters;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+
+/**
+ * Base class for a service implementation capturing the Avalon
+ * serviceConfiguration artifacts. Take care that using this class
+ * introduces a dependency to the YAAFI library.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public abstract class BaseServiceImpl
+    extends AbstractLogEnabled
+    implements BaseService
+{
+    /** The name of the service as defined in the role configuration file */
+    private String serviceName;
+
+    /** The context supplied by the Avalon framework */
+    private Context serviceContext;
+
+    /** The service manager supplied by the Avalon framework */
+    private ServiceManager serviceManager;
+
+    /** The configuraton supplied by the Avalon framework */
+    private Configuration serviceConfiguration;
+
+    /** The parameters supplied by the avalon framework */
+    private Parameters serviceParameters;
+
+    /** the Avalon application directory */
+    private File serviceApplicationDir;
+
+    /** the Avalon temp directory */
+    private File serviceTempDir;
+
+    /** the Avalon partition name */
+    private String servicePartitionName;
+
+    /** the class loader for this service */
+    private ClassLoader serviceClassLoader;
+
+    /////////////////////////////////////////////////////////////////////////
+    // Avalon Lifecycle Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Constructor
+     */
+    public BaseServiceImpl()
+<span class="fc" id="L81">    {</span>
+        // nothing to do
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+     */
+    public void contextualize(Context context) throws ContextException
+    {
+<span class="fc" id="L90">        this.serviceContext = context;</span>
+<span class="fc" id="L91">        this.serviceName = (String) context.get(&quot;urn:avalon:name&quot;);</span>
+<span class="fc" id="L92">        this.serviceApplicationDir = (File) context.get(&quot;urn:avalon:home&quot;);</span>
+<span class="fc" id="L93">        this.serviceTempDir = (File) context.get(&quot;urn:avalon:temp&quot;);</span>
+<span class="fc" id="L94">        this.servicePartitionName = (String) context.get(&quot;urn:avalon:partition&quot;);</span>
+<span class="fc" id="L95">        this.serviceClassLoader = (ClassLoader) context.get(&quot;urn:avalon:classloader&quot;);</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+     */
+    public void service(ServiceManager serviceManager) throws ServiceException
+    {
+<span class="fc" id="L103">        this.serviceManager = serviceManager;</span>
+<span class="fc" id="L104">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+     */
+    public void configure(Configuration configuration) throws ConfigurationException
+    {
+<span class="fc" id="L111">        this.serviceConfiguration = configuration;</span>
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.parameters.Parameterizable#parameterize(org.apache.avalon.framework.parameters.Parameters)
+     */
+    public void parameterize(Parameters parameters) throws ParameterException
+    {
+<span class="fc" id="L119">        this.serviceParameters = parameters;</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+     */
+    public void reconfigure(Configuration configuration) throws ConfigurationException
+    {
+<span class="fc" id="L127">        this.serviceConfiguration = configuration;</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Disposable#dispose()
+     */
+    public void dispose()
+    {
+<span class="fc" id="L135">        this.serviceApplicationDir = null;</span>
+<span class="fc" id="L136">        this.serviceClassLoader = null;</span>
+<span class="fc" id="L137">        this.serviceConfiguration = null;</span>
+<span class="fc" id="L138">        this.serviceContext = null;</span>
+<span class="fc" id="L139">        this.serviceManager = null;</span>
+<span class="fc" id="L140">        this.serviceName = null;</span>
+<span class="fc" id="L141">        this.serviceParameters = null;</span>
+<span class="fc" id="L142">        this.servicePartitionName = null;</span>
+<span class="fc" id="L143">        this.serviceTempDir = null;</span>
+<span class="fc" id="L144">    }</span>
+
+    /////////////////////////////////////////////////////////////////////////
+    // Service Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+<span class="fc" id="L155">        StringBuilder result = new StringBuilder();</span>
+
+<span class="fc" id="L157">        result.append( getClass().getName() + &quot;@&quot; + Integer.toHexString(hashCode()));</span>
+
+<span class="fc" id="L159">        result.append(&quot;{&quot;);</span>
+
+<span class="fc" id="L161">        result.append(&quot;serviceName: &quot;);</span>
+<span class="fc" id="L162">        result.append(this.getServiceName());</span>
+<span class="fc" id="L163">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L165">        result.append(&quot; servicePartitionName: &quot;);</span>
+<span class="fc" id="L166">        result.append(this.getServicePartitionName());</span>
+<span class="fc" id="L167">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L169">        result.append(&quot; serviceApplicatonDir: &quot;);</span>
+<span class="fc" id="L170">        result.append(this.getServiceApplicationDir().getAbsolutePath());</span>
+<span class="fc" id="L171">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L173">        result.append(&quot; serviceTempDir: &quot;);</span>
+<span class="fc" id="L174">        result.append(this.getServiceTempDir().getAbsolutePath());</span>
+<span class="fc" id="L175">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L177">        result.append(&quot; serviceContext: &quot;);</span>
+<span class="fc" id="L178">        result.append(this.getServiceContext().toString());</span>
+<span class="fc" id="L179">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L181">        result.append(&quot; serviceConfiguration: &quot;);</span>
+<span class="fc" id="L182">        result.append(this.getServiceConfiguration().toString());</span>
+<span class="fc" id="L183">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L185">        result.append(&quot; serviceParameters: &quot;);</span>
+<span class="fc" id="L186">        result.append(Parameters.toProperties(this.getServiceParameters()));</span>
+<span class="fc" id="L187">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L189">        result.append(&quot; serviceClassLoader: &quot;);</span>
+<span class="fc" id="L190">        result.append(this.getServiceClassLoader());</span>
+<span class="fc" id="L191">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L193">        result.append(&quot; serviceLogger: &quot;);</span>
+<span class="fc" id="L194">        result.append(this.getLogger());</span>
+<span class="fc" id="L195">        result.append(&quot;;&quot;);</span>
+
+<span class="fc" id="L197">        result.append(&quot; serviceManager: &quot;);</span>
+<span class="fc" id="L198">        result.append(this.getServiceManager());</span>
+
+<span class="fc" id="L200">        result.append(&quot;}&quot;);</span>
+
+<span class="fc" id="L202">        return result.toString();</span>
+    }
+
+    /**
+     * @see org.apache.avalon.framework.service.ServiceManager#hasService(java.lang.String)
+     * @param key name of the service to test for
+     * @return boolean indicator if the service exists
+     */
+    protected boolean hasService(String key)
+    {
+<span class="nc" id="L212">        return this.getServiceManager().hasService(key);</span>
+    }
+
+    /**
+     * @see org.apache.avalon.framework.service.ServiceManager#lookup(java.lang.String)
+     * @param key name of service to lookup from the service manager
+     * @return reference to the service
+     */
+    protected Object lookup(String key)
+    {
+        try
+        {
+<span class="nc" id="L224">            return this.getServiceManager().lookup(key);</span>
+        }
+<span class="nc" id="L226">        catch (ServiceException e)</span>
+        {
+<span class="nc" id="L228">            String msg = &quot;Unable to lookup the following service : &quot; + key;</span>
+<span class="nc" id="L229">            this.getLogger().error(msg,e);</span>
+<span class="nc" id="L230">            throw new RuntimeException(msg);</span>
+        }
+    }
+
+    /**
+     * @param object service to release
+     * @see org.apache.avalon.framework.service.ServiceManager#release(java.lang.Object)
+     */
+    protected void release(Object object)
+    {
+<span class="nc bnc" id="L240" title="All 2 branches missed.">    	if ( object != null )</span>
+    	{
+<span class="nc" id="L242">    		object = null;</span>
+    	}
+<span class="nc" id="L244">    }</span>
+
+    /**
+     * Determines the absolute file based on the application directory
+     * @param fileName the filename
+     * @return the absolute file
+     */
+    protected File createAbsoluteFile( String fileName )
+    {
+<span class="fc" id="L253">        File result = new File(fileName);</span>
+
+<span class="pc bpc" id="L255" title="1 of 2 branches missed.">        if( result.isAbsolute() == false )</span>
+        {
+<span class="fc" id="L257">            result = new File( this.getServiceApplicationDir(), fileName );</span>
+        }
+
+<span class="fc" id="L260">        return result;</span>
+    }
+
+    /**
+     * Determines the absolute path based on the application directory
+     * @param fileName the filename
+     * @return the absolute path
+     */
+    protected String createAbsolutePath( String fileName )
+    {
+<span class="fc" id="L270">        return this.createAbsoluteFile(fileName).getAbsolutePath();</span>
+    }
+
+    /**
+     * @return Returns the serviceApplicationDir.
+     */
+    protected File getServiceApplicationDir()
+    {
+<span class="fc" id="L278">        return serviceApplicationDir;</span>
+    }
+
+    /**
+     * @return Returns the serviceClassLoader.
+     */
+    protected ClassLoader getServiceClassLoader()
+    {
+<span class="fc" id="L286">        return serviceClassLoader;</span>
+    }
+
+    /**
+     * @return Returns the serviceConfiguration.
+     */
+    protected Configuration getServiceConfiguration()
+    {
+<span class="fc" id="L294">        return serviceConfiguration;</span>
+    }
+
+    /**
+     * @return Returns the serviceContext.
+     */
+    protected Context getServiceContext()
+    {
+<span class="fc" id="L302">        return serviceContext;</span>
+    }
+
+    /**
+     * @return Returns the serviceManager.
+     */
+    protected ServiceManager getServiceManager()
+    {
+<span class="fc" id="L310">        return serviceManager;</span>
+    }
+
+    /**
+     * @return Returns the serviceName.
+     */
+    protected String getServiceName()
+    {
+<span class="fc" id="L318">        return serviceName;</span>
+    }
+
+    /**
+     * @return Returns the serviceParameters.
+     */
+    protected Parameters getServiceParameters()
+    {
+<span class="fc" id="L326">        return serviceParameters;</span>
+    }
+
+    /**
+     * @return Returns the servicePartitionName.
+     */
+    protected String getServicePartitionName()
+    {
+<span class="fc" id="L334">        return servicePartitionName;</span>
+    }
+
+    /**
+     * @return Returns the serviceTempDir.
+     */
+    protected File getServiceTempDir()
+    {
+<span class="fc" id="L342">        return serviceTempDir;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

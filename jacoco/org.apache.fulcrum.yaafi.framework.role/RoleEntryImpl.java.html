@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleEntryImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.role</a> &gt; <span class="el_source">RoleEntryImpl.java</span></div><h1>RoleEntryImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.role;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.apache.fulcrum.yaafi.framework.util.ToStringBuilder;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/**
+ * Interface exposed by the ServiceContainerImpl
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class RoleEntryImpl implements RoleEntry {
+	/** the name of the service component to be used for the service lookup */
+	private String name;
+
+	/** the name of the implementation class of the service component */
+	private String implementationClazzName;
+
+	/** the short name of the service component to lookup the configuration */
+	private String shorthand;
+
+	/** do we incarnate the instance of the service component during start-up? */
+	private boolean isEarlyInit;
+
+	/** a description for the service component if any */
+	private String description;
+
+	/** the type of service component, e.g. &quot;avalon&quot; */
+	private String componentType;
+
+	/**
+	 * the type of service component if any, e.g. &quot;merlin&quot;, &quot;phoenix&quot; or &quot;fortress
+	 */
+	private String componentFlavour;
+
+	/** do we use a dynamic proxy when invoking the service */
+	private boolean hasDynamicProxy;
+
+	/** the list of interceptors to be invoked when using a dynamic proxy */
+	private ArrayList&lt;String&gt; interceptorList;
+
+	/** the optional category for creating a logger */
+	private String logCategory;
+
+	/**
+	 * YAAFI role entry
+	 *
+	 * @param name             the name of the service component to be used for the
+	 *                         service lookup
+	 * @param defaultClass     the name of the implementation class of the service
+	 *                         component
+	 * @param shorthand        the short name of the service component
+	 * @param earlyInit        do we incarnate the instance of the service component
+	 *                         during start-up?
+	 * @param description      a description for the service component if any
+	 * @param componentType    the type of service component
+	 * @param componentFlavour the flavour of the gicen component type
+	 * @param hasProxy         create a dynamic proxy
+	 * @param interceptorList  the list of service interceptor to be invoked
+	 * @param logCategory      the category for creating the logger
+	 */
+	public RoleEntryImpl(String name, String defaultClass, String shorthand, boolean earlyInit, String description,
+			String componentType, String componentFlavour, boolean hasProxy, ArrayList&lt;String&gt; interceptorList,
+<span class="fc" id="L87">			String logCategory) {</span>
+<span class="fc" id="L88">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L89">		Validate.notEmpty(defaultClass, &quot;defaultClass&quot;);</span>
+<span class="fc" id="L90">		Validate.notEmpty(shorthand, &quot;shorthand&quot;);</span>
+<span class="fc" id="L91">		Validate.notEmpty(componentType, &quot;componentType&quot;);</span>
+<span class="fc" id="L92">		Validate.notEmpty(componentFlavour, &quot;componentFlavour&quot;);</span>
+<span class="fc" id="L93">		Validate.notNull(interceptorList, &quot;interceptorList&quot;);</span>
+<span class="fc" id="L94">		Validate.notEmpty(logCategory, &quot;logCategory&quot;);</span>
+
+<span class="fc" id="L96">		this.name = name;</span>
+<span class="fc" id="L97">		this.implementationClazzName = defaultClass;</span>
+<span class="fc" id="L98">		this.shorthand = shorthand;</span>
+<span class="fc" id="L99">		this.isEarlyInit = earlyInit;</span>
+<span class="fc" id="L100">		this.description = description;</span>
+<span class="fc" id="L101">		this.componentType = componentType;</span>
+<span class="fc" id="L102">		this.componentFlavour = componentFlavour;</span>
+<span class="fc" id="L103">		this.hasDynamicProxy = hasProxy;</span>
+<span class="fc" id="L104">		this.interceptorList = interceptorList;</span>
+<span class="fc" id="L105">		this.logCategory = logCategory;</span>
+<span class="fc" id="L106">	}</span>
+
+	/**
+	 * @return Returns the componentType.
+	 */
+	public String getComponentType() {
+<span class="nc" id="L112">		return componentType;</span>
+	}
+
+	/**
+	 * @return Returns the description.
+	 */
+	public String getDescription() {
+<span class="nc" id="L119">		return description;</span>
+	}
+
+	/**
+	 * @return Returns the implementationClazzName.
+	 */
+	public String getImplementationClazzName() {
+<span class="fc" id="L126">		return implementationClazzName;</span>
+	}
+
+	/**
+	 * @return Returns the isEarlyInit.
+	 */
+	public boolean isEarlyInit() {
+<span class="fc" id="L133">		return isEarlyInit;</span>
+	}
+
+	/**
+	 * @return Returns the name.
+	 */
+	public String getName() {
+<span class="fc" id="L140">		return name;</span>
+	}
+
+	/**
+	 * @return Returns the shorthand.
+	 */
+	public String getShorthand() {
+<span class="fc" id="L147">		return shorthand;</span>
+	}
+
+	/**
+	 * @return Returns the componentFlavour.
+	 */
+	public String getComponentFlavour() {
+<span class="fc" id="L154">		return componentFlavour;</span>
+	}
+
+	/**
+	 * @return Returns the hasDynamicProxy.
+	 */
+	public boolean hasDynamicProxy() {
+<span class="fc" id="L161">		return hasDynamicProxy;</span>
+	}
+
+	/**
+	 * @param hasProxy The hasDynamicProxy to set.
+	 */
+	public void setHasDynamicProxy(boolean hasProxy) {
+<span class="fc" id="L168">		this.hasDynamicProxy = hasProxy;</span>
+<span class="fc" id="L169">	}</span>
+
+	/**
+	 * Determines if the given name of the interceptor is already defined.
+	 *
+	 * @param interceptorName the name of the interceptor
+	 * @return true if it is already defined
+	 */
+	public boolean hasInterceptor(String interceptorName) {
+<span class="fc" id="L178">		String currInterceptorName = null;</span>
+<span class="fc" id="L179">		Iterator&lt;String&gt; iterator = this.interceptorList.iterator();</span>
+
+<span class="fc bfc" id="L181" title="All 2 branches covered.">		while (iterator.hasNext()) {</span>
+<span class="fc" id="L182">			currInterceptorName = iterator.next();</span>
+
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">			if (currInterceptorName.equals(interceptorName)) {</span>
+<span class="nc" id="L185">				return true;</span>
+			}
+		}
+
+<span class="fc" id="L189">		return false;</span>
+	}
+
+	/**
+	 * Adds all given interceptors but avoiding duplicates.
+	 *
+	 * @param collection the interceptors to be added
+	 */
+	public void addInterceptors(Collection&lt;?&gt; collection) {
+<span class="fc" id="L198">		String currInterceptorName = null;</span>
+<span class="fc" id="L199">		Iterator&lt;?&gt; iterator = collection.iterator();</span>
+
+<span class="fc bfc" id="L201" title="All 2 branches covered.">		while (iterator.hasNext()) {</span>
+<span class="fc" id="L202">			currInterceptorName = (String) iterator.next();</span>
+
+<span class="pc bpc" id="L204" title="1 of 2 branches missed.">			if (this.hasInterceptor(currInterceptorName) == false) {</span>
+<span class="fc" id="L205">				this.interceptorList.add(currInterceptorName);</span>
+			}
+		}
+<span class="fc" id="L208">	}</span>
+
+	/**
+	 * @return Returns the interceptorList.
+	 */
+	public String[] getInterceptorList() {
+<span class="fc" id="L214">		return interceptorList.toArray(new String[interceptorList.size()]);</span>
+	}
+
+	/**
+	 * @return Returns the logCategory.
+	 */
+	public String getLogCategory() {
+<span class="fc" id="L221">		return logCategory;</span>
+	}
+
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+<span class="fc" id="L228">		ToStringBuilder toStringBuilder = new ToStringBuilder(this);</span>
+<span class="fc" id="L229">		toStringBuilder.append(&quot;name&quot;, this.name);</span>
+<span class="fc" id="L230">		toStringBuilder.append(&quot;shorthand&quot;, this.shorthand);</span>
+<span class="fc" id="L231">		toStringBuilder.append(&quot;implementationClazzName&quot;, this.implementationClazzName);</span>
+<span class="fc" id="L232">		toStringBuilder.append(&quot;isEarlyInit&quot;, this.isEarlyInit);</span>
+<span class="fc" id="L233">		toStringBuilder.append(&quot;hasDynamicProxy&quot;, this.hasDynamicProxy);</span>
+<span class="fc" id="L234">		toStringBuilder.append(&quot;componentType&quot;, this.componentType);</span>
+<span class="fc" id="L235">		toStringBuilder.append(&quot;componentFlavour&quot;, this.componentFlavour);</span>
+<span class="fc" id="L236">		toStringBuilder.append(&quot;interceptorList&quot;, this.interceptorList);</span>
+<span class="fc" id="L237">		toStringBuilder.append(&quot;logCategory&quot;, this.logCategory);</span>
+<span class="fc" id="L238">		toStringBuilder.append(&quot;description&quot;, this.description);</span>
+<span class="fc" id="L239">		return toStringBuilder.toString();</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

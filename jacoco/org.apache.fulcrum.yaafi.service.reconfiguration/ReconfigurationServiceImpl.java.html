@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReconfigurationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.service.reconfiguration</a> &gt; <span class="el_source">ReconfigurationServiceImpl.java</span></div><h1>ReconfigurationServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.service.reconfiguration;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+import java.io.InputStream;
+import java.security.MessageDigest;
+
+import org.apache.avalon.framework.activity.Disposable;
+import org.apache.avalon.framework.activity.Initializable;
+import org.apache.avalon.framework.activity.Startable;
+import org.apache.avalon.framework.activity.Suspendable;
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.DefaultConfigurationBuilder;
+import org.apache.avalon.framework.configuration.Reconfigurable;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.Contextualizable;
+import org.apache.avalon.framework.logger.AbstractLogEnabled;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.avalon.framework.service.Serviceable;
+import org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager;
+
+/**
+ * Monitors the componentConfiguration.xml and triggers a reconfiguration if the
+ * content of the component configuration file has changed.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class ReconfigurationServiceImpl extends AbstractLogEnabled implements ReconfigurationService, Serviceable,
+		Contextualizable, Reconfigurable, Initializable, Runnable, Startable, Disposable {
+	/** the interval between two checks in ms */
+	private int interval;
+
+	/** shall the worker thread terminate immediately */
+	private boolean terminateNow;
+
+	/** the worker thread polling the componentConfiguraton */
+	private Thread workerThread;
+
+	/** the ServiceManager to use */
+	private ServiceManager serviceManager;
+
+	/** the application directory */
+	private File applicationDir;
+
+	/** our list of resources to monitor */
+	private ReconfigurationEntry[] reconfigurationEntryList;
+
+	/** the interface to reconfigure individual services */
+	private ServiceLifecycleManager serviceLifecycleManager;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Avalon Service Lifecycle Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Constructor
+	 */
+<span class="fc" id="L80">	public ReconfigurationServiceImpl() {</span>
+<span class="fc" id="L81">		this.terminateNow = false;</span>
+<span class="fc" id="L82">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+	 */
+	public void service(ServiceManager manager) throws ServiceException {
+<span class="fc" id="L88">		this.serviceManager = manager;</span>
+<span class="fc" id="L89">		this.serviceLifecycleManager = (ServiceLifecycleManager) manager;</span>
+<span class="fc" id="L90">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+	 */
+	public void contextualize(Context context) throws ContextException {
+<span class="fc" id="L96">		this.applicationDir = (File) context.get(&quot;urn:avalon:home&quot;);</span>
+<span class="fc" id="L97">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void configure(Configuration configuration) throws ConfigurationException {
+		// limit to minimum interval of 1 second
+
+<span class="fc" id="L105">		this.interval = Math.max(configuration.getAttributeAsInteger(&quot;interval&quot;, 5000), 1000);</span>
+
+<span class="fc" id="L107">		this.getLogger().debug(&quot;Monitoring the resources every &quot; + this.interval + &quot; ms&quot;);</span>
+
+		// parse the resources to monitor
+
+		// Configuration entry = null;
+<span class="fc" id="L112">		Configuration services = null;</span>
+<span class="fc" id="L113">		Configuration[] serviceEntries = null;</span>
+<span class="fc" id="L114">		Configuration[] entryList = configuration.getChildren(&quot;entry&quot;);</span>
+
+<span class="fc" id="L116">		String location = null;</span>
+<span class="fc" id="L117">		String serviceName = null;</span>
+<span class="fc" id="L118">		String[] serviceNameList = null;</span>
+<span class="fc" id="L119">		ReconfigurationEntry reconfigurationEntry = null;</span>
+<span class="fc" id="L120">		ReconfigurationEntry[] list = new ReconfigurationEntry[entryList.length];</span>
+<span class="fc" id="L121">		int listIndex = 0;</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">		for (Configuration entry : entryList) {</span>
+<span class="fc" id="L123">			location = entry.getChild(&quot;location&quot;).getValue();</span>
+<span class="fc" id="L124">			services = entry.getChild(&quot;services&quot;, false);</span>
+
+<span class="fc" id="L126">			this.getLogger().debug(&quot;Adding the following resource to monitor : &quot; + location);</span>
+
+<span class="fc bfc" id="L128" title="All 2 branches covered.">			if (services != null) {</span>
+<span class="fc" id="L129">				serviceEntries = services.getChildren(&quot;service&quot;);</span>
+<span class="fc" id="L130">				serviceNameList = new String[serviceEntries.length];</span>
+
+<span class="fc bfc" id="L132" title="All 2 branches covered.">				for (int j = 0; j &lt; serviceEntries.length; j++) {</span>
+<span class="fc" id="L133">					serviceName = serviceEntries[j].getAttribute(&quot;name&quot;);</span>
+<span class="fc" id="L134">					serviceNameList[j] = serviceName;</span>
+				}
+			}
+
+<span class="fc" id="L138">			reconfigurationEntry = new ReconfigurationEntry(this.getLogger(), this.applicationDir, location,</span>
+					serviceNameList);
+
+<span class="fc" id="L141">			list[listIndex++] = reconfigurationEntry;</span>
+		}
+
+<span class="fc" id="L144">		this.getLogger().debug(&quot;Monitoring &quot; + list.length + &quot; resources&quot;);</span>
+
+<span class="fc" id="L146">		this.setReconfigurationEntryList(list);</span>
+<span class="fc" id="L147">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Initializable#initialize()
+	 */
+	public void initialize() throws Exception {
+		// request a SHA-1 to make sure that it is supported
+<span class="fc" id="L154">		MessageDigest.getInstance(&quot;SHA1&quot;);</span>
+
+		// check that the ServiceManager implements Reconfigurable
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">		if (this.serviceManager instanceof ServiceLifecycleManager == false)</span>
+<span class="nc" id="L158">			throw new IllegalArgumentException(</span>
+					&quot;The ServiceManager instance does not implement ServiceLifecycleManager!&quot;);
+
+		// create the worker thread polling the target
+<span class="fc" id="L162">		this.workerThread = new Thread(this, &quot;ReconfigurationService&quot;);</span>
+<span class="fc" id="L163">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Startable#start()
+	 */
+	public void start() throws Exception {
+<span class="fc" id="L169">		this.getLogger().debug(&quot;Starting worker thread ...&quot;);</span>
+<span class="fc" id="L170">		this.workerThread.start();</span>
+<span class="fc" id="L171">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Startable#stop()
+	 */
+	public void stop() throws Exception {
+<span class="fc" id="L177">		this.getLogger().debug(&quot;Stopping worker thread ...&quot;);</span>
+<span class="fc" id="L178">		this.terminateNow = true;</span>
+<span class="fc" id="L179">		this.workerThread.interrupt();</span>
+<span class="fc" id="L180">		this.workerThread.join(10000);</span>
+<span class="fc" id="L181">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Disposable#dispose()
+	 */
+	public void dispose() {
+<span class="fc" id="L187">		this.terminateNow = false;</span>
+<span class="fc" id="L188">		this.applicationDir = null;</span>
+<span class="fc" id="L189">		this.workerThread = null;</span>
+<span class="fc" id="L190">		this.serviceManager = null;</span>
+<span class="fc" id="L191">		this.reconfigurationEntryList = null;</span>
+<span class="fc" id="L192">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void reconfigure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L198">		this.configure(configuration);</span>
+<span class="fc" id="L199">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service interface implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Polls for changes in the confguration to reconfigure either the whole
+	 * container or just a list of services.
+	 *
+	 * @see java.lang.Runnable#run()
+	 */
+	public void run() {
+<span class="fc" id="L212">		ReconfigurationEntry[] list = null;</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">		while (this.terminateNow == false) {</span>
+<span class="fc" id="L214">			list = this.getReconfigurationEntryList();</span>
+			try {
+<span class="fc bfc" id="L216" title="All 2 branches covered.">				for (ReconfigurationEntry reconfigurationEntry : list) {</span>
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">					if (reconfigurationEntry.hasChanged())</span>
+<span class="nc" id="L218">						this.onReconfigure(reconfigurationEntry);</span>
+				}
+
+<span class="fc" id="L221">				Thread.sleep(this.interval);</span>
+<span class="fc" id="L222">			} catch (InterruptedException e) {</span>
+<span class="fc" id="L223">				continue;</span>
+<span class="nc" id="L224">			} catch (Exception e) {</span>
+<span class="nc" id="L225">				String msg = &quot;The ReconfigurationService had a problem&quot;;</span>
+<span class="nc" id="L226">				this.getLogger().error(msg, e);</span>
+<span class="nc" id="L227">				continue;</span>
+<span class="fc" id="L228">			}</span>
+		}
+<span class="fc" id="L230">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Reconfigure either the whole container or a list of services. This method is
+	 * called within a seperate worker thred.
+	 *
+	 * @param reconfigurationEntry the configuration what to reconfigure
+	 * @throws Exception the reconfiguration failed
+	 */
+	protected void onReconfigure(ReconfigurationEntry reconfigurationEntry) throws Exception {
+<span class="nc bnc" id="L244" title="All 2 branches missed.">		if (reconfigurationEntry.getServiceList() == null) {</span>
+			// reconfigure the whole container using Avalon Lifecycle Spec
+<span class="nc" id="L246">			InputStream is = reconfigurationEntry.locate();</span>
+<span class="nc" id="L247">			DefaultConfigurationBuilder builder = new DefaultConfigurationBuilder();</span>
+<span class="nc" id="L248">			Configuration configuration = builder.build(is);</span>
+<span class="nc" id="L249">			is.close();</span>
+<span class="nc" id="L250">			is = null;</span>
+
+<span class="nc" id="L252">			this.getLogger().warn(&quot;Starting to reconfigure the container&quot;);</span>
+
+<span class="nc bnc" id="L254" title="All 2 branches missed.">			if (this.serviceManager instanceof Suspendable) {</span>
+<span class="nc" id="L255">				this.getLogger().info(&quot;Calling suspend() of the container&quot;);</span>
+<span class="nc" id="L256">				((Suspendable) this.serviceManager).suspend();</span>
+			}
+
+<span class="nc bnc" id="L259" title="All 2 branches missed.">			if (this.serviceManager instanceof Reconfigurable) {</span>
+<span class="nc" id="L260">				this.getLogger().info(&quot;Calling reconfigure() of the container&quot;);</span>
+<span class="nc" id="L261">				((Reconfigurable) this.serviceManager).reconfigure(configuration);</span>
+			}
+
+<span class="nc bnc" id="L264" title="All 2 branches missed.">			if (this.serviceManager instanceof Suspendable) {</span>
+<span class="nc" id="L265">				this.getLogger().info(&quot;Calling resume() of the container&quot;);</span>
+<span class="nc" id="L266">				((Suspendable) this.serviceManager).resume();</span>
+			}
+
+<span class="nc" id="L269">			this.getLogger().info(&quot;Reconfiguring the container was successful&quot;);</span>
+<span class="nc" id="L270">		} else {</span>
+<span class="nc" id="L271">			String[] serviceList = reconfigurationEntry.getServiceList();</span>
+<span class="nc" id="L272">			this.getLogger().warn(&quot;Calling reconfigure() on individual services : &quot; + serviceList.length);</span>
+<span class="nc" id="L273">			this.serviceLifecycleManager.reconfigure(serviceList);</span>
+		}
+<span class="nc" id="L275">	}</span>
+
+	/**
+	 * @return Returns the reconfigurationEntryList.
+	 */
+	private synchronized ReconfigurationEntry[] getReconfigurationEntryList() {
+<span class="fc" id="L281">		return reconfigurationEntryList;</span>
+	}
+
+	/**
+	 * @param reconfigurationEntryList The reconfigurationEntryList to set.
+	 */
+	private synchronized void setReconfigurationEntryList(ReconfigurationEntry[] reconfigurationEntryList) {
+<span class="fc" id="L288">		this.reconfigurationEntryList = reconfigurationEntryList;</span>
+<span class="fc" id="L289">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

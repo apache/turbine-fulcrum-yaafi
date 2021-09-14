@@ -1,0 +1,610 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Validate.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.util</a> &gt; <span class="el_source">Validate.java</span></div><h1>Validate.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.fulcrum.yaafi.framework.util;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * &lt;p&gt;Assists in validating arguments.&lt;/p&gt;
+ *
+ * &lt;p&gt;The class is based along the lines of JUnit. If an argument value is
+ * deemed invalid, an IllegalArgumentException is thrown. For example:&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * Validate.isTrue( i &amp;gt; 0, &quot;The value must be greater than zero: &quot;, i);
+ * Validate.notNull( surname, &quot;The surname must not be null&quot;);
+ * &lt;/pre&gt;
+ *
+ * @author &lt;a href=&quot;mailto:ola.berg@arkitema.se&quot;&gt;Ola Berg&lt;/a&gt;
+ * @author Stephen Colebourne
+ * @author Gary Gregory
+ * @author Norm Deane
+ * @since 2.0
+ * @version $Id$
+ */
+public class Validate
+{
+    /**
+     * Constructor. This class should not normally be instantiated.
+     */
+    public Validate()
+<span class="nc" id="L51">    {</span>
+<span class="nc" id="L52">    }</span>
+
+    // isTrue
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the test result is &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is used when validating according to an arbitrary boolean expression,
+     * such as validating a primitive number or using your own custom validation
+     * expression.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.isTrue( myObject.isOk(), &quot;The object is not OK: &quot;, myObject);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;For performance reasons, the object is passed as a separate parameter and
+     * appended to the message string only in the case of an error.&lt;/p&gt;
+     *
+     * @param expression  a boolean expression
+     * @param message  the exception message you would like to see if the
+     *  expression is &lt;code&gt;false&lt;/code&gt;
+     * @param value  the value to append to the message in case of error
+     * @throws IllegalArgumentException if expression is &lt;code&gt;false&lt;/code&gt;
+     */
+    public static void isTrue(boolean expression, String message, Object value)
+    {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (expression == false)</span>
+        {
+<span class="nc" id="L82">            throw new IllegalArgumentException( message + value );</span>
+        }
+<span class="nc" id="L84">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the test result is &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is used when validating according to an arbitrary boolean expression,
+     * such as validating a primitive number or using your own custom validation
+     * expression.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.isTrue( i &amp;gt; 0, &quot;The value must be greater than zero: &quot;, i);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;For performance reasons, the long value is passed as a separate parameter and
+     * appended to the message string only in the case of an error.&lt;/p&gt;
+     *
+     * @param expression  a boolean expression
+     * @param message  the exception message you would like to see if the expression is &lt;code&gt;false&lt;/code&gt;
+     * @param value  the value to append to the message in case of error
+     * @throws IllegalArgumentException if expression is &lt;code&gt;false&lt;/code&gt;
+     */
+    public static void isTrue(boolean expression, String message, long value)
+    {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (expression == false)</span>
+        {
+<span class="nc" id="L110">            throw new IllegalArgumentException( message + value );</span>
+        }
+<span class="nc" id="L112">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the test result is &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is used when validating according to an arbitrary boolean expression,
+     * such as validating a primitive number or using your own custom validation
+     * expression.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.isTrue( d &amp;gt; 0.0, &quot;The value must be greater than zero: &quot;, d);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;For performance reasons, the double value is passed as a separate parameter and
+     * appended to the message string only in the case of an error.&lt;/p&gt;
+     *
+     * @param expression  a boolean expression
+     * @param message  the exception message you would like to see if the expression
+     *  is &lt;code&gt;false&lt;/code&gt;
+     * @param value  the value to append to the message in case of error
+     * @throws IllegalArgumentException if expression is &lt;code&gt;false&lt;/code&gt;
+     */
+    public static void isTrue(boolean expression, String message, double value)
+    {
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (expression == false)</span>
+        {
+<span class="nc" id="L139">            throw new IllegalArgumentException( message + value );</span>
+        }
+<span class="nc" id="L141">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the test result is &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is used when validating according to an arbitrary boolean expression,
+     * such as validating a primitive number or using your own custom validation
+     * expression.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.isTrue( (i &amp;gt; 0), &quot;The value must be greater than zero&quot;);
+     * Validate.isTrue( myObject.isOk(), &quot;The object is not OK&quot;);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;For performance reasons, the message string should not involve a string append,
+     * instead use the {@link #isTrue(boolean, String, Object)} method.&lt;/p&gt;
+     *
+     * @param expression  a boolean expression
+     * @param message  the exception message you would like to see if the expression
+     *  is &lt;code&gt;false&lt;/code&gt;
+     * @throws IllegalArgumentException if expression is &lt;code&gt;false&lt;/code&gt;
+     */
+    public static void isTrue(boolean expression, String message)
+    {
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">        if (expression == false)</span>
+        {
+<span class="nc" id="L168">            throw new IllegalArgumentException( message );</span>
+        }
+<span class="fc" id="L170">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the test result is &lt;code&gt;false&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is used when validating according to an arbitrary boolean expression,
+     * such as validating a primitive number or using your own custom validation
+     * expression.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.isTrue( i &amp;gt; 0 );
+     * Validate.isTrue( myObject.isOk() );
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated expression is false'.&lt;/p&gt;
+     *
+     * @param expression  a boolean expression
+     * @throws IllegalArgumentException if expression is &lt;code&gt;false&lt;/code&gt;
+     */
+    public static void isTrue(boolean expression)
+    {
+<span class="nc bnc" id="L192" title="All 2 branches missed.">        if (expression == false)</span>
+        {
+<span class="nc" id="L194">            throw new IllegalArgumentException(</span>
+                            &quot;The validated expression is false&quot; );
+        }
+<span class="nc" id="L197">    }</span>
+
+    // notNull
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument is &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notNull(myObject, &quot;The object must not be null&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param object  the object to check is not &lt;code&gt;null&lt;/code&gt;
+     * @param message  the exception message you would like to see
+     *  if the object is &lt;code&gt;null&lt;/code&gt;
+     * @throws IllegalArgumentException if the object is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void notNull(Object object, String message)
+    {
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">        if (object == null)</span>
+        {
+<span class="nc" id="L219">            throw new IllegalArgumentException( message );</span>
+        }
+<span class="fc" id="L221">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument is &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notNull(myObject);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated object is null'.&lt;/p&gt;
+     *
+     * @param object  the object to check is not &lt;code&gt;null&lt;/code&gt;
+     * @throws IllegalArgumentException if the object is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void notNull(Object object)
+    {
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">        if (object == null)</span>
+        {
+<span class="nc" id="L240">            throw new IllegalArgumentException( &quot;The validated object is null&quot; );</span>
+        }
+<span class="fc" id="L242">    }</span>
+
+    // notEmpty array
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument array is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myArray, &quot;The array must not be empty&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param array  the array to check is not empty
+     * @param message  the exception message you would like to see if the array is empty
+     * @throws IllegalArgumentException if the array is empty
+     */
+    public static void notEmpty(Object [] array, String message)
+    {
+<span class="nc bnc" id="L261" title="All 4 branches missed.">        if (array == null || array.length == 0)</span>
+        {
+<span class="nc" id="L263">            throw new IllegalArgumentException( message );</span>
+        }
+<span class="nc" id="L265">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument array is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myArray);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated array is empty'.
+     *
+     * @param array  the array to check is not empty
+     * @throws IllegalArgumentException if the array is empty
+     */
+    public static void notEmpty(Object [] array)
+    {
+<span class="nc bnc" id="L282" title="All 4 branches missed.">        if (array == null || array.length == 0)</span>
+        {
+<span class="nc" id="L284">            throw new IllegalArgumentException( &quot;The validated array is empty&quot; );</span>
+        }
+<span class="nc" id="L286">    }</span>
+
+    // notEmpty collection
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Collection is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myCollection, &quot;The collection must not be empty&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param collection  the collection to check is not empty
+     * @param message  the exception message you would like to see if the collection is empty
+     * @throws IllegalArgumentException if the collection is empty
+     */
+    public static void notEmpty(Collection&lt;?&gt; collection, String message)
+    {
+<span class="nc bnc" id="L305" title="All 4 branches missed.">        if (collection == null || collection.size() == 0)</span>
+        {
+<span class="nc" id="L307">            throw new IllegalArgumentException( message );</span>
+        }
+<span class="nc" id="L309">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Collection is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myCollection);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated collection is empty'.&lt;/p&gt;
+     *
+     * @param collection  the collection to check is not empty
+     * @throws IllegalArgumentException if the collection is empty
+     */
+    public static void notEmpty(Collection&lt;?&gt; collection)
+    {
+<span class="nc bnc" id="L326" title="All 4 branches missed.">        if (collection == null || collection.size() == 0)</span>
+        {
+<span class="nc" id="L328">            throw new IllegalArgumentException(</span>
+                            &quot;The validated collection is empty&quot; );
+        }
+<span class="nc" id="L331">    }</span>
+
+    // notEmpty map
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Map is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myMap, &quot;The map must not be empty&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param map  the map to check is not empty
+     * @param message  the exception message you would like to see if the map is empty
+     * @throws IllegalArgumentException if the map is empty
+     */
+    public static void notEmpty(Map&lt;?, ?&gt; map, String message)
+    {
+<span class="nc bnc" id="L350" title="All 4 branches missed.">        if (map == null || map.size() == 0)</span>
+        {
+<span class="nc" id="L352">            throw new IllegalArgumentException( message );</span>
+        }
+<span class="nc" id="L354">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Map is empty (&lt;code&gt;null&lt;/code&gt; or no elements).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myMap);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated map is empty'.&lt;/p&gt;
+     *
+     * @param map  the map to check is not empty
+     * @throws IllegalArgumentException if the map is empty
+     */
+    public static void notEmpty(Map&lt;?, ?&gt; map)
+    {
+<span class="nc bnc" id="L371" title="All 4 branches missed.">        if (map == null || map.size() == 0)</span>
+        {
+<span class="nc" id="L373">            throw new IllegalArgumentException( &quot;The validated map is empty&quot; );</span>
+        }
+<span class="nc" id="L375">    }</span>
+
+    // notEmpty string
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument String is empty (&lt;code&gt;null&lt;/code&gt; or zero length).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myString, &quot;The string must not be empty&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param string  the string to check is not empty
+     * @param message  the exception message you would like to see if the string is empty
+     * @throws IllegalArgumentException if the string is empty
+     */
+    public static void notEmpty(String string, String message)
+    {
+<span class="pc bpc" id="L394" title="1 of 2 branches missed.">    	if ( StringUtils.isEmpty(string) )</span>
+<span class="nc" id="L395">            throw new IllegalArgumentException( message );</span>
+<span class="fc" id="L396">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument String is empty (&lt;code&gt;null&lt;/code&gt; or zero length).&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.notEmpty(myString);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated string is empty'.&lt;/p&gt;
+     *
+     * @param string  the string to check is not empty
+     * @throws IllegalArgumentException if the string is empty
+     */
+    public static void notEmpty(String string)
+    {
+<span class="nc bnc" id="L413" title="All 2 branches missed.">    	if ( StringUtils.isEmpty(string) )</span>
+<span class="nc" id="L414">            throw new IllegalArgumentException( &quot;The validated string is empty&quot; );</span>
+<span class="nc" id="L415">    }</span>
+
+    // notNullElements array
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument array has &lt;code&gt;null&lt;/code&gt; elements or is
+     * &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.noNullElements(myArray, &quot;The array must not contain null elements&quot;);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;If the array is null then the message in the exception is 'The validated object is null'.&lt;/p&gt;
+     *
+     * @param array  the array to check
+     * @param message  the exception message if the array has
+     *  &lt;code&gt;null&lt;/code&gt; elements
+     * @throws IllegalArgumentException if the array has &lt;code&gt;null&lt;/code&gt;
+     *  elements or is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void noNullElements(Object [] array, String message)
+    {
+<span class="fc" id="L439">        Validate.notNull( array );</span>
+<span class="fc bfc" id="L440" title="All 2 branches covered.">        for (int i = 0; i &lt; array.length; i++)</span>
+        {
+<span class="pc bpc" id="L442" title="1 of 2 branches missed.">            if (array[i] == null)</span>
+            {
+<span class="nc" id="L444">                throw new IllegalArgumentException( message );</span>
+            }
+        }
+<span class="fc" id="L447">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument array has &lt;code&gt;null&lt;/code&gt; elements or is
+     * &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.noNullElements(myArray);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;If the array has a null element the message in the exception is
+     * 'The validated array contains null element at index: '.&lt;/p&gt;
+     *
+     * &lt;p&gt;If the array is null then the message in the exception is 'The validated object is null'.&lt;/p&gt;
+     *
+     * @param array  the array to check
+     * @throws IllegalArgumentException if the array has &lt;code&gt;null&lt;/code&gt;
+     *  elements or is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void noNullElements(Object [] array)
+    {
+<span class="nc" id="L469">        Validate.notNull( array );</span>
+<span class="nc bnc" id="L470" title="All 2 branches missed.">        for (int i = 0; i &lt; array.length; i++)</span>
+        {
+<span class="nc bnc" id="L472" title="All 2 branches missed.">            if (array[i] == null)</span>
+            {
+<span class="nc" id="L474">                throw new IllegalArgumentException(</span>
+                                &quot;The validated array contains null element at index: &quot;
+                                                + i );
+            }
+        }
+<span class="nc" id="L479">    }</span>
+
+    // notNullElements collection
+    //---------------------------------------------------------------------------------
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Collection has &lt;code&gt;null&lt;/code&gt; elements or is
+     * &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.noNullElements(myCollection, &quot;The collection must not contain null elements&quot;);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;If the collection is null then the message in the exception is 'The validated object is null'.&lt;/p&gt;
+     *
+     * @param collection  the collection to check
+     * @param message  the exception message if the collection has
+     *  &lt;code&gt;null&lt;/code&gt; elements
+     * @throws IllegalArgumentException if the collection has
+     *  &lt;code&gt;null&lt;/code&gt; elements or is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void noNullElements(Collection&lt;?&gt; collection, String message)
+    {
+<span class="nc" id="L503">        Validate.notNull( collection );</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">        for (Iterator&lt;?&gt; it = collection.iterator(); it.hasNext();)</span>
+        {
+<span class="nc bnc" id="L506" title="All 2 branches missed.">            if (it.next() == null)</span>
+            {
+<span class="nc" id="L508">                throw new IllegalArgumentException( message );</span>
+            }
+        }
+<span class="nc" id="L511">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument Collection has &lt;code&gt;null&lt;/code&gt; elements or is
+     * &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.noNullElements(myCollection);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The message in the exception is 'The validated collection contains null element at index: '.&lt;/p&gt;
+     *
+     * &lt;p&gt;If the collection is null then the message in the exception is 'The validated object is null'.&lt;/p&gt;
+     *
+     * @param collection  the collection to check
+     * @throws IllegalArgumentException if the collection has
+     *  &lt;code&gt;null&lt;/code&gt; elements or is &lt;code&gt;null&lt;/code&gt;
+     */
+    public static void noNullElements(Collection&lt;?&gt; collection)
+    {
+<span class="nc" id="L532">        Validate.notNull( collection );</span>
+<span class="nc" id="L533">        int i = 0;</span>
+<span class="nc bnc" id="L534" title="All 2 branches missed.">        for (Iterator&lt;?&gt; it = collection.iterator(); it.hasNext(); i++)</span>
+        {
+<span class="nc bnc" id="L536" title="All 2 branches missed.">            if (it.next() == null)</span>
+            {
+<span class="nc" id="L538">                throw new IllegalArgumentException(</span>
+                                &quot;The validated collection contains null element at index: &quot;
+                                                + i );
+            }
+        }
+<span class="nc" id="L543">    }</span>
+
+    /**
+     * &lt;p&gt;Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt;
+     * if the argument collection  is &lt;code&gt;null&lt;/code&gt; or has elements that
+     * are not of type &lt;code&gt;clazz&lt;/code&gt; or a subclass.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.allElementsOfType(collection, String.class, &quot;Collection has invalid elements&quot;);
+     * &lt;/pre&gt;
+     *
+     * @param collection  the collection to check, not null
+     * @param clazz  the &lt;code&gt;Class&lt;/code&gt; which the collection's elements are expected to be, not null
+     * @param message  the exception message if the &lt;code&gt;Collection&lt;/code&gt; has elements not of type &lt;code&gt;clazz&lt;/code&gt;
+     * @since 2.1
+     */
+    public static void allElementsOfType(Collection&lt;?&gt; collection, Class&lt;?&gt; clazz,
+        String message)
+    {
+<span class="nc" id="L562">        Validate.notNull( collection );</span>
+<span class="nc" id="L563">        Validate.notNull( clazz );</span>
+<span class="nc bnc" id="L564" title="All 2 branches missed.">        for (Iterator&lt;?&gt; it = collection.iterator(); it.hasNext();)</span>
+        {
+<span class="nc bnc" id="L566" title="All 2 branches missed.">            if (clazz.isInstance( it.next() ) == false)</span>
+            {
+<span class="nc" id="L568">                throw new IllegalArgumentException( message );</span>
+            }
+        }
+<span class="nc" id="L571">    }</span>
+
+    /**
+     * &lt;p&gt;
+     * Validate an argument, throwing &lt;code&gt;IllegalArgumentException&lt;/code&gt; if the argument collection is
+     * &lt;code&gt;null&lt;/code&gt; or has elements that are not of type &lt;code&gt;clazz&lt;/code&gt; or a subclass.
+     * &lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * Validate.allElementsOfType(collection, String.class);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;
+     * The message in the exception is 'The validated collection contains an element not of type clazz at index: '.
+     * &lt;/p&gt;
+     *
+     * @param collection
+     *            the collection to check, not null
+     * @param clazz
+     *            the &lt;code&gt;Class&lt;/code&gt; which the collection's elements are expected to be, not null
+     * @since 2.1
+     */
+    public static void allElementsOfType(Collection&lt;?&gt; collection, Class&lt;?&gt; clazz)
+    {
+<span class="nc" id="L595">        Validate.notNull( collection );</span>
+<span class="nc" id="L596">        Validate.notNull( clazz );</span>
+<span class="nc" id="L597">        int i = 0;</span>
+<span class="nc bnc" id="L598" title="All 2 branches missed.">        for (Iterator&lt;?&gt; it = collection.iterator(); it.hasNext(); i++)</span>
+        {
+<span class="nc bnc" id="L600" title="All 2 branches missed.">            if (clazz.isInstance( it.next() ) == false)</span>
+            {
+<span class="nc" id="L602">                throw new IllegalArgumentException(</span>
+                                &quot;The validated collection contains an element not of type &quot;
+<span class="nc" id="L604">                                                + clazz.getName()</span>
+                                                + &quot; at index: &quot; + i );
+            }
+        }
+<span class="nc" id="L608">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

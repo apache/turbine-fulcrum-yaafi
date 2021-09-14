@@ -1,0 +1,748 @@
+<!DOCTYPE HTML>
+<html lang="de">
+<head>
+<title>Source code</title>
+<link rel="stylesheet" type="text/css" href="../../../../../../../stylesheet.css" title="Style">
+</head>
+<body>
+<main role="main">
+<div class="sourceContainer">
+<pre><span class="sourceLineNo">001</span><a id="line.1">package org.apache.fulcrum.yaafi.framework.factory;</a>
+<span class="sourceLineNo">002</span><a id="line.2"></a>
+<span class="sourceLineNo">003</span><a id="line.3">/*</a>
+<span class="sourceLineNo">004</span><a id="line.4"> * Licensed to the Apache Software Foundation (ASF) under one</a>
+<span class="sourceLineNo">005</span><a id="line.5"> * or more contributor license agreements.  See the NOTICE file</a>
+<span class="sourceLineNo">006</span><a id="line.6"> * distributed with this work for additional information</a>
+<span class="sourceLineNo">007</span><a id="line.7"> * regarding copyright ownership.  The ASF licenses this file</a>
+<span class="sourceLineNo">008</span><a id="line.8"> * to you under the Apache License, Version 2.0 (the</a>
+<span class="sourceLineNo">009</span><a id="line.9"> * "License"); you may not use this file except in compliance</a>
+<span class="sourceLineNo">010</span><a id="line.10"> * with the License.  You may obtain a copy of the License at</a>
+<span class="sourceLineNo">011</span><a id="line.11"> *</a>
+<span class="sourceLineNo">012</span><a id="line.12"> *   http://www.apache.org/licenses/LICENSE-2.0</a>
+<span class="sourceLineNo">013</span><a id="line.13"> *</a>
+<span class="sourceLineNo">014</span><a id="line.14"> * Unless required by applicable law or agreed to in writing,</a>
+<span class="sourceLineNo">015</span><a id="line.15"> * software distributed under the License is distributed on an</a>
+<span class="sourceLineNo">016</span><a id="line.16"> * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</a>
+<span class="sourceLineNo">017</span><a id="line.17"> * KIND, either express or implied.  See the License for the</a>
+<span class="sourceLineNo">018</span><a id="line.18"> * specific language governing permissions and limitations</a>
+<span class="sourceLineNo">019</span><a id="line.19"> * under the License.</a>
+<span class="sourceLineNo">020</span><a id="line.20"> */</a>
+<span class="sourceLineNo">021</span><a id="line.21"></a>
+<span class="sourceLineNo">022</span><a id="line.22">import java.io.File;</a>
+<span class="sourceLineNo">023</span><a id="line.23">import java.io.IOException;</a>
+<span class="sourceLineNo">024</span><a id="line.24">import java.io.InputStream;</a>
+<span class="sourceLineNo">025</span><a id="line.25">import java.util.Enumeration;</a>
+<span class="sourceLineNo">026</span><a id="line.26">import java.util.Hashtable;</a>
+<span class="sourceLineNo">027</span><a id="line.27"></a>
+<span class="sourceLineNo">028</span><a id="line.28">import org.apache.avalon.framework.configuration.Configuration;</a>
+<span class="sourceLineNo">029</span><a id="line.29">import org.apache.avalon.framework.configuration.DefaultConfiguration;</a>
+<span class="sourceLineNo">030</span><a id="line.30">import org.apache.avalon.framework.configuration.DefaultConfigurationBuilder;</a>
+<span class="sourceLineNo">031</span><a id="line.31">import org.apache.avalon.framework.context.Context;</a>
+<span class="sourceLineNo">032</span><a id="line.32">import org.apache.avalon.framework.context.DefaultContext;</a>
+<span class="sourceLineNo">033</span><a id="line.33">import org.apache.avalon.framework.logger.ConsoleLogger;</a>
+<span class="sourceLineNo">034</span><a id="line.34">import org.apache.avalon.framework.logger.Logger;</a>
+<span class="sourceLineNo">035</span><a id="line.35">import org.apache.avalon.framework.service.ServiceManager;</a>
+<span class="sourceLineNo">036</span><a id="line.36">import org.apache.commons.lang3.StringUtils;</a>
+<span class="sourceLineNo">037</span><a id="line.37">import org.apache.fulcrum.yaafi.framework.constant.AvalonMerlinConstants;</a>
+<span class="sourceLineNo">038</span><a id="line.38">import org.apache.fulcrum.yaafi.framework.container.ServiceConstants;</a>
+<span class="sourceLineNo">039</span><a id="line.39">import org.apache.fulcrum.yaafi.framework.crypto.CryptoStreamFactory;</a>
+<span class="sourceLineNo">040</span><a id="line.40">import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;</a>
+<span class="sourceLineNo">041</span><a id="line.41">import org.apache.fulcrum.yaafi.framework.util.Validate;</a>
+<span class="sourceLineNo">042</span><a id="line.42"></a>
+<span class="sourceLineNo">043</span><a id="line.43">/**</a>
+<span class="sourceLineNo">044</span><a id="line.44"> * Helper class to capture configuration related stuff. The are two ways for</a>
+<span class="sourceLineNo">045</span><a id="line.45"> * setting up the configuration:</a>
+<span class="sourceLineNo">046</span><a id="line.46"> * &lt;ul&gt;</a>
+<span class="sourceLineNo">047</span><a id="line.47"> * &lt;li&gt;set all parameters manually&lt;/li&gt;</a>
+<span class="sourceLineNo">048</span><a id="line.48"> * &lt;li&gt;use a containerConfiguration file and provide the remaining settings&lt;/li&gt;</a>
+<span class="sourceLineNo">049</span><a id="line.49"> * &lt;/ul&gt;</a>
+<span class="sourceLineNo">050</span><a id="line.50"> *</a>
+<span class="sourceLineNo">051</span><a id="line.51"> * The Avalon context and configuration are created by</a>
+<span class="sourceLineNo">052</span><a id="line.52"> * &lt;ul&gt;</a>
+<span class="sourceLineNo">053</span><a id="line.53"> * &lt;li&gt;createFinalContext()&lt;/li&gt;</a>
+<span class="sourceLineNo">054</span><a id="line.54"> * &lt;li&gt;createFinalConfiguration()&lt;/li&gt;</a>
+<span class="sourceLineNo">055</span><a id="line.55"> * &lt;/ul&gt;</a>
+<span class="sourceLineNo">056</span><a id="line.56"> *</a>
+<span class="sourceLineNo">057</span><a id="line.57"> * @author &lt;a href="mailto:siegfried.goeschl@it20one.at"&gt;Siegfried Goeschl&lt;/a&gt;</a>
+<span class="sourceLineNo">058</span><a id="line.58"> */</a>
+<span class="sourceLineNo">059</span><a id="line.59"></a>
+<span class="sourceLineNo">060</span><a id="line.60">public class ServiceContainerConfiguration {</a>
+<span class="sourceLineNo">061</span><a id="line.61">        /** our default implementation class of the service container */</a>
+<span class="sourceLineNo">062</span><a id="line.62">        private String serviceContainerClazzName;</a>
+<span class="sourceLineNo">063</span><a id="line.63"></a>
+<span class="sourceLineNo">064</span><a id="line.64">        /** the location of the component role file */</a>
+<span class="sourceLineNo">065</span><a id="line.65">        private String componentRolesLocation;</a>
+<span class="sourceLineNo">066</span><a id="line.66"></a>
+<span class="sourceLineNo">067</span><a id="line.67">        /** is the component role file encrypted? */</a>
+<span class="sourceLineNo">068</span><a id="line.68">        private String isComponentRolesEncrypted;</a>
+<span class="sourceLineNo">069</span><a id="line.69"></a>
+<span class="sourceLineNo">070</span><a id="line.70">        /** the location of the component configuration file */</a>
+<span class="sourceLineNo">071</span><a id="line.71">        private String componentConfigurationLocation;</a>
+<span class="sourceLineNo">072</span><a id="line.72"></a>
+<span class="sourceLineNo">073</span><a id="line.73">        /** is the component configuration file encrypted? */</a>
+<span class="sourceLineNo">074</span><a id="line.74">        private String isComponentConfigurationEncrypted;</a>
+<span class="sourceLineNo">075</span><a id="line.75"></a>
+<span class="sourceLineNo">076</span><a id="line.76">        /** the location of the paramaters file */</a>
+<span class="sourceLineNo">077</span><a id="line.77">        private String parametersLocation;</a>
+<span class="sourceLineNo">078</span><a id="line.78"></a>
+<span class="sourceLineNo">079</span><a id="line.79">        /** is the parameters file encrypted? */</a>
+<span class="sourceLineNo">080</span><a id="line.80">        private String isParametersEncrypted;</a>
+<span class="sourceLineNo">081</span><a id="line.81"></a>
+<span class="sourceLineNo">082</span><a id="line.82">        /** the user-supplied Avalon context */</a>
+<span class="sourceLineNo">083</span><a id="line.83">        private DefaultContext context;</a>
+<span class="sourceLineNo">084</span><a id="line.84"></a>
+<span class="sourceLineNo">085</span><a id="line.85">        /** the Avalon logger */</a>
+<span class="sourceLineNo">086</span><a id="line.86">        private Logger logger;</a>
+<span class="sourceLineNo">087</span><a id="line.87"></a>
+<span class="sourceLineNo">088</span><a id="line.88">        /** the application directory */</a>
+<span class="sourceLineNo">089</span><a id="line.89">        private String applicationRootDir;</a>
+<span class="sourceLineNo">090</span><a id="line.90"></a>
+<span class="sourceLineNo">091</span><a id="line.91">        /** the temporary directory */</a>
+<span class="sourceLineNo">092</span><a id="line.92">        private String tempRootDir;</a>
+<span class="sourceLineNo">093</span><a id="line.93"></a>
+<span class="sourceLineNo">094</span><a id="line.94">        /** the class loader passed in the Avalon Context */</a>
+<span class="sourceLineNo">095</span><a id="line.95">        private ClassLoader componentClassLoader;</a>
+<span class="sourceLineNo">096</span><a id="line.96"></a>
+<span class="sourceLineNo">097</span><a id="line.97">        /** the type of container where YAAFI is embedded */</a>
+<span class="sourceLineNo">098</span><a id="line.98">        private String containerFlavour;</a>
+<span class="sourceLineNo">099</span><a id="line.99"></a>
+<span class="sourceLineNo">100</span><a id="line.100">        /** the caller-supplied container configuration */</a>
+<span class="sourceLineNo">101</span><a id="line.101">        private Configuration containerConfiguration;</a>
+<span class="sourceLineNo">102</span><a id="line.102"></a>
+<span class="sourceLineNo">103</span><a id="line.103">        /** to lookup service in the parent container */</a>
+<span class="sourceLineNo">104</span><a id="line.104">        private ServiceManager parentServiceManager;</a>
+<span class="sourceLineNo">105</span><a id="line.105"></a>
+<span class="sourceLineNo">106</span><a id="line.106">        /** a list of ServiceManager maintaining their own services */</a>
+<span class="sourceLineNo">107</span><a id="line.107">        private String[] serviceManagerList;</a>
+<span class="sourceLineNo">108</span><a id="line.108"></a>
+<span class="sourceLineNo">109</span><a id="line.109">        /** Constructor */</a>
+<span class="sourceLineNo">110</span><a id="line.110">        public ServiceContainerConfiguration() {</a>
+<span class="sourceLineNo">111</span><a id="line.111">                this(ConsoleLogger.LEVEL_DEBUG);</a>
+<span class="sourceLineNo">112</span><a id="line.112">        }</a>
+<span class="sourceLineNo">113</span><a id="line.113"></a>
+<span class="sourceLineNo">114</span><a id="line.114">        /**</a>
+<span class="sourceLineNo">115</span><a id="line.115">         * Constructor.</a>
+<span class="sourceLineNo">116</span><a id="line.116">         *</a>
+<span class="sourceLineNo">117</span><a id="line.117">         * @param logLevel the log level for the console logger.</a>
+<span class="sourceLineNo">118</span><a id="line.118">         */</a>
+<span class="sourceLineNo">119</span><a id="line.119">        public ServiceContainerConfiguration(int logLevel) {</a>
+<span class="sourceLineNo">120</span><a id="line.120">                this.logger = new ConsoleLogger(logLevel);</a>
+<span class="sourceLineNo">121</span><a id="line.121">                this.containerFlavour = ServiceConstants.AVALON_CONTAINER_YAAFI;</a>
+<span class="sourceLineNo">122</span><a id="line.122">                this.serviceContainerClazzName = ServiceConstants.CLAZZ_NAME;</a>
+<span class="sourceLineNo">123</span><a id="line.123">                this.componentRolesLocation = ServiceConstants.COMPONENT_ROLE_VALUE;</a>
+<span class="sourceLineNo">124</span><a id="line.124">                this.isComponentRolesEncrypted = "false";</a>
+<span class="sourceLineNo">125</span><a id="line.125">                this.componentConfigurationLocation = ServiceConstants.COMPONENT_CONFIG_VALUE;</a>
+<span class="sourceLineNo">126</span><a id="line.126">                this.isComponentConfigurationEncrypted = "false";</a>
+<span class="sourceLineNo">127</span><a id="line.127">                this.parametersLocation = ServiceConstants.COMPONENT_PARAMETERS_VALUE;</a>
+<span class="sourceLineNo">128</span><a id="line.128">                this.isParametersEncrypted = "false";</a>
+<span class="sourceLineNo">129</span><a id="line.129">                this.context = new DefaultContext();</a>
+<span class="sourceLineNo">130</span><a id="line.130">                this.applicationRootDir = new File("").getAbsolutePath();</a>
+<span class="sourceLineNo">131</span><a id="line.131">                this.tempRootDir = System.getProperty("java.io.tmpdir", ".");</a>
+<span class="sourceLineNo">132</span><a id="line.132">                this.componentClassLoader = this.getClass().getClassLoader();</a>
+<span class="sourceLineNo">133</span><a id="line.133">        }</a>
+<span class="sourceLineNo">134</span><a id="line.134"></a>
+<span class="sourceLineNo">135</span><a id="line.135">        /**</a>
+<span class="sourceLineNo">136</span><a id="line.136">         * Add a new entry to the context by creating a new one.</a>
+<span class="sourceLineNo">137</span><a id="line.137">         * </a>
+<span class="sourceLineNo">138</span><a id="line.138">         * @param name  the name of the new entry</a>
+<span class="sourceLineNo">139</span><a id="line.139">         * @param value the value of the new entry</a>
+<span class="sourceLineNo">140</span><a id="line.140">         */</a>
+<span class="sourceLineNo">141</span><a id="line.141">        public void addToContext(String name, Object value) {</a>
+<span class="sourceLineNo">142</span><a id="line.142">                Validate.notEmpty(name, "name");</a>
+<span class="sourceLineNo">143</span><a id="line.143">                Validate.notNull(value, "value");</a>
+<span class="sourceLineNo">144</span><a id="line.144">                this.getContext().put(name, value);</a>
+<span class="sourceLineNo">145</span><a id="line.145">        }</a>
+<span class="sourceLineNo">146</span><a id="line.146"></a>
+<span class="sourceLineNo">147</span><a id="line.147">        /**</a>
+<span class="sourceLineNo">148</span><a id="line.148">         * Add a hashtable to the context</a>
+<span class="sourceLineNo">149</span><a id="line.149">         * </a>
+<span class="sourceLineNo">150</span><a id="line.150">         * @param hashtable the Hashtable to be added</a>
+<span class="sourceLineNo">151</span><a id="line.151">         */</a>
+<span class="sourceLineNo">152</span><a id="line.152">        public void addToContext(Hashtable&lt;?, ?&gt; hashtable) {</a>
+<span class="sourceLineNo">153</span><a id="line.153">                Validate.notNull(hashtable, "hashtable");</a>
+<span class="sourceLineNo">154</span><a id="line.154"></a>
+<span class="sourceLineNo">155</span><a id="line.155">                String name = null;</a>
+<span class="sourceLineNo">156</span><a id="line.156">                Object value = null;</a>
+<span class="sourceLineNo">157</span><a id="line.157">                Enumeration&lt;?&gt; keys = hashtable.keys();</a>
+<span class="sourceLineNo">158</span><a id="line.158"></a>
+<span class="sourceLineNo">159</span><a id="line.159">                while (keys.hasMoreElements()) {</a>
+<span class="sourceLineNo">160</span><a id="line.160">                        name = (String) keys.nextElement();</a>
+<span class="sourceLineNo">161</span><a id="line.161">                        value = hashtable.get(name);</a>
+<span class="sourceLineNo">162</span><a id="line.162">                        this.addToContext(name, value);</a>
+<span class="sourceLineNo">163</span><a id="line.163">                }</a>
+<span class="sourceLineNo">164</span><a id="line.164">        }</a>
+<span class="sourceLineNo">165</span><a id="line.165"></a>
+<span class="sourceLineNo">166</span><a id="line.166">        /**</a>
+<span class="sourceLineNo">167</span><a id="line.167">         * Create the final Avalon context passed to YAAFI containing</a>
+<span class="sourceLineNo">168</span><a id="line.168">         * &lt;ul&gt;</a>
+<span class="sourceLineNo">169</span><a id="line.169">         * &lt;li&gt;user-supplied context&lt;/li&gt;</a>
+<span class="sourceLineNo">170</span><a id="line.170">         * &lt;li&gt;urn:avalon:home&lt;/li&gt;</a>
+<span class="sourceLineNo">171</span><a id="line.171">         * &lt;li&gt;urn:avalon:temp&lt;/li&gt;</a>
+<span class="sourceLineNo">172</span><a id="line.172">         * &lt;li&gt;urn:avalon:name&lt;/li&gt;</a>
+<span class="sourceLineNo">173</span><a id="line.173">         * &lt;li&gt;urn:avalon:partition&lt;/li&gt;</a>
+<span class="sourceLineNo">174</span><a id="line.174">         * &lt;li&gt;urn:avalon:classloader&lt;/li&gt;</a>
+<span class="sourceLineNo">175</span><a id="line.175">         * &lt;/ul&gt;</a>
+<span class="sourceLineNo">176</span><a id="line.176">         *</a>
+<span class="sourceLineNo">177</span><a id="line.177">         * @return the final Context</a>
+<span class="sourceLineNo">178</span><a id="line.178">         * @throws Exception if filename not defined</a>
+<span class="sourceLineNo">179</span><a id="line.179">         * @throws IOException if file not found</a>
+<span class="sourceLineNo">180</span><a id="line.180">         */</a>
+<span class="sourceLineNo">181</span><a id="line.181"></a>
+<span class="sourceLineNo">182</span><a id="line.182">        public Context createFinalContext() throws IOException, Exception {</a>
+<span class="sourceLineNo">183</span><a id="line.183">                // 1) add the application root dir</a>
+<span class="sourceLineNo">184</span><a id="line.184"></a>
+<span class="sourceLineNo">185</span><a id="line.185">                this.addToContext(AvalonMerlinConstants.URN_AVALON_HOME, this.getApplicationRootDir());</a>
+<span class="sourceLineNo">186</span><a id="line.186"></a>
+<span class="sourceLineNo">187</span><a id="line.187">                // 2) add the temp root dir</a>
+<span class="sourceLineNo">188</span><a id="line.188"></a>
+<span class="sourceLineNo">189</span><a id="line.189">                this.addToContext(AvalonMerlinConstants.URN_AVALON_TEMP, this.getTempRootDir());</a>
+<span class="sourceLineNo">190</span><a id="line.190"></a>
+<span class="sourceLineNo">191</span><a id="line.191">                // 3) add the Avalon name</a>
+<span class="sourceLineNo">192</span><a id="line.192"></a>
+<span class="sourceLineNo">193</span><a id="line.193">                this.addToContext(AvalonMerlinConstants.URN_AVALON_NAME, ServiceConstants.ROLE_NAME);</a>
+<span class="sourceLineNo">194</span><a id="line.194"></a>
+<span class="sourceLineNo">195</span><a id="line.195">                // 4) add the Avalon partition name</a>
+<span class="sourceLineNo">196</span><a id="line.196"></a>
+<span class="sourceLineNo">197</span><a id="line.197">                this.addToContext(AvalonMerlinConstants.URN_AVALON_PARTITION, "root");</a>
+<span class="sourceLineNo">198</span><a id="line.198"></a>
+<span class="sourceLineNo">199</span><a id="line.199">                // 5) add the class loader</a>
+<span class="sourceLineNo">200</span><a id="line.200"></a>
+<span class="sourceLineNo">201</span><a id="line.201">                this.addToContext(AvalonMerlinConstants.URN_AVALON_CLASSLOADER, this.getComponentClassLoader());</a>
+<span class="sourceLineNo">202</span><a id="line.202"></a>
+<span class="sourceLineNo">203</span><a id="line.203">                return this.getContext();</a>
+<span class="sourceLineNo">204</span><a id="line.204">        }</a>
+<span class="sourceLineNo">205</span><a id="line.205"></a>
+<span class="sourceLineNo">206</span><a id="line.206">        /**</a>
+<span class="sourceLineNo">207</span><a id="line.207">         * Create a final configuration.</a>
+<span class="sourceLineNo">208</span><a id="line.208">         *</a>
+<span class="sourceLineNo">209</span><a id="line.209">         * @return the configuration</a>
+<span class="sourceLineNo">210</span><a id="line.210">         */</a>
+<span class="sourceLineNo">211</span><a id="line.211">        public Configuration createFinalConfiguration() {</a>
+<span class="sourceLineNo">212</span><a id="line.212">                DefaultConfiguration result = null;</a>
+<span class="sourceLineNo">213</span><a id="line.213"></a>
+<span class="sourceLineNo">214</span><a id="line.214">                if (this.getContainerConfiguration() != null) {</a>
+<span class="sourceLineNo">215</span><a id="line.215">                        return this.getContainerConfiguration();</a>
+<span class="sourceLineNo">216</span><a id="line.216">                } else {</a>
+<span class="sourceLineNo">217</span><a id="line.217">                        // the root element is "fulcrum-yaafi"</a>
+<span class="sourceLineNo">218</span><a id="line.218"></a>
+<span class="sourceLineNo">219</span><a id="line.219">                        result = new DefaultConfiguration(ServiceConstants.ROLE_NAME);</a>
+<span class="sourceLineNo">220</span><a id="line.220"></a>
+<span class="sourceLineNo">221</span><a id="line.221">                        // add the following fragement</a>
+<span class="sourceLineNo">222</span><a id="line.222">                        //</a>
+<span class="sourceLineNo">223</span><a id="line.223">                        // &lt;containerFlavour&gt;merlin&lt;/containerFlavour&gt;</a>
+<span class="sourceLineNo">224</span><a id="line.224"></a>
+<span class="sourceLineNo">225</span><a id="line.225">                        DefaultConfiguration containerFlavourConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">226</span><a id="line.226">                                        ServiceConstants.CONTAINERFLAVOUR_CONFIG_KEY);</a>
+<span class="sourceLineNo">227</span><a id="line.227"></a>
+<span class="sourceLineNo">228</span><a id="line.228">                        containerFlavourConfig.setValue(this.getContainerFlavour());</a>
+<span class="sourceLineNo">229</span><a id="line.229"></a>
+<span class="sourceLineNo">230</span><a id="line.230">                        result.addChild(containerFlavourConfig);</a>
+<span class="sourceLineNo">231</span><a id="line.231"></a>
+<span class="sourceLineNo">232</span><a id="line.232">                        // add the following fragement</a>
+<span class="sourceLineNo">233</span><a id="line.233">                        //</a>
+<span class="sourceLineNo">234</span><a id="line.234">                        // &lt;containerClazzName&gt;...&lt;/containerClazzName&gt;</a>
+<span class="sourceLineNo">235</span><a id="line.235"></a>
+<span class="sourceLineNo">236</span><a id="line.236">                        DefaultConfiguration containerClazzNameConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">237</span><a id="line.237">                                        ServiceConstants.CONTAINERCLAZZNAME_CONFIG_KEY);</a>
+<span class="sourceLineNo">238</span><a id="line.238"></a>
+<span class="sourceLineNo">239</span><a id="line.239">                        containerClazzNameConfig.setValue(this.getServiceContainerClazzName());</a>
+<span class="sourceLineNo">240</span><a id="line.240"></a>
+<span class="sourceLineNo">241</span><a id="line.241">                        result.addChild(containerClazzNameConfig);</a>
+<span class="sourceLineNo">242</span><a id="line.242"></a>
+<span class="sourceLineNo">243</span><a id="line.243">                        // add the following fragement</a>
+<span class="sourceLineNo">244</span><a id="line.244">                        //</a>
+<span class="sourceLineNo">245</span><a id="line.245">                        // &lt;componentRoles&gt;</a>
+<span class="sourceLineNo">246</span><a id="line.246">                        // &lt;location&gt;../conf/componentRoles.xml&lt;/location&gt;</a>
+<span class="sourceLineNo">247</span><a id="line.247">                        // &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;</a>
+<span class="sourceLineNo">248</span><a id="line.248">                        // &lt;/componentRoles&gt;</a>
+<span class="sourceLineNo">249</span><a id="line.249"></a>
+<span class="sourceLineNo">250</span><a id="line.250">                        DefaultConfiguration componentRolesConfig = new DefaultConfiguration(ServiceConstants.COMPONENT_ROLE_KEYS);</a>
+<span class="sourceLineNo">251</span><a id="line.251"></a>
+<span class="sourceLineNo">252</span><a id="line.252">                        DefaultConfiguration componentRolesLocation = new DefaultConfiguration(</a>
+<span class="sourceLineNo">253</span><a id="line.253">                                        ServiceConstants.COMPONENT_LOCATION_KEY);</a>
+<span class="sourceLineNo">254</span><a id="line.254"></a>
+<span class="sourceLineNo">255</span><a id="line.255">                        componentRolesLocation.setValue(this.getComponentRolesLocation());</a>
+<span class="sourceLineNo">256</span><a id="line.256"></a>
+<span class="sourceLineNo">257</span><a id="line.257">                        DefaultConfiguration componentRolesIsEncrypted = new DefaultConfiguration(</a>
+<span class="sourceLineNo">258</span><a id="line.258">                                        ServiceConstants.COMPONENT_ISENCRYPTED_KEY);</a>
+<span class="sourceLineNo">259</span><a id="line.259"></a>
+<span class="sourceLineNo">260</span><a id="line.260">                        componentRolesIsEncrypted.setValue(this.isComponentRolesEncrypted());</a>
+<span class="sourceLineNo">261</span><a id="line.261"></a>
+<span class="sourceLineNo">262</span><a id="line.262">                        componentRolesConfig.addChild(componentRolesLocation);</a>
+<span class="sourceLineNo">263</span><a id="line.263">                        componentRolesConfig.addChild(componentRolesIsEncrypted);</a>
+<span class="sourceLineNo">264</span><a id="line.264"></a>
+<span class="sourceLineNo">265</span><a id="line.265">                        result.addChild(componentRolesConfig);</a>
+<span class="sourceLineNo">266</span><a id="line.266"></a>
+<span class="sourceLineNo">267</span><a id="line.267">                        // add the following fragement</a>
+<span class="sourceLineNo">268</span><a id="line.268">                        //</a>
+<span class="sourceLineNo">269</span><a id="line.269">                        // &lt;componentConfiguration&gt;</a>
+<span class="sourceLineNo">270</span><a id="line.270">                        // &lt;location&gt;../conf/componentRoles.xml&lt;/location&gt;</a>
+<span class="sourceLineNo">271</span><a id="line.271">                        // &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;</a>
+<span class="sourceLineNo">272</span><a id="line.272">                        // &lt;/componentConfiguration&gt;</a>
+<span class="sourceLineNo">273</span><a id="line.273"></a>
+<span class="sourceLineNo">274</span><a id="line.274">                        DefaultConfiguration componentConfigurationConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">275</span><a id="line.275">                                        ServiceConstants.COMPONENT_CONFIG_KEY);</a>
+<span class="sourceLineNo">276</span><a id="line.276"></a>
+<span class="sourceLineNo">277</span><a id="line.277">                        DefaultConfiguration componentConfigurationLocation = new DefaultConfiguration(</a>
+<span class="sourceLineNo">278</span><a id="line.278">                                        ServiceConstants.COMPONENT_LOCATION_KEY);</a>
+<span class="sourceLineNo">279</span><a id="line.279"></a>
+<span class="sourceLineNo">280</span><a id="line.280">                        componentConfigurationLocation.setValue(this.getComponentConfigurationLocation());</a>
+<span class="sourceLineNo">281</span><a id="line.281"></a>
+<span class="sourceLineNo">282</span><a id="line.282">                        DefaultConfiguration componentConfigurationIsEncrypted = new DefaultConfiguration(</a>
+<span class="sourceLineNo">283</span><a id="line.283">                                        ServiceConstants.COMPONENT_ISENCRYPTED_KEY);</a>
+<span class="sourceLineNo">284</span><a id="line.284"></a>
+<span class="sourceLineNo">285</span><a id="line.285">                        componentConfigurationIsEncrypted.setValue(this.isComponentConfigurationEncrypted());</a>
+<span class="sourceLineNo">286</span><a id="line.286"></a>
+<span class="sourceLineNo">287</span><a id="line.287">                        componentConfigurationConfig.addChild(componentConfigurationLocation);</a>
+<span class="sourceLineNo">288</span><a id="line.288">                        componentConfigurationConfig.addChild(componentConfigurationIsEncrypted);</a>
+<span class="sourceLineNo">289</span><a id="line.289"></a>
+<span class="sourceLineNo">290</span><a id="line.290">                        result.addChild(componentConfigurationConfig);</a>
+<span class="sourceLineNo">291</span><a id="line.291"></a>
+<span class="sourceLineNo">292</span><a id="line.292">                        // Add the following fragement</a>
+<span class="sourceLineNo">293</span><a id="line.293">                        //</a>
+<span class="sourceLineNo">294</span><a id="line.294">                        // &lt;parameters&gt;</a>
+<span class="sourceLineNo">295</span><a id="line.295">                        // &lt;location&gt;../conf/parameters.properties&lt;/location&gt;</a>
+<span class="sourceLineNo">296</span><a id="line.296">                        // &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;</a>
+<span class="sourceLineNo">297</span><a id="line.297">                        // &lt;/parameters&gt;</a>
+<span class="sourceLineNo">298</span><a id="line.298"></a>
+<span class="sourceLineNo">299</span><a id="line.299">                        DefaultConfiguration parameterConfigurationConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">300</span><a id="line.300">                                        ServiceConstants.COMPONENT_PARAMETERS_KEY);</a>
+<span class="sourceLineNo">301</span><a id="line.301"></a>
+<span class="sourceLineNo">302</span><a id="line.302">                        DefaultConfiguration parameterConfigurationLocation = new DefaultConfiguration(</a>
+<span class="sourceLineNo">303</span><a id="line.303">                                        ServiceConstants.COMPONENT_LOCATION_KEY);</a>
+<span class="sourceLineNo">304</span><a id="line.304"></a>
+<span class="sourceLineNo">305</span><a id="line.305">                        parameterConfigurationLocation.setValue(this.getParametersLocation());</a>
+<span class="sourceLineNo">306</span><a id="line.306"></a>
+<span class="sourceLineNo">307</span><a id="line.307">                        DefaultConfiguration parameterConfigurationIsEncrypted = new DefaultConfiguration(</a>
+<span class="sourceLineNo">308</span><a id="line.308">                                        ServiceConstants.COMPONENT_ISENCRYPTED_KEY);</a>
+<span class="sourceLineNo">309</span><a id="line.309"></a>
+<span class="sourceLineNo">310</span><a id="line.310">                        parameterConfigurationIsEncrypted.setValue(this.isParametersEncrypted());</a>
+<span class="sourceLineNo">311</span><a id="line.311"></a>
+<span class="sourceLineNo">312</span><a id="line.312">                        parameterConfigurationConfig.addChild(parameterConfigurationLocation);</a>
+<span class="sourceLineNo">313</span><a id="line.313">                        parameterConfigurationConfig.addChild(parameterConfigurationIsEncrypted);</a>
+<span class="sourceLineNo">314</span><a id="line.314"></a>
+<span class="sourceLineNo">315</span><a id="line.315">                        result.addChild(parameterConfigurationConfig);</a>
+<span class="sourceLineNo">316</span><a id="line.316"></a>
+<span class="sourceLineNo">317</span><a id="line.317">                        // Add the following fragement</a>
+<span class="sourceLineNo">318</span><a id="line.318">                        //</a>
+<span class="sourceLineNo">319</span><a id="line.319">                        // &lt;serviceManagers&gt;</a>
+<span class="sourceLineNo">320</span><a id="line.320">                        // &lt;serviceManagers&gt;springFrameworkService&lt;/serviceManager&gt;</a>
+<span class="sourceLineNo">321</span><a id="line.321">                        // &lt;/serviceManagers&gt;</a>
+<span class="sourceLineNo">322</span><a id="line.322"></a>
+<span class="sourceLineNo">323</span><a id="line.323">                        if (this.hasServiceManagerList()) {</a>
+<span class="sourceLineNo">324</span><a id="line.324">                                DefaultConfiguration serviceManagerListConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">325</span><a id="line.325">                                                ServiceConstants.SERVICEMANAGER_LIST_KEY);</a>
+<span class="sourceLineNo">326</span><a id="line.326"></a>
+<span class="sourceLineNo">327</span><a id="line.327">                                for (int i = 0; i &lt; this.serviceManagerList.length; i++) {</a>
+<span class="sourceLineNo">328</span><a id="line.328">                                        DefaultConfiguration serviceManagerConfig = new DefaultConfiguration(</a>
+<span class="sourceLineNo">329</span><a id="line.329">                                                        ServiceConstants.SERVICEMANAGER_KEY);</a>
+<span class="sourceLineNo">330</span><a id="line.330"></a>
+<span class="sourceLineNo">331</span><a id="line.331">                                        serviceManagerConfig.setValue(this.serviceManagerList[i]);</a>
+<span class="sourceLineNo">332</span><a id="line.332"></a>
+<span class="sourceLineNo">333</span><a id="line.333">                                        serviceManagerListConfig.addChild(serviceManagerConfig);</a>
+<span class="sourceLineNo">334</span><a id="line.334">                                }</a>
+<span class="sourceLineNo">335</span><a id="line.335"></a>
+<span class="sourceLineNo">336</span><a id="line.336">                                result.addChild(serviceManagerListConfig);</a>
+<span class="sourceLineNo">337</span><a id="line.337">                        }</a>
+<span class="sourceLineNo">338</span><a id="line.338"></a>
+<span class="sourceLineNo">339</span><a id="line.339">                        return result;</a>
+<span class="sourceLineNo">340</span><a id="line.340">                }</a>
+<span class="sourceLineNo">341</span><a id="line.341">        }</a>
+<span class="sourceLineNo">342</span><a id="line.342"></a>
+<span class="sourceLineNo">343</span><a id="line.343">        /////////////////////////////////////////////////////////////////////////</a>
+<span class="sourceLineNo">344</span><a id="line.344">        // Generated Getters/Setters</a>
+<span class="sourceLineNo">345</span><a id="line.345">        /////////////////////////////////////////////////////////////////////////</a>
+<span class="sourceLineNo">346</span><a id="line.346"></a>
+<span class="sourceLineNo">347</span><a id="line.347">        /**</a>
+<span class="sourceLineNo">348</span><a id="line.348">         * @return Returns the serviceContainerClazzName.</a>
+<span class="sourceLineNo">349</span><a id="line.349">         */</a>
+<span class="sourceLineNo">350</span><a id="line.350">        private String getServiceContainerClazzName() {</a>
+<span class="sourceLineNo">351</span><a id="line.351">                return this.serviceContainerClazzName;</a>
+<span class="sourceLineNo">352</span><a id="line.352">        }</a>
+<span class="sourceLineNo">353</span><a id="line.353"></a>
+<span class="sourceLineNo">354</span><a id="line.354">        /**</a>
+<span class="sourceLineNo">355</span><a id="line.355">         * @return Returns the componentConfigurationLocation.</a>
+<span class="sourceLineNo">356</span><a id="line.356">         */</a>
+<span class="sourceLineNo">357</span><a id="line.357">        private String getComponentConfigurationLocation() {</a>
+<span class="sourceLineNo">358</span><a id="line.358">                return componentConfigurationLocation;</a>
+<span class="sourceLineNo">359</span><a id="line.359">        }</a>
+<span class="sourceLineNo">360</span><a id="line.360"></a>
+<span class="sourceLineNo">361</span><a id="line.361">        /**</a>
+<span class="sourceLineNo">362</span><a id="line.362">         * @param componentConfigurationLocation The componentConfigurationLocation to</a>
+<span class="sourceLineNo">363</span><a id="line.363">         *                                       set.</a>
+<span class="sourceLineNo">364</span><a id="line.364">         */</a>
+<span class="sourceLineNo">365</span><a id="line.365">        public void setComponentConfigurationLocation(String componentConfigurationLocation) {</a>
+<span class="sourceLineNo">366</span><a id="line.366">                Validate.notNull(componentConfigurationLocation, "componentConfigurationLocation");</a>
+<span class="sourceLineNo">367</span><a id="line.367">                this.componentConfigurationLocation = componentConfigurationLocation;</a>
+<span class="sourceLineNo">368</span><a id="line.368">        }</a>
+<span class="sourceLineNo">369</span><a id="line.369"></a>
+<span class="sourceLineNo">370</span><a id="line.370">        /**</a>
+<span class="sourceLineNo">371</span><a id="line.371">         * @return Returns the componentRolesLocation.</a>
+<span class="sourceLineNo">372</span><a id="line.372">         */</a>
+<span class="sourceLineNo">373</span><a id="line.373">        private String getComponentRolesLocation() {</a>
+<span class="sourceLineNo">374</span><a id="line.374">                return componentRolesLocation;</a>
+<span class="sourceLineNo">375</span><a id="line.375">        }</a>
+<span class="sourceLineNo">376</span><a id="line.376"></a>
+<span class="sourceLineNo">377</span><a id="line.377">        /**</a>
+<span class="sourceLineNo">378</span><a id="line.378">         * @param componentRolesLocation The componentRolesLocation to set.</a>
+<span class="sourceLineNo">379</span><a id="line.379">         */</a>
+<span class="sourceLineNo">380</span><a id="line.380">        public void setComponentRolesLocation(String componentRolesLocation) {</a>
+<span class="sourceLineNo">381</span><a id="line.381">                this.componentRolesLocation = componentRolesLocation;</a>
+<span class="sourceLineNo">382</span><a id="line.382">        }</a>
+<span class="sourceLineNo">383</span><a id="line.383"></a>
+<span class="sourceLineNo">384</span><a id="line.384">        /**</a>
+<span class="sourceLineNo">385</span><a id="line.385">         * @return Returns the context.</a>
+<span class="sourceLineNo">386</span><a id="line.386">         */</a>
+<span class="sourceLineNo">387</span><a id="line.387">        private DefaultContext getContext() {</a>
+<span class="sourceLineNo">388</span><a id="line.388">                return context;</a>
+<span class="sourceLineNo">389</span><a id="line.389">        }</a>
+<span class="sourceLineNo">390</span><a id="line.390"></a>
+<span class="sourceLineNo">391</span><a id="line.391">        /**</a>
+<span class="sourceLineNo">392</span><a id="line.392">         * @param context The context to set.</a>
+<span class="sourceLineNo">393</span><a id="line.393">         */</a>
+<span class="sourceLineNo">394</span><a id="line.394">        public void setContext(Context context) {</a>
+<span class="sourceLineNo">395</span><a id="line.395">                if (context instanceof DefaultContext) {</a>
+<span class="sourceLineNo">396</span><a id="line.396">                        this.context = (DefaultContext) context;</a>
+<span class="sourceLineNo">397</span><a id="line.397">                } else {</a>
+<span class="sourceLineNo">398</span><a id="line.398">                        this.context = new DefaultContext(context);</a>
+<span class="sourceLineNo">399</span><a id="line.399">                }</a>
+<span class="sourceLineNo">400</span><a id="line.400">        }</a>
+<span class="sourceLineNo">401</span><a id="line.401"></a>
+<span class="sourceLineNo">402</span><a id="line.402">        /**</a>
+<span class="sourceLineNo">403</span><a id="line.403">         * @return Returns the isComponentConfigurationEncrypted.</a>
+<span class="sourceLineNo">404</span><a id="line.404">         */</a>
+<span class="sourceLineNo">405</span><a id="line.405">        private String isComponentConfigurationEncrypted() {</a>
+<span class="sourceLineNo">406</span><a id="line.406">                return isComponentConfigurationEncrypted;</a>
+<span class="sourceLineNo">407</span><a id="line.407">        }</a>
+<span class="sourceLineNo">408</span><a id="line.408"></a>
+<span class="sourceLineNo">409</span><a id="line.409">        /**</a>
+<span class="sourceLineNo">410</span><a id="line.410">         * @param isComponentConfigurationEncrypted The</a>
+<span class="sourceLineNo">411</span><a id="line.411">         *                                          isComponentConfigurationEncrypted to</a>
+<span class="sourceLineNo">412</span><a id="line.412">         *                                          set.</a>
+<span class="sourceLineNo">413</span><a id="line.413">         */</a>
+<span class="sourceLineNo">414</span><a id="line.414">        public void setComponentConfigurationEncrypted(String isComponentConfigurationEncrypted) {</a>
+<span class="sourceLineNo">415</span><a id="line.415">                this.isComponentConfigurationEncrypted = isComponentConfigurationEncrypted;</a>
+<span class="sourceLineNo">416</span><a id="line.416">        }</a>
+<span class="sourceLineNo">417</span><a id="line.417"></a>
+<span class="sourceLineNo">418</span><a id="line.418">        /**</a>
+<span class="sourceLineNo">419</span><a id="line.419">         * @return Returns the isComponentRolesEncrypted.</a>
+<span class="sourceLineNo">420</span><a id="line.420">         */</a>
+<span class="sourceLineNo">421</span><a id="line.421">        private String isComponentRolesEncrypted() {</a>
+<span class="sourceLineNo">422</span><a id="line.422">                return isComponentRolesEncrypted;</a>
+<span class="sourceLineNo">423</span><a id="line.423">        }</a>
+<span class="sourceLineNo">424</span><a id="line.424"></a>
+<span class="sourceLineNo">425</span><a id="line.425">        /**</a>
+<span class="sourceLineNo">426</span><a id="line.426">         * @param isComponentRolesEncrypted The isComponentRolesEncrypted to set.</a>
+<span class="sourceLineNo">427</span><a id="line.427">         */</a>
+<span class="sourceLineNo">428</span><a id="line.428">        public void setComponentRolesEncrypted(String isComponentRolesEncrypted) {</a>
+<span class="sourceLineNo">429</span><a id="line.429">                this.isComponentRolesEncrypted = isComponentRolesEncrypted;</a>
+<span class="sourceLineNo">430</span><a id="line.430">        }</a>
+<span class="sourceLineNo">431</span><a id="line.431"></a>
+<span class="sourceLineNo">432</span><a id="line.432">        /**</a>
+<span class="sourceLineNo">433</span><a id="line.433">         * @return Returns the isParametersEncrypted.</a>
+<span class="sourceLineNo">434</span><a id="line.434">         */</a>
+<span class="sourceLineNo">435</span><a id="line.435">        private String isParametersEncrypted() {</a>
+<span class="sourceLineNo">436</span><a id="line.436">                return isParametersEncrypted;</a>
+<span class="sourceLineNo">437</span><a id="line.437">        }</a>
+<span class="sourceLineNo">438</span><a id="line.438"></a>
+<span class="sourceLineNo">439</span><a id="line.439">        /**</a>
+<span class="sourceLineNo">440</span><a id="line.440">         * @param isParametersEncrypted The isParametersEncrypted to set.</a>
+<span class="sourceLineNo">441</span><a id="line.441">         */</a>
+<span class="sourceLineNo">442</span><a id="line.442">        public void setParametersEncrypted(String isParametersEncrypted) {</a>
+<span class="sourceLineNo">443</span><a id="line.443">                Validate.notEmpty(isParametersEncrypted, "isParametersEncrypted");</a>
+<span class="sourceLineNo">444</span><a id="line.444">                this.isParametersEncrypted = isParametersEncrypted;</a>
+<span class="sourceLineNo">445</span><a id="line.445">        }</a>
+<span class="sourceLineNo">446</span><a id="line.446"></a>
+<span class="sourceLineNo">447</span><a id="line.447">        /**</a>
+<span class="sourceLineNo">448</span><a id="line.448">         * @return Returns the logger.</a>
+<span class="sourceLineNo">449</span><a id="line.449">         */</a>
+<span class="sourceLineNo">450</span><a id="line.450">        public Logger getLogger() {</a>
+<span class="sourceLineNo">451</span><a id="line.451">                return logger;</a>
+<span class="sourceLineNo">452</span><a id="line.452">        }</a>
+<span class="sourceLineNo">453</span><a id="line.453"></a>
+<span class="sourceLineNo">454</span><a id="line.454">        /**</a>
+<span class="sourceLineNo">455</span><a id="line.455">         * @param logger The logger to set.</a>
+<span class="sourceLineNo">456</span><a id="line.456">         */</a>
+<span class="sourceLineNo">457</span><a id="line.457">        public void setLogger(Logger logger) {</a>
+<span class="sourceLineNo">458</span><a id="line.458">                this.logger = logger;</a>
+<span class="sourceLineNo">459</span><a id="line.459">        }</a>
+<span class="sourceLineNo">460</span><a id="line.460"></a>
+<span class="sourceLineNo">461</span><a id="line.461">        /**</a>
+<span class="sourceLineNo">462</span><a id="line.462">         * @return Returns the parametersLocation.</a>
+<span class="sourceLineNo">463</span><a id="line.463">         */</a>
+<span class="sourceLineNo">464</span><a id="line.464">        private String getParametersLocation() {</a>
+<span class="sourceLineNo">465</span><a id="line.465">                return parametersLocation;</a>
+<span class="sourceLineNo">466</span><a id="line.466">        }</a>
+<span class="sourceLineNo">467</span><a id="line.467"></a>
+<span class="sourceLineNo">468</span><a id="line.468">        /**</a>
+<span class="sourceLineNo">469</span><a id="line.469">         * @param parametersLocation The parametersLocation to set.</a>
+<span class="sourceLineNo">470</span><a id="line.470">         */</a>
+<span class="sourceLineNo">471</span><a id="line.471">        public void setParametersLocation(String parametersLocation) {</a>
+<span class="sourceLineNo">472</span><a id="line.472">                this.parametersLocation = parametersLocation;</a>
+<span class="sourceLineNo">473</span><a id="line.473">        }</a>
+<span class="sourceLineNo">474</span><a id="line.474"></a>
+<span class="sourceLineNo">475</span><a id="line.475">        /**</a>
+<span class="sourceLineNo">476</span><a id="line.476">         * @return Returns the applicationRootDir.</a>
+<span class="sourceLineNo">477</span><a id="line.477">         */</a>
+<span class="sourceLineNo">478</span><a id="line.478">        private File getApplicationRootDir() {</a>
+<span class="sourceLineNo">479</span><a id="line.479">                return new File(applicationRootDir);</a>
+<span class="sourceLineNo">480</span><a id="line.480">        }</a>
+<span class="sourceLineNo">481</span><a id="line.481"></a>
+<span class="sourceLineNo">482</span><a id="line.482">        /**</a>
+<span class="sourceLineNo">483</span><a id="line.483">         * @param applicationRootDir The applicationRootDir to set.</a>
+<span class="sourceLineNo">484</span><a id="line.484">         */</a>
+<span class="sourceLineNo">485</span><a id="line.485">        public void setApplicationRootDir(String applicationRootDir) {</a>
+<span class="sourceLineNo">486</span><a id="line.486">                Validate.notNull(applicationRootDir, "applicationRootDir");</a>
+<span class="sourceLineNo">487</span><a id="line.487"></a>
+<span class="sourceLineNo">488</span><a id="line.488">                if (applicationRootDir.equals(".")) {</a>
+<span class="sourceLineNo">489</span><a id="line.489">                        this.applicationRootDir = new File("").getAbsolutePath();</a>
+<span class="sourceLineNo">490</span><a id="line.490">                } else {</a>
+<span class="sourceLineNo">491</span><a id="line.491">                        this.applicationRootDir = new File(applicationRootDir).getAbsolutePath();</a>
+<span class="sourceLineNo">492</span><a id="line.492">                }</a>
+<span class="sourceLineNo">493</span><a id="line.493">        }</a>
+<span class="sourceLineNo">494</span><a id="line.494"></a>
+<span class="sourceLineNo">495</span><a id="line.495">        /**</a>
+<span class="sourceLineNo">496</span><a id="line.496">         * @return Returns the tempRootDir.</a>
+<span class="sourceLineNo">497</span><a id="line.497">         * @throws Exception </a>
+<span class="sourceLineNo">498</span><a id="line.498">         * @throws IOException </a>
+<span class="sourceLineNo">499</span><a id="line.499">         */</a>
+<span class="sourceLineNo">500</span><a id="line.500">        private File getTempRootDir() throws IOException, Exception {</a>
+<span class="sourceLineNo">501</span><a id="line.501">                return makeAbsoluteFile(this.getApplicationRootDir(), this.tempRootDir);</a>
+<span class="sourceLineNo">502</span><a id="line.502">        }</a>
+<span class="sourceLineNo">503</span><a id="line.503"></a>
+<span class="sourceLineNo">504</span><a id="line.504">        /**</a>
+<span class="sourceLineNo">505</span><a id="line.505">         * @param tempRootDir The tempRootDir to set.</a>
+<span class="sourceLineNo">506</span><a id="line.506">         */</a>
+<span class="sourceLineNo">507</span><a id="line.507">        public void setTempRootDir(String tempRootDir) {</a>
+<span class="sourceLineNo">508</span><a id="line.508">                Validate.notNull(tempRootDir, "tempRootDir");</a>
+<span class="sourceLineNo">509</span><a id="line.509">                this.tempRootDir = tempRootDir;</a>
+<span class="sourceLineNo">510</span><a id="line.510">        }</a>
+<span class="sourceLineNo">511</span><a id="line.511"></a>
+<span class="sourceLineNo">512</span><a id="line.512">        /**</a>
+<span class="sourceLineNo">513</span><a id="line.513">         * @return Returns the classLoader.</a>
+<span class="sourceLineNo">514</span><a id="line.514">         */</a>
+<span class="sourceLineNo">515</span><a id="line.515">        private ClassLoader getComponentClassLoader() {</a>
+<span class="sourceLineNo">516</span><a id="line.516">                return componentClassLoader;</a>
+<span class="sourceLineNo">517</span><a id="line.517">        }</a>
+<span class="sourceLineNo">518</span><a id="line.518"></a>
+<span class="sourceLineNo">519</span><a id="line.519">        /**</a>
+<span class="sourceLineNo">520</span><a id="line.520">         * @param componentClassLoader The classLoader to set.</a>
+<span class="sourceLineNo">521</span><a id="line.521">         */</a>
+<span class="sourceLineNo">522</span><a id="line.522">        public void setComponentClassLoader(ClassLoader componentClassLoader) {</a>
+<span class="sourceLineNo">523</span><a id="line.523">                Validate.notNull(componentClassLoader, "componentClassLoader");</a>
+<span class="sourceLineNo">524</span><a id="line.524">                this.componentClassLoader = componentClassLoader;</a>
+<span class="sourceLineNo">525</span><a id="line.525">        }</a>
+<span class="sourceLineNo">526</span><a id="line.526"></a>
+<span class="sourceLineNo">527</span><a id="line.527">        /**</a>
+<span class="sourceLineNo">528</span><a id="line.528">         * @return Returns the containerFlavour.</a>
+<span class="sourceLineNo">529</span><a id="line.529">         */</a>
+<span class="sourceLineNo">530</span><a id="line.530">        private String getContainerFlavour() {</a>
+<span class="sourceLineNo">531</span><a id="line.531">                return containerFlavour;</a>
+<span class="sourceLineNo">532</span><a id="line.532">        }</a>
+<span class="sourceLineNo">533</span><a id="line.533"></a>
+<span class="sourceLineNo">534</span><a id="line.534">        /**</a>
+<span class="sourceLineNo">535</span><a id="line.535">         * @param containerFlavour The containerFlavour to set.</a>
+<span class="sourceLineNo">536</span><a id="line.536">         */</a>
+<span class="sourceLineNo">537</span><a id="line.537">        public void setContainerFlavour(String containerFlavour) {</a>
+<span class="sourceLineNo">538</span><a id="line.538">                this.containerFlavour = containerFlavour;</a>
+<span class="sourceLineNo">539</span><a id="line.539">        }</a>
+<span class="sourceLineNo">540</span><a id="line.540"></a>
+<span class="sourceLineNo">541</span><a id="line.541">        /**</a>
+<span class="sourceLineNo">542</span><a id="line.542">         * @return Returns the containerConfiguration.</a>
+<span class="sourceLineNo">543</span><a id="line.543">         */</a>
+<span class="sourceLineNo">544</span><a id="line.544">        private Configuration getContainerConfiguration() {</a>
+<span class="sourceLineNo">545</span><a id="line.545">                return containerConfiguration;</a>
+<span class="sourceLineNo">546</span><a id="line.546">        }</a>
+<span class="sourceLineNo">547</span><a id="line.547"></a>
+<span class="sourceLineNo">548</span><a id="line.548">        /**</a>
+<span class="sourceLineNo">549</span><a id="line.549">         * @param containerConfiguration The containerConfiguration to set.</a>
+<span class="sourceLineNo">550</span><a id="line.550">         */</a>
+<span class="sourceLineNo">551</span><a id="line.551">        public void setContainerConfiguration(Configuration containerConfiguration) {</a>
+<span class="sourceLineNo">552</span><a id="line.552">                this.containerConfiguration = containerConfiguration;</a>
+<span class="sourceLineNo">553</span><a id="line.553">        }</a>
+<span class="sourceLineNo">554</span><a id="line.554"></a>
+<span class="sourceLineNo">555</span><a id="line.555">        /**</a>
+<span class="sourceLineNo">556</span><a id="line.556">         * Get the parent service manager to find service managed by the parent</a>
+<span class="sourceLineNo">557</span><a id="line.557">         * container.</a>
+<span class="sourceLineNo">558</span><a id="line.558">         *</a>
+<span class="sourceLineNo">559</span><a id="line.559">         * @return the parent container</a>
+<span class="sourceLineNo">560</span><a id="line.560">         */</a>
+<span class="sourceLineNo">561</span><a id="line.561"></a>
+<span class="sourceLineNo">562</span><a id="line.562">        public ServiceManager getParentServiceManager() {</a>
+<span class="sourceLineNo">563</span><a id="line.563">                return parentServiceManager;</a>
+<span class="sourceLineNo">564</span><a id="line.564">        }</a>
+<span class="sourceLineNo">565</span><a id="line.565"></a>
+<span class="sourceLineNo">566</span><a id="line.566">        /**</a>
+<span class="sourceLineNo">567</span><a id="line.567">         * Set the parent service manager to find service managed by the parent</a>
+<span class="sourceLineNo">568</span><a id="line.568">         * container.</a>
+<span class="sourceLineNo">569</span><a id="line.569">         *</a>
+<span class="sourceLineNo">570</span><a id="line.570">         * @param parentServiceManager the parent container</a>
+<span class="sourceLineNo">571</span><a id="line.571">         */</a>
+<span class="sourceLineNo">572</span><a id="line.572">        public void setParentServiceManager(ServiceManager parentServiceManager) {</a>
+<span class="sourceLineNo">573</span><a id="line.573">                this.parentServiceManager = parentServiceManager;</a>
+<span class="sourceLineNo">574</span><a id="line.574">        }</a>
+<span class="sourceLineNo">575</span><a id="line.575"></a>
+<span class="sourceLineNo">576</span><a id="line.576">        /**</a>
+<span class="sourceLineNo">577</span><a id="line.577">         * Get a list of service manager managing their own set of services.</a>
+<span class="sourceLineNo">578</span><a id="line.578">         *</a>
+<span class="sourceLineNo">579</span><a id="line.579">         * @return a list of service implementing the ServiceManager interface</a>
+<span class="sourceLineNo">580</span><a id="line.580">         */</a>
+<span class="sourceLineNo">581</span><a id="line.581">        public String[] getServiceManagerList() {</a>
+<span class="sourceLineNo">582</span><a id="line.582">                return serviceManagerList;</a>
+<span class="sourceLineNo">583</span><a id="line.583">        }</a>
+<span class="sourceLineNo">584</span><a id="line.584"></a>
+<span class="sourceLineNo">585</span><a id="line.585">        /**</a>
+<span class="sourceLineNo">586</span><a id="line.586">         * Set a list of service manager managing their own set of services.</a>
+<span class="sourceLineNo">587</span><a id="line.587">         *</a>
+<span class="sourceLineNo">588</span><a id="line.588">         * @param serviceManagerList a list of service implementing the ServiceManager</a>
+<span class="sourceLineNo">589</span><a id="line.589">         *                           interface</a>
+<span class="sourceLineNo">590</span><a id="line.590">         */</a>
+<span class="sourceLineNo">591</span><a id="line.591">        public void setServiceManagerList(String[] serviceManagerList) {</a>
+<span class="sourceLineNo">592</span><a id="line.592">                this.serviceManagerList = serviceManagerList;</a>
+<span class="sourceLineNo">593</span><a id="line.593">        }</a>
+<span class="sourceLineNo">594</span><a id="line.594"></a>
+<span class="sourceLineNo">595</span><a id="line.595">        /**</a>
+<span class="sourceLineNo">596</span><a id="line.596">         * @return true if there is a service manager defined</a>
+<span class="sourceLineNo">597</span><a id="line.597">         */</a>
+<span class="sourceLineNo">598</span><a id="line.598">        public boolean hasServiceManagerList() {</a>
+<span class="sourceLineNo">599</span><a id="line.599">                if (this.serviceManagerList != null &amp;&amp; this.serviceManagerList.length &gt; 0)</a>
+<span class="sourceLineNo">600</span><a id="line.600">                        return true;</a>
+<span class="sourceLineNo">601</span><a id="line.601">                return false;</a>
+<span class="sourceLineNo">602</span><a id="line.602">        }</a>
+<span class="sourceLineNo">603</span><a id="line.603"></a>
+<span class="sourceLineNo">604</span><a id="line.604">        /**</a>
+<span class="sourceLineNo">605</span><a id="line.605">         * Loads a containerConfiguration file and set is as the Avalon configuration to</a>
+<span class="sourceLineNo">606</span><a id="line.606">         * be used for Configurable.configure(). Take care that the implementation uses</a>
+<span class="sourceLineNo">607</span><a id="line.607">         * an InputStreamLocator to find the containerConfiguration which uses the</a>
+<span class="sourceLineNo">608</span><a id="line.608">         * previously set application root directory.</a>
+<span class="sourceLineNo">609</span><a id="line.609">         *</a>
+<span class="sourceLineNo">610</span><a id="line.610">         * @param location the location of the containerConfiguration</a>
+<span class="sourceLineNo">611</span><a id="line.611">         * @throws IOException loading the configuration failed</a>
+<span class="sourceLineNo">612</span><a id="line.612">         */</a>
+<span class="sourceLineNo">613</span><a id="line.613">        public void loadContainerConfiguration(String location) throws IOException {</a>
+<span class="sourceLineNo">614</span><a id="line.614">                this.loadContainerConfiguration(location, "false");</a>
+<span class="sourceLineNo">615</span><a id="line.615">        }</a>
+<span class="sourceLineNo">616</span><a id="line.616"></a>
+<span class="sourceLineNo">617</span><a id="line.617">        /**</a>
+<span class="sourceLineNo">618</span><a id="line.618">         * Loads a containerConfiguration file and set is as the Avalon configuration to</a>
+<span class="sourceLineNo">619</span><a id="line.619">         * be used for Configurable.configure(). Take care that the implementation uses</a>
+<span class="sourceLineNo">620</span><a id="line.620">         * an InputStreamLocator to find the containerConfiguration which uses the</a>
+<span class="sourceLineNo">621</span><a id="line.621">         * previously set application root directory.</a>
+<span class="sourceLineNo">622</span><a id="line.622">         *</a>
+<span class="sourceLineNo">623</span><a id="line.623">         * @param location    the location of the containerConfiguration</a>
+<span class="sourceLineNo">624</span><a id="line.624">         * @param isEncrypted is the file encrypted</a>
+<span class="sourceLineNo">625</span><a id="line.625">         * @throws IOException loading the configuration failed</a>
+<span class="sourceLineNo">626</span><a id="line.626">         */</a>
+<span class="sourceLineNo">627</span><a id="line.627">        public void loadContainerConfiguration(String location, String isEncrypted) throws IOException {</a>
+<span class="sourceLineNo">628</span><a id="line.628">                Configuration result = null;</a>
+<span class="sourceLineNo">629</span><a id="line.629"></a>
+<span class="sourceLineNo">630</span><a id="line.630">                InputStreamLocator locator = new InputStreamLocator(this.getApplicationRootDir(), this.getLogger());</a>
+<span class="sourceLineNo">631</span><a id="line.631"></a>
+<span class="sourceLineNo">632</span><a id="line.632">                DefaultConfigurationBuilder builder = new DefaultConfigurationBuilder();</a>
+<span class="sourceLineNo">633</span><a id="line.633">                InputStream is = locator.locate(location);</a>
+<span class="sourceLineNo">634</span><a id="line.634"></a>
+<span class="sourceLineNo">635</span><a id="line.635">                if (is != null) {</a>
+<span class="sourceLineNo">636</span><a id="line.636">                        try {</a>
+<span class="sourceLineNo">637</span><a id="line.637">                                is = CryptoStreamFactory.getDecryptingInputStream(is, isEncrypted);</a>
+<span class="sourceLineNo">638</span><a id="line.638">                                result = builder.build(is);</a>
+<span class="sourceLineNo">639</span><a id="line.639">                                this.setContainerConfiguration(result);</a>
+<span class="sourceLineNo">640</span><a id="line.640">                        } catch (Exception e) {</a>
+<span class="sourceLineNo">641</span><a id="line.641">                                String msg = "Unable to parse the following file : " + location;</a>
+<span class="sourceLineNo">642</span><a id="line.642">                                this.getLogger().error(msg, e);</a>
+<span class="sourceLineNo">643</span><a id="line.643">                                throw new IOException(msg);</a>
+<span class="sourceLineNo">644</span><a id="line.644">                        }</a>
+<span class="sourceLineNo">645</span><a id="line.645">                } else {</a>
+<span class="sourceLineNo">646</span><a id="line.646">                        String msg = "Unable to locate the containerConfiguration file : " + location;</a>
+<span class="sourceLineNo">647</span><a id="line.647">                        this.getLogger().error(msg);</a>
+<span class="sourceLineNo">648</span><a id="line.648">                        throw new IOException(msg);</a>
+<span class="sourceLineNo">649</span><a id="line.649">                }</a>
+<span class="sourceLineNo">650</span><a id="line.650">        }</a>
+<span class="sourceLineNo">651</span><a id="line.651"></a>
+<span class="sourceLineNo">652</span><a id="line.652">        /**</a>
+<span class="sourceLineNo">653</span><a id="line.653">         * Determines the absolute file.</a>
+<span class="sourceLineNo">654</span><a id="line.654">         * </a>
+<span class="sourceLineNo">655</span><a id="line.655">         * @param baseDir  the base directory</a>
+<span class="sourceLineNo">656</span><a id="line.656">         * @param fileName the filename</a>
+<span class="sourceLineNo">657</span><a id="line.657">         * @return the absolute path</a>
+<span class="sourceLineNo">658</span><a id="line.658">         */</a>
+<span class="sourceLineNo">659</span><a id="line.659">        private static File makeAbsoluteFile(File baseDir, String fileName) throws IOException, Exception {</a>
+<span class="sourceLineNo">660</span><a id="line.660">                if (baseDir.exists()) {</a>
+<span class="sourceLineNo">661</span><a id="line.661">                        if (!StringUtils.isEmpty(fileName)) {</a>
+<span class="sourceLineNo">662</span><a id="line.662">                                File result = new File(fileName);</a>
+<span class="sourceLineNo">663</span><a id="line.663">                                if (!result.isAbsolute()) {</a>
+<span class="sourceLineNo">664</span><a id="line.664">                                        result = new File(baseDir, fileName);</a>
+<span class="sourceLineNo">665</span><a id="line.665">                                }</a>
+<span class="sourceLineNo">666</span><a id="line.666">                                return result;</a>
+<span class="sourceLineNo">667</span><a id="line.667">                        } else {</a>
+<span class="sourceLineNo">668</span><a id="line.668">                                throw new Exception("No filename specified");</a>
+<span class="sourceLineNo">669</span><a id="line.669">                        }</a>
+<span class="sourceLineNo">670</span><a id="line.670">                } else {</a>
+<span class="sourceLineNo">671</span><a id="line.671">                        throw new IOException("The directory does not exist");</a>
+<span class="sourceLineNo">672</span><a id="line.672">                }</a>
+<span class="sourceLineNo">673</span><a id="line.673">        }</a>
+<span class="sourceLineNo">674</span><a id="line.674">}</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+</div>
+</main>
+</body>
+</html>

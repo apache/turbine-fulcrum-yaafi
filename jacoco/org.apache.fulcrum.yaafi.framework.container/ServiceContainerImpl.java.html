@@ -1,0 +1,1414 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServiceContainerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.container</a> &gt; <span class="el_source">ServiceContainerImpl.java</span></div><h1>ServiceContainerImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.container;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.DefaultConfiguration;
+import org.apache.avalon.framework.configuration.DefaultConfigurationBuilder;
+import org.apache.avalon.framework.container.ContainerUtil;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.DefaultContext;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.avalon.framework.parameters.ParameterException;
+import org.apache.avalon.framework.parameters.Parameters;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.fulcrum.yaafi.framework.component.AvalonServiceComponentImpl;
+import org.apache.fulcrum.yaafi.framework.component.ServiceComponent;
+import org.apache.fulcrum.yaafi.framework.configuration.ComponentConfigurationPropertiesResolver;
+import org.apache.fulcrum.yaafi.framework.configuration.ComponentConfigurationPropertiesResolverImpl;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonYaafiConstants;
+import org.apache.fulcrum.yaafi.framework.context.AvalonToYaafiContextMapper;
+import org.apache.fulcrum.yaafi.framework.context.YaafiToAvalonContextMapper;
+import org.apache.fulcrum.yaafi.framework.crypto.CryptoStreamFactory;
+import org.apache.fulcrum.yaafi.framework.role.RoleConfigurationParser;
+import org.apache.fulcrum.yaafi.framework.role.RoleConfigurationParserImpl;
+import org.apache.fulcrum.yaafi.framework.role.RoleEntry;
+import org.apache.fulcrum.yaafi.framework.util.ConfigurationUtil;
+import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;
+import org.apache.fulcrum.yaafi.framework.util.ToStringBuilder;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * Yet another avalon framework implementation (YAAFI).
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class ServiceContainerImpl implements ServiceContainer, ServiceConstants {
+	/** Default timeout before disposing the container */
+	private static final int DISPOSAL_DELAY_DEFAULT = 0;
+
+	/** Default timeout before reconfiguring the container or services */
+	private static final int RECONFIGURATION_DELAY_DEFAULT = 2000;
+
+	/** The role configuration file to be used */
+	private String componentRolesLocation;
+
+	/** is the component role file encrypted? */
+	private String isComponentRolesEncrypted;
+
+	/** which flavour of component role file we have to parse? */
+	private String componentRolesFlavour;
+
+	/** The service configuration file to be used */
+	private String componentConfigurationLocation;
+
+	/** is the component configuration file encrypted? */
+	private String isComponentConfigurationEncrypted;
+
+	/** The parameters file to be used */
+	private String parametersLocation;
+
+	/** is the parameters file encrypted? */
+	private String isParametersEncrypted;
+
+	/** The application directory aka the current working directory */
+	private File applicationRootDir;
+
+	/** The directory for storing temporary files */
+	private File tempRootDir;
+
+	/** The logger to be used passed by the caller */
+	private Logger logger;
+
+	/** The service manager passed to the container */
+	private ServiceManager parentServiceManager;
+
+	/** The list of services instantiated */
+	private List&lt;ServiceComponent&gt; serviceList;
+
+	/** The map of services used for the lookup */
+	private HashMap&lt;String, ServiceComponent&gt; serviceMap;
+
+	/** The Avalon role configuration loaded by this class */
+	private Configuration roleConfiguration;
+
+	/** The Avalon service configuration loaded by this class */
+	private Configuration serviceConfiguration;
+
+	/** The temporary Avalon context passed to the implementation */
+	private Context callerContext;
+
+	/** The default Avalon context passed to the services */
+	private Context context;
+
+	/** The default Avalon parameters */
+	private Parameters parameters;
+
+	/** Is this instance already disposed? */
+	private volatile boolean isAlreadyDisposed;
+
+	/** Is this instance currently disposed? */
+	private volatile boolean isCurrentlyDisposing;
+
+	/** The type of container where YAAFI is embedded */
+	private String containerFlavour;
+
+	/**
+	 * The ms to wait before triggering a reconfiguration of the container or
+	 * service
+	 */
+	private int reconfigurationDelay;
+
+	/** The ms to wait before triggering a disposal of the container */
+	private int disposalDelay;
+
+	/** global flag for enabling/disabling dynamic proxies */
+	private boolean hasDynamicProxies;
+
+	/** The list of interceptor services applied to all services */
+	private ArrayList&lt;String&gt; defaultInterceptorServiceList;
+
+	/** The list of ServiceManagers as fallback service lookup */
+	private ArrayList&lt;String&gt; fallbackServiceManagerList;
+
+	/**
+	 * the configuration for running the ComponentConfigurationPropertiesResolver
+	 */
+	private Configuration componentConfigurationPropertiesResolverConfig;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Avalon Service Lifecycle
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Constructor using sensible defaults.
+	 */
+	public ServiceContainerImpl() {
+<span class="fc" id="L167">		super();</span>
+
+<span class="fc" id="L169">		this.containerFlavour = COMPONENT_CONTAINERFLAVOUR_VALUE;</span>
+<span class="fc" id="L170">		this.componentRolesFlavour = COMPONENT_ROLECONFIGFLAVOUR_VALUE;</span>
+
+<span class="fc" id="L172">		this.componentRolesLocation = COMPONENT_ROLE_VALUE;</span>
+<span class="fc" id="L173">		this.componentConfigurationLocation = COMPONENT_CONFIG_VALUE;</span>
+<span class="fc" id="L174">		this.parametersLocation = COMPONENT_PARAMETERS_VALUE;</span>
+
+<span class="fc" id="L176">		this.isComponentConfigurationEncrypted = &quot;false&quot;;</span>
+<span class="fc" id="L177">		this.isComponentRolesEncrypted = &quot;false&quot;;</span>
+<span class="fc" id="L178">		this.isParametersEncrypted = &quot;false&quot;;</span>
+
+<span class="fc" id="L180">		this.isAlreadyDisposed = false;</span>
+<span class="fc" id="L181">		this.isCurrentlyDisposing = false;</span>
+
+<span class="fc" id="L183">		this.serviceList = new ArrayList&lt;ServiceComponent&gt;();</span>
+<span class="fc" id="L184">		this.serviceMap = new HashMap&lt;String, ServiceComponent&gt;();</span>
+
+<span class="fc" id="L186">		this.applicationRootDir = new File(new File(&quot;&quot;).getAbsolutePath());</span>
+<span class="fc" id="L187">		this.tempRootDir = new File(System.getProperty(&quot;java.io.tmpdir&quot;, &quot;.&quot;));</span>
+
+<span class="fc" id="L189">		this.fallbackServiceManagerList = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L190">		this.defaultInterceptorServiceList = new ArrayList&lt;String&gt;();</span>
+
+<span class="fc" id="L192">		this.disposalDelay = DISPOSAL_DELAY_DEFAULT;</span>
+<span class="fc" id="L193">		this.reconfigurationDelay = RECONFIGURATION_DELAY_DEFAULT;</span>
+<span class="fc" id="L194">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.logger.LogEnabled#enableLogging(org.apache.avalon.framework.logger.Logger)
+	 */
+	public void enableLogging(Logger logger) {
+<span class="fc" id="L200">		Validate.notNull(logger, &quot;logger&quot;);</span>
+<span class="fc" id="L201">		this.logger = logger;</span>
+<span class="fc" id="L202">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+	 */
+	public void contextualize(Context context) throws ContextException {
+<span class="fc" id="L208">		Validate.notNull(context, &quot;context&quot;);</span>
+		// Argghhh - I need to to parse the Configuration before I can map the Context
+<span class="fc" id="L210">		this.callerContext = context;</span>
+<span class="fc" id="L211">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+	 */
+	public void service(ServiceManager serviceManager) throws ServiceException {
+<span class="nc" id="L217">		this.parentServiceManager = serviceManager;</span>
+<span class="nc" id="L218">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void configure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L224">		Validate.notNull(configuration, &quot;configuration&quot;);</span>
+
+		// retrieve the reconfigurationDelay
+
+<span class="fc" id="L228">		this.reconfigurationDelay = configuration.getChild(RECONFIGURATION_DELAY_KEY)</span>
+<span class="fc" id="L229">				.getValueAsInteger(RECONFIGURATION_DELAY_DEFAULT);</span>
+
+		// retrieve the disposal delay
+
+<span class="fc" id="L233">		this.disposalDelay = configuration.getChild(DISPOSAL_DELAY_KEY).getValueAsInteger(DISPOSAL_DELAY_DEFAULT);</span>
+
+		// evaluate if we are using dynamic proxies
+
+<span class="fc" id="L237">		this.hasDynamicProxies = configuration.getChild(DYNAMICPROXY_ENABLED_KEY).getValueAsBoolean(false);</span>
+
+		// retrieve the container flavour
+
+<span class="fc" id="L241">		this.setContainerFlavour(</span>
+<span class="fc" id="L242">				configuration.getChild(CONTAINERFLAVOUR_CONFIG_KEY).getValue(COMPONENT_CONTAINERFLAVOUR_VALUE));</span>
+
+<span class="fc" id="L244">		this.getLogger().debug(&quot;Using the following container type : &quot; + this.getContainerFlavour());</span>
+
+		// process the caller-supplied context here
+
+		try {
+			// instantiate a mapper using the existing context - it might
+			// contain application specific entries we are not aware of
+
+<span class="fc" id="L252">			AvalonToYaafiContextMapper mapper = new AvalonToYaafiContextMapper(this.getTempRootDir(),</span>
+<span class="fc" id="L253">					this.callerContext, this.getClassLoader());</span>
+
+			// do the magic mapping
+
+<span class="fc" id="L257">			this.context = mapper.mapFrom(this.callerContext, this.getContainerFlavour());</span>
+
+			// don't keep a reference of the caller-supplied context
+
+<span class="fc" id="L261">			this.callerContext = null;</span>
+<span class="nc" id="L262">		} catch (ContextException e) {</span>
+<span class="nc" id="L263">			String msg = &quot;Failed to parse the caller-supplied context&quot;;</span>
+<span class="nc" id="L264">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L265">			throw new ConfigurationException(msg);</span>
+<span class="fc" id="L266">		}</span>
+
+		// evaluate componentRoles
+
+<span class="fc" id="L270">		Configuration currComponentRoles = configuration.getChild(COMPONENT_ROLE_KEYS);</span>
+
+<span class="fc" id="L272">		this.setComponentRolesLocation(</span>
+<span class="fc" id="L273">				currComponentRoles.getChild(COMPONENT_LOCATION_KEY).getValue(COMPONENT_ROLE_VALUE));</span>
+
+<span class="fc" id="L275">		this.setComponentRolesFlavour(</span>
+<span class="fc" id="L276">				currComponentRoles.getChild(CONTAINERFLAVOUR_CONFIG_KEY).getValue(COMPONENT_ROLECONFIGFLAVOUR_VALUE));</span>
+
+<span class="fc" id="L278">		this.setComponentRolesEncrypted(currComponentRoles.getChild(COMPONENT_ISENCRYPTED_KEY).getValue(&quot;false&quot;));</span>
+
+		// evaluate componentConfiguraion
+
+<span class="fc" id="L282">		Configuration currComponentConfiguration = configuration.getChild(COMPONENT_CONFIG_KEY);</span>
+
+<span class="fc" id="L284">		this.setComponentConfigurationLocation(</span>
+<span class="fc" id="L285">				currComponentConfiguration.getChild(COMPONENT_LOCATION_KEY).getValue(COMPONENT_CONFIG_VALUE));</span>
+
+<span class="fc" id="L287">		this.setComponentConfigurationEncrypted(</span>
+<span class="fc" id="L288">				currComponentConfiguration.getChild(COMPONENT_ISENCRYPTED_KEY).getValue(&quot;false&quot;));</span>
+
+		// get the configuration for componentConfigurationPropertiesResolver
+
+<span class="fc" id="L292">		this.componentConfigurationPropertiesResolverConfig = configuration.getChild(COMPONENT_CONFIG_PROPERTIES_KEY);</span>
+
+		// evaluate parameters
+
+<span class="fc" id="L296">		Configuration currParameters = configuration.getChild(COMPONENT_PARAMETERS_KEY);</span>
+
+<span class="fc" id="L298">		this.setParametersLocation(</span>
+<span class="fc" id="L299">				currParameters.getChild(COMPONENT_LOCATION_KEY).getValue(COMPONENT_PARAMETERS_VALUE));</span>
+
+<span class="fc" id="L301">		this.setParametersEncrypted(currParameters.getChild(COMPONENT_ISENCRYPTED_KEY).getValue(&quot;false&quot;));</span>
+
+		// evaluate the default interceptors
+
+<span class="fc" id="L305">		Configuration currInterceptorList = configuration.getChild(INTERCEPTOR_LIST_KEY);</span>
+
+<span class="fc" id="L307">		Configuration[] interceptorConfigList = currInterceptorList.getChildren(INTERCEPTOR_KEY);</span>
+
+<span class="fc bfc" id="L309" title="All 2 branches covered.">		for (int i = 0; i &lt; interceptorConfigList.length; i++) {</span>
+<span class="fc" id="L310">			String interceptorServiceName = interceptorConfigList[i].getValue(null);</span>
+
+<span class="pc bpc" id="L312" title="2 of 4 branches missed.">			if (!StringUtils.isEmpty(interceptorServiceName) &amp;&amp; this.hasDynamicProxies()) {</span>
+<span class="fc" id="L313">				this.defaultInterceptorServiceList.add(interceptorServiceName);</span>
+
+<span class="fc" id="L315">				this.getLogger().debug(&quot;Using the following default interceptor service : &quot; + interceptorServiceName);</span>
+			}
+		}
+
+		// evaluate a list of service managers managing their own set of services
+		// independent from the Avalon container. This service managers are used
+		// to find services implemented as Spring bean or remote web services.
+
+<span class="fc" id="L323">		Configuration currServiceManagerList = configuration.getChild(SERVICEMANAGER_LIST_KEY);</span>
+
+<span class="fc" id="L325">		Configuration[] serviceManagerConfigList = currServiceManagerList.getChildren(SERVICEMANAGER_KEY);</span>
+
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">		for (int i = 0; i &lt; serviceManagerConfigList.length; i++) {</span>
+<span class="nc" id="L328">			String serviceManagerName = serviceManagerConfigList[i].getValue(null);</span>
+
+<span class="nc bnc" id="L330" title="All 2 branches missed.">			if (!StringUtils.isEmpty(serviceManagerName)) {</span>
+<span class="nc" id="L331">				this.fallbackServiceManagerList.add(serviceManagerName);</span>
+
+<span class="nc" id="L333">				this.getLogger().debug(&quot;Using the following fallback service manager : &quot; + serviceManagerName);</span>
+			}
+		}
+<span class="fc" id="L336">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.parameters.Parameterizable#parameterize(org.apache.avalon.framework.parameters.Parameters)
+	 */
+	public void parameterize(Parameters parameters) throws ParameterException {
+<span class="nc" id="L342">		this.parameters = parameters;</span>
+<span class="nc" id="L343">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Initializable#initialize()
+	 */
+	public void initialize() throws Exception {
+<span class="fc" id="L349">		this.getLogger().debug(&quot;YAAFI Service Framework is starting up&quot;);</span>
+
+		// set the directories being used
+
+<span class="fc" id="L353">		this.setApplicationRootDir((File) this.getContext().get(AvalonYaafiConstants.URN_AVALON_HOME));</span>
+
+<span class="fc" id="L355">		this.setTempRootDir((File) this.getContext().get(AvalonYaafiConstants.URN_AVALON_TEMP));</span>
+
+		// get the configuration files
+
+<span class="fc" id="L359">		this.roleConfiguration = loadConfiguration(this.componentRolesLocation, this.isComponentRolesEncrypted());</span>
+
+<span class="pc bpc" id="L361" title="1 of 2 branches missed.">		if (this.roleConfiguration == null) {</span>
+<span class="nc" id="L362">			String msg = &quot;Unable to locate the role configuration : &quot; + this.componentRolesLocation;</span>
+<span class="nc" id="L363">			this.getLogger().error(msg);</span>
+<span class="nc" id="L364">			throw new ConfigurationException(msg);</span>
+		}
+
+<span class="fc" id="L367">		this.serviceConfiguration = loadConfiguration(this.componentConfigurationLocation,</span>
+<span class="fc" id="L368">				this.isComponentConfigurationEncrypted());</span>
+
+		// create the configuration properties
+
+<span class="fc" id="L372">		Properties componentConfigurationProperties = this.loadComponentConfigurationProperties();</span>
+
+		// expand the componentConfiguration using the componentConfigurationProperties
+
+<span class="fc" id="L376">		ConfigurationUtil.expand(this.getLogger(), (DefaultConfiguration) this.serviceConfiguration,</span>
+				componentConfigurationProperties);
+
+		// create the default parameters
+
+<span class="pc bpc" id="L381" title="1 of 2 branches missed.">		if (this.getParameters() == null) {</span>
+<span class="fc" id="L382">			this.parameters = this.loadParameters(this.parametersLocation, this.isParametersEncrypted());</span>
+		}
+
+		// create the service implementation instances
+
+<span class="fc" id="L387">		List&lt;ServiceComponent&gt; currServiceList = this.createServiceComponents(this.roleConfiguration, this.getLogger());</span>
+
+<span class="fc" id="L389">		this.setServiceList(currServiceList);</span>
+
+		// fill the service map mapping from a service name to an instance
+
+<span class="fc bfc" id="L393" title="All 2 branches covered.">		for (int i = 0; i &lt; this.getServiceList().size(); i++) {</span>
+<span class="fc" id="L394">			ServiceComponent serviceComponent = (ServiceComponent) this.getServiceList().get(i);</span>
+<span class="fc" id="L395">			this.getServiceMap().put(serviceComponent.getName(), serviceComponent);</span>
+		}
+
+		// ensure that fallback service managers are available
+
+<span class="pc bpc" id="L400" title="1 of 2 branches missed.">		for (int i = 0; i &lt; this.fallbackServiceManagerList.size(); i++) {</span>
+<span class="nc" id="L401">			String currServiceManagerName = (String) this.fallbackServiceManagerList.get(i);</span>
+<span class="nc bnc" id="L402" title="All 2 branches missed.">			if (this.getServiceMap().get(currServiceManagerName) == null) {</span>
+<span class="nc" id="L403">				String msg = &quot;The following fallback service manager was not found : &quot; + currServiceManagerName;</span>
+<span class="nc" id="L404">				throw new IllegalArgumentException(msg);</span>
+			}
+		}
+
+		// run the various lifecycle stages
+
+<span class="fc" id="L410">		this.incarnateAll(this.getServiceList());</span>
+
+		// we are up and running
+
+<span class="fc" id="L414">		this.isCurrentlyDisposing = false;</span>
+<span class="fc" id="L415">		this.isAlreadyDisposed = false;</span>
+<span class="fc" id="L416">		this.getLogger().debug(&quot;YAAFI Avalon Service Container is up and running&quot;);</span>
+<span class="fc" id="L417">	}</span>
+
+	/**
+	 * Disposes the service container implementation.
+	 *
+	 * @see org.apache.avalon.framework.activity.Disposable#dispose()
+	 */
+	public void dispose() {
+<span class="pc bpc" id="L425" title="2 of 4 branches missed.">		if (this.isCurrentlyDisposing() || this.isAlreadyDisposed()) {</span>
+<span class="nc" id="L426">			return;</span>
+		}
+
+<span class="fc" id="L429">		this.isCurrentlyDisposing = true;</span>
+
+<span class="pc bpc" id="L431" title="1 of 2 branches missed.">		if (this.getLogger() != null) {</span>
+<span class="fc" id="L432">			this.getLogger().debug(&quot;Disposing all services&quot;);</span>
+		}
+
+		// wait some time before disposing all services
+
+<span class="fc" id="L437">		waitForDisposal();</span>
+
+<span class="fc" id="L439">		synchronized (this) {</span>
+			// de-commission all services
+
+<span class="fc" id="L442">			this.decommissionAll(this.getServiceList());</span>
+
+			// dispose all services
+
+<span class="fc" id="L446">			this.disposeAll(this.getServiceList());</span>
+
+			// clean up
+
+<span class="fc" id="L450">			this.getServiceList().clear();</span>
+<span class="fc" id="L451">			this.getServiceMap().clear();</span>
+
+<span class="fc" id="L453">			this.componentRolesLocation = null;</span>
+<span class="fc" id="L454">			this.componentConfigurationLocation = null;</span>
+<span class="fc" id="L455">			this.context = null;</span>
+<span class="fc" id="L456">			this.parametersLocation = null;</span>
+<span class="fc" id="L457">			this.roleConfiguration = null;</span>
+<span class="fc" id="L458">			this.serviceConfiguration = null;</span>
+<span class="fc" id="L459">			this.parameters = null;</span>
+<span class="fc" id="L460">			this.fallbackServiceManagerList = null;</span>
+<span class="fc" id="L461">			this.defaultInterceptorServiceList = null;</span>
+<span class="fc" id="L462">			this.isCurrentlyDisposing = false;</span>
+<span class="fc" id="L463">			this.isAlreadyDisposed = true;</span>
+
+<span class="pc bpc" id="L465" title="1 of 2 branches missed.">			if (this.getLogger() != null) {</span>
+<span class="fc" id="L466">				this.getLogger().debug(&quot;All services are disposed&quot;);</span>
+			}
+<span class="fc" id="L468">		}</span>
+<span class="fc" id="L469">	}</span>
+
+	/**
+	 * Reconfiguring the services. I'm not sure how to implement this properly since
+	 * the Avalon docs is vague on this subject. For now we suspend, reconfigure and
+	 * resume the services in the correct order.
+	 *
+	 * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public synchronized void reconfigure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L479">		Validate.notNull(configuration, &quot;configuration&quot;);</span>
+
+<span class="fc" id="L481">		int exceptionCounter = 0;</span>
+		ServiceComponent serviceComponent;
+
+<span class="fc" id="L484">		this.getLogger().warn(&quot;Reconfiguring all services ...&quot;);</span>
+
+		// 1) wait for some time
+
+<span class="fc" id="L488">		this.waitForReconfiguration();</span>
+
+		// 2) store the new configuration
+
+<span class="fc" id="L492">		this.serviceConfiguration = configuration;</span>
+
+<span class="fc" id="L494">		Properties componentConfigurationProperties = this.loadComponentConfigurationProperties();</span>
+
+<span class="fc" id="L496">		ConfigurationUtil.expand(this.getLogger(), (DefaultConfiguration) this.serviceConfiguration,</span>
+				componentConfigurationProperties);
+
+		// 3) reconfigure the services
+
+<span class="fc bfc" id="L501" title="All 2 branches covered.">		for (int i = 0; i &lt; this.getServiceList().size(); i++) {</span>
+<span class="fc" id="L502">			serviceComponent = (ServiceComponent) this.getServiceList().get(i);</span>
+
+<span class="fc" id="L504">			Configuration serviceComponentConfiguration = this.serviceConfiguration</span>
+<span class="fc" id="L505">					.getChild(serviceComponent.getShorthand());</span>
+
+			try {
+<span class="fc" id="L508">				serviceComponent.setConfiguration(serviceComponentConfiguration);</span>
+<span class="fc" id="L509">				serviceComponent.reconfigure();</span>
+<span class="nc" id="L510">			} catch (Throwable t) {</span>
+<span class="nc" id="L511">				String msg = &quot;Reconfiguring of &quot; + serviceComponent.getShorthand() + &quot; failed&quot;;</span>
+<span class="nc" id="L512">				this.getLogger().error(msg);</span>
+<span class="nc" id="L513">				exceptionCounter++;</span>
+<span class="fc" id="L514">			}</span>
+		}
+
+		// 4) check the result
+
+<span class="pc bpc" id="L519" title="1 of 2 branches missed.">		if (exceptionCounter &gt; 0) {</span>
+<span class="nc" id="L520">			String msg = &quot;The reconfiguration failed with &quot; + exceptionCounter + &quot; exception(s)&quot;;</span>
+<span class="nc" id="L521">			this.getLogger().error(msg);</span>
+<span class="nc" id="L522">			throw new ConfigurationException(msg);</span>
+		}
+<span class="fc" id="L524">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Server Interface Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager#getRoleEntry(java.lang.String)
+	 */
+	public synchronized RoleEntry getRoleEntry(String name) throws ServiceException {
+<span class="nc" id="L534">		return this.getServiceComponentEx(name).getRoleEntry();</span>
+	}
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager#getRoleEntries()
+	 */
+	public synchronized RoleEntry[] getRoleEntries() {
+		ServiceComponent serviceComponent;
+<span class="fc" id="L542">		List&lt;ServiceComponent&gt; serviceList = this.getServiceList();</span>
+<span class="fc" id="L543">		RoleEntry[] result = new RoleEntry[serviceList.size()];</span>
+
+<span class="fc bfc" id="L545" title="All 2 branches covered.">		for (int i = 0; i &lt; result.length; i++) {</span>
+<span class="fc" id="L546">			serviceComponent = (ServiceComponent) serviceList.get(i);</span>
+<span class="fc" id="L547">			result[i] = serviceComponent.getRoleEntry();</span>
+		}
+
+<span class="fc" id="L550">		return result;</span>
+	}
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager#reconfigure(java.lang.String[])
+	 */
+	public synchronized void reconfigure(String[] names) throws ServiceException, ConfigurationException {
+<span class="fc" id="L557">		Validate.notNull(names, &quot;names&quot;);</span>
+<span class="fc" id="L558">		Validate.noNullElements(names, &quot;names&quot;);</span>
+
+<span class="fc" id="L560">		this.waitForReconfiguration();</span>
+
+<span class="fc bfc" id="L562" title="All 2 branches covered.">		for (int i = 0; i &lt; names.length; i++) {</span>
+			// ensure that the service exists since during our reconfiguration
+			// we might use a stale reconfiguration entry
+
+<span class="pc bpc" id="L566" title="1 of 2 branches missed.">			if (this.getServiceMap().get(names[i]) != null) {</span>
+<span class="fc" id="L567">				this.reconfigure(names[i]);</span>
+			}
+		}
+<span class="fc" id="L570">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.service.ServiceManager#hasService(java.lang.String)
+	 */
+	public boolean hasService(String name) {
+<span class="fc" id="L576">		Validate.notEmpty(name, &quot;name&quot;);</span>
+
+		boolean result;
+
+<span class="pc bpc" id="L580" title="2 of 4 branches missed.">		if (this.isCurrentlyDisposing() || this.isAlreadyDisposed()) {</span>
+<span class="nc" id="L581">			return false;</span>
+		}
+
+<span class="fc" id="L584">		synchronized (this) {</span>
+			// look at our available service
+<span class="pc bpc" id="L586" title="1 of 2 branches missed.">			result = this.getLocalServiceComponent(name) != null;</span>
+
+			// look at fallback service managers
+<span class="pc bpc" id="L589" title="1 of 2 branches missed.">			if (!result)</span>
+<span class="nc" id="L590">				result = this.hasFallbackService(name);</span>
+<span class="fc" id="L591">		}</span>
+
+		// if we haven't found anything ask the parent ServiceManager
+<span class="pc bpc" id="L594" title="3 of 4 branches missed.">		if (!result &amp;&amp; this.hasParentServiceManager())</span>
+<span class="nc" id="L595">			result = this.getParentServiceManager().hasService(name);</span>
+
+<span class="fc" id="L597">		return result;</span>
+	}
+
+	/**
+	 * Lookup a service instance. The implementation uses the following mechanism
+	 * &lt;ul&gt;
+	 * &lt;li&gt;look for a matching local service
+	 * &lt;li&gt;use the fallback service manager as they might know the service
+	 * &lt;li&gt;ask the parent service manager
+	 * &lt;/ul&gt;
+	 *
+	 * @see org.apache.avalon.framework.service.ServiceManager#lookup(java.lang.String)
+	 */
+	public Object lookup(String name) throws ServiceException {
+<span class="fc" id="L611">		Validate.notEmpty(name, &quot;name&quot;);</span>
+
+<span class="fc" id="L613">		Object result = null;</span>
+		ServiceComponent serviceManagerComponent;
+
+<span class="pc bpc" id="L616" title="1 of 2 branches missed.">		if (this.isAlreadyDisposed()) {</span>
+<span class="nc" id="L617">			String msg = &quot;The container is disposed an no services are available&quot;;</span>
+<span class="nc" id="L618">			this.getLogger().error(msg);</span>
+<span class="nc" id="L619">			throw new ServiceException(name, msg);</span>
+		}
+
+		try {
+<span class="fc" id="L623">			synchronized (this) {</span>
+				// 1) check our local services
+<span class="fc" id="L625">				serviceManagerComponent = this.getLocalServiceComponent(name);</span>
+
+<span class="pc bpc" id="L627" title="1 of 2 branches missed.">				if (serviceManagerComponent != null) {</span>
+<span class="fc" id="L628">					result = serviceManagerComponent.getInstance();</span>
+
+<span class="pc bpc" id="L630" title="1 of 4 branches missed.">					if (result != null &amp;&amp; this.getLogger().isDebugEnabled()) {</span>
+<span class="fc" id="L631">						String msg = &quot;Located the service '&quot; + name + &quot;' in the local container&quot;;</span>
+<span class="fc" id="L632">						this.getLogger().debug(msg);</span>
+					}
+				}
+
+				// 2) look at fallback service managers
+<span class="pc bpc" id="L637" title="1 of 2 branches missed.">				if (result == null) {</span>
+<span class="nc" id="L638">					result = this.getFallbackService(name);</span>
+				}
+<span class="fc" id="L640">			}</span>
+<span class="nc" id="L641">		} catch (ServiceException e) {</span>
+<span class="nc" id="L642">			String msg = &quot;Failed to lookup a service &quot; + name;</span>
+<span class="nc" id="L643">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L644">			throw e;</span>
+<span class="nc" id="L645">		} catch (Throwable t) {</span>
+<span class="nc" id="L646">			String msg = &quot;Failed to lookup a service &quot; + name;</span>
+<span class="nc" id="L647">			this.getLogger().error(msg, t);</span>
+<span class="nc" id="L648">			throw new ServiceException(name, msg, t);</span>
+<span class="fc" id="L649">		}</span>
+
+		// 3) if we haven't found anything ask the parent ServiceManager
+<span class="pc bpc" id="L652" title="3 of 4 branches missed.">		if (result == null &amp;&amp; this.hasParentServiceManager()) {</span>
+<span class="nc" id="L653">			result = this.getParentServiceManager().lookup(name);</span>
+
+<span class="nc bnc" id="L655" title="All 4 branches missed.">			if (result != null &amp;&amp; this.getLogger().isDebugEnabled()) {</span>
+<span class="nc" id="L656">				String msg = &quot;Located the service '&quot; + name + &quot;' using the parent service manager&quot;;</span>
+<span class="nc" id="L657">				this.getLogger().debug(msg);</span>
+			}
+		}
+
+		// if we still haven't found anything then complain
+
+<span class="pc bpc" id="L663" title="1 of 2 branches missed.">		if (result == null) {</span>
+<span class="nc" id="L664">			String msg = &quot;The following component does not exist : &quot; + name;</span>
+<span class="nc" id="L665">			this.getLogger().error(msg);</span>
+<span class="nc" id="L666">			throw new ServiceException(AvalonYaafiConstants.AVALON_CONTAINER_YAAFI, name);</span>
+		}
+
+<span class="fc" id="L669">		return result;</span>
+	}
+
+	/* (non-Javadoc)
+	 * @see org.apache.avalon.framework.service.ServiceManager#release(java.lang.Object)
+	 */
+	public void release(Object object) {
+		// AFAIK this is only useful for lifecycle management regarding
+		// lifestyle other than singleton.
+<span class="fc" id="L678">	}</span>
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceContainer#decommission(java.lang.String)
+	 */
+	public synchronized void decommission(String name) throws ServiceException {
+<span class="fc" id="L684">		this.waitForReconfiguration();</span>
+<span class="fc" id="L685">		ServiceComponent serviceComponent = this.getServiceComponentEx(name);</span>
+<span class="fc" id="L686">		this.decommission(serviceComponent);</span>
+<span class="fc" id="L687">	}</span>
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceContainer#getParameters()
+	 */
+	public Parameters getParameters() {
+<span class="fc" id="L693">		return this.parameters;</span>
+	}
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+<span class="fc" id="L704">		ToStringBuilder toStringBuilder = new ToStringBuilder(this);</span>
+<span class="fc" id="L705">		toStringBuilder.append(&quot;applicationRootDir&quot;, this.getApplicationRootDir());</span>
+<span class="fc" id="L706">		toStringBuilder.append(&quot;tempRootDir&quot;, this.getTempRootDir());</span>
+<span class="fc" id="L707">		toStringBuilder.append(&quot;componentRolesLocation&quot;, this.componentRolesLocation);</span>
+<span class="fc" id="L708">		toStringBuilder.append(&quot;componentConfigurationLocation&quot;, this.componentConfigurationLocation);</span>
+<span class="fc" id="L709">		toStringBuilder.append(&quot;parametersLocation&quot;, parametersLocation);</span>
+<span class="fc" id="L710">		toStringBuilder.append(&quot;logger&quot;, this.getLogger().getClass().getName());</span>
+<span class="fc" id="L711">		toStringBuilder.append(&quot;hasDynamicProxies&quot;, this.hasDynamicProxies);</span>
+<span class="fc" id="L712">		toStringBuilder.append(&quot;containerFlavour&quot;, this.containerFlavour);</span>
+<span class="fc" id="L713">		toStringBuilder.append(&quot;componentRolesFlavour&quot;, this.componentRolesFlavour);</span>
+<span class="fc" id="L714">		toStringBuilder.append(&quot;isComponentRolesEncrypted&quot;, this.isComponentRolesEncrypted);</span>
+<span class="fc" id="L715">		toStringBuilder.append(&quot;isComponentConfigurationEncrypted&quot;, this.isComponentConfigurationEncrypted);</span>
+<span class="fc" id="L716">		toStringBuilder.append(&quot;isParametersEncrypted&quot;, this.isParametersEncrypted);</span>
+
+<span class="fc" id="L718">		return toStringBuilder.toString();</span>
+	}
+
+	/**
+	 * Create a role configuration parser based on the container flavour.
+	 * 
+	 * @return the role configuration parser
+	 */
+	private RoleConfigurationParser createRoleConfigurationParser() {
+<span class="fc" id="L727">		return new RoleConfigurationParserImpl(this.getComponentRolesFlavour());</span>
+	}
+
+	/**
+	 * Reconfigure a single service
+	 *
+	 * @param name the name of the service to be reconfigured
+	 * @throws ServiceException       the service was not found
+	 * @throws ConfigurationException the reconfiguration failed
+	 */
+	private void reconfigure(String name) throws ServiceException, ConfigurationException {
+<span class="fc" id="L738">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L739">		ServiceComponent serviceComponent = this.getServiceComponentEx(name);</span>
+
+		// reconfigure the component
+
+		try {
+<span class="fc" id="L744">			serviceComponent.reconfigure();</span>
+<span class="nc" id="L745">		} catch (ConfigurationException e) {</span>
+<span class="nc" id="L746">			String msg = &quot;Reconfiguring failed : &quot; + serviceComponent.getShorthand();</span>
+<span class="nc" id="L747">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L748">			throw new ConfigurationException(msg, e);</span>
+<span class="nc" id="L749">		} catch (Throwable t) {</span>
+<span class="nc" id="L750">			String msg = &quot;Reconfiguring failed : &quot; + serviceComponent.getShorthand();</span>
+<span class="nc" id="L751">			this.getLogger().error(msg, t);</span>
+<span class="nc" id="L752">			throw new ConfigurationException(msg, t);</span>
+<span class="fc" id="L753">		}</span>
+<span class="fc" id="L754">	}</span>
+
+	/**
+	 * Enforce that a service is known to simplify error handling.
+	 *
+	 * @param name the name of the service component
+	 * @return the service component
+	 * @throws ServiceException the service was not found
+	 */
+	private ServiceComponent getServiceComponentEx(String name) throws ServiceException {
+<span class="fc" id="L764">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L765">		ServiceComponent result = (ServiceComponent) this.getServiceMap().get(name);</span>
+
+<span class="pc bpc" id="L767" title="1 of 2 branches missed.">		if (result == null) {</span>
+<span class="nc" id="L768">			String msg = &quot;The following component does not exist : &quot; + name;</span>
+<span class="nc" id="L769">			this.getLogger().error(msg);</span>
+<span class="nc" id="L770">			throw new ServiceException(AvalonYaafiConstants.AVALON_CONTAINER_YAAFI, name);</span>
+		}
+
+<span class="fc" id="L773">		return result;</span>
+	}
+
+	/**
+	 * Try to get a local service component.
+	 *
+	 * @param name the name of the service component
+	 * @return the service component if any
+	 */
+	private ServiceComponent getLocalServiceComponent(String name) {
+<span class="fc" id="L783">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L784">		ServiceComponent result = (ServiceComponent) this.getServiceMap().get(name);</span>
+<span class="fc" id="L785">		return result;</span>
+	}
+
+	/**
+	 * Try to get a service component provided by a fallback service manager.
+	 *
+	 * @param name the name of the service component
+	 * @return the service component if any
+	 * @throws Exception getting the service failed
+	 */
+	private Object getFallbackService(String name) throws Exception {
+
+<span class="nc" id="L797">		Validate.notEmpty(name, &quot;name&quot;);</span>
+
+<span class="nc" id="L799">		Object result = null;</span>
+		ServiceComponent serviceManagerComponent;
+
+<span class="nc bnc" id="L802" title="All 2 branches missed.">		for (int i = 0; i &lt; this.fallbackServiceManagerList.size(); i++) {</span>
+<span class="nc" id="L803">			String serviceManagerComponentName = (String) fallbackServiceManagerList.get(i);</span>
+<span class="nc" id="L804">			serviceManagerComponent = this.getLocalServiceComponent(serviceManagerComponentName);</span>
+
+<span class="nc bnc" id="L806" title="All 2 branches missed.">			if (serviceManagerComponent != null) {</span>
+<span class="nc" id="L807">				ServiceManager currServiceManager = (ServiceManager) serviceManagerComponent.getInstance();</span>
+
+<span class="nc bnc" id="L809" title="All 2 branches missed.">				if (currServiceManager.hasService(name)) {</span>
+<span class="nc" id="L810">					result = currServiceManager.lookup(name);</span>
+
+<span class="nc bnc" id="L812" title="All 4 branches missed.">					if (result != null &amp;&amp; this.getLogger().isDebugEnabled()) {</span>
+<span class="nc" id="L813">						String msg = &quot;Located the service '&quot; + name + &quot;' using the fallback service manager '&quot;</span>
+								+ serviceManagerComponentName + &quot;'&quot;;
+<span class="nc" id="L815">						this.getLogger().debug(msg);</span>
+					}
+				}
+			}
+		}
+
+<span class="nc" id="L821">		return result;</span>
+	}
+
+	/**
+	 * Try to get a service provided by a fallback service manager.
+	 *
+	 * @param name the name of the service component
+	 * @return the service component if any
+	 */
+	private boolean hasFallbackService(String name) {
+<span class="nc" id="L831">		Validate.notEmpty(name, &quot;name&quot;);</span>
+
+		ServiceComponent serviceManagerComponent;
+
+<span class="nc bnc" id="L835" title="All 2 branches missed.">		for (int i = 0; i &lt; this.fallbackServiceManagerList.size(); i++) {</span>
+<span class="nc" id="L836">			String serviceManagerComponentName = (String) fallbackServiceManagerList.get(i);</span>
+<span class="nc" id="L837">			serviceManagerComponent = this.getLocalServiceComponent(serviceManagerComponentName);</span>
+
+<span class="nc bnc" id="L839" title="All 2 branches missed.">			if (serviceManagerComponent != null) {</span>
+				ServiceManager currServiceManager;
+
+				try {
+<span class="nc" id="L843">					currServiceManager = (ServiceManager) serviceManagerComponent.getInstance();</span>
+<span class="nc bnc" id="L844" title="All 2 branches missed.">					if (currServiceManager.hasService(name)) {</span>
+<span class="nc" id="L845">						return true;</span>
+					}
+<span class="nc" id="L847">				} catch (Exception e) {</span>
+<span class="nc" id="L848">					String msg = &quot;Unable to invoke fallback service manager '&quot; + serviceManagerComponentName + &quot;'&quot;;</span>
+<span class="nc" id="L849">					this.getLogger().error(msg, e);</span>
+<span class="nc" id="L850">					throw new RuntimeException(msg);</span>
+<span class="nc" id="L851">				}</span>
+			}
+		}
+
+<span class="nc" id="L855">		return false;</span>
+	}
+
+	/**
+	 * @param string The location of the component configuration file
+	 */
+	private void setComponentConfigurationLocation(String string) {
+<span class="fc" id="L862">		this.componentConfigurationLocation = string;</span>
+<span class="fc" id="L863">	}</span>
+
+	/**
+	 * @param string The location of the component role file
+	 */
+	private void setComponentRolesLocation(String string) {
+<span class="fc" id="L869">		this.componentRolesLocation = string;</span>
+<span class="fc" id="L870">	}</span>
+
+	/**
+	 * @param string The location of the parameters file
+	 */
+	private void setParametersLocation(String string) {
+<span class="fc" id="L876">		this.parametersLocation = string;</span>
+<span class="fc" id="L877">	}</span>
+
+	/**
+	 * @return The logger of the service container
+	 */
+	private Logger getLogger() {
+<span class="fc" id="L883">		return this.logger;</span>
+	}
+
+	/**
+	 * @return Returns the serviceMap.
+	 */
+	private HashMap&lt;String, ServiceComponent&gt; getServiceMap() {
+<span class="fc" id="L890">		return this.serviceMap;</span>
+	}
+
+	/**
+	 * Incarnation of a list of services.
+	 *
+	 * @param serviceList the list of available services
+	 * @throws Exception the incarnation of a service failed
+	 */
+	private void incarnateAll(List&lt;ServiceComponent&gt; serviceList) throws Exception {
+		ServiceComponent serviceComponent;
+
+		// configure all services
+
+<span class="fc bfc" id="L904" title="All 2 branches covered.">		for (int i = 0; i &lt; serviceList.size(); i++) {</span>
+<span class="fc" id="L905">			serviceComponent = (ServiceComponent) this.getServiceList().get(i);</span>
+<span class="fc" id="L906">			this.configure(serviceComponent);</span>
+		}
+
+		// incarnate all services
+
+<span class="fc bfc" id="L911" title="All 2 branches covered.">		for (int i = 0; i &lt; serviceList.size(); i++) {</span>
+<span class="fc" id="L912">			serviceComponent = (ServiceComponent) this.getServiceList().get(i);</span>
+<span class="fc" id="L913">			this.incarnate(serviceComponent);</span>
+		}
+
+<span class="fc" id="L916">	}</span>
+
+	/**
+	 * Configure a single service component. After the invocation the service
+	 * component is ready to be incarnated.
+	 *
+	 * @param serviceComponent The service component to be configured
+	 * @throws Exception the configuration failed
+	 */
+	private void configure(ServiceComponent serviceComponent) throws Exception {
+<span class="fc" id="L926">		this.getLogger().debug(&quot;Configuring the service component &quot; + serviceComponent.getShorthand());</span>
+
+		// map the context according to the Avalon component type
+
+<span class="fc" id="L930">		YaafiToAvalonContextMapper mapper = new YaafiToAvalonContextMapper(serviceComponent.getName(),</span>
+<span class="fc" id="L931">				this.getClassLoader());</span>
+
+<span class="fc" id="L933">		RoleEntry roleEntry = serviceComponent.getRoleEntry();</span>
+<span class="fc" id="L934">		String componentFlavour = roleEntry.getComponentFlavour();</span>
+
+<span class="fc" id="L936">		DefaultContext serviceComponentContext = mapper.mapTo(this.getContext(), componentFlavour);</span>
+
+		// create the remaining Avalon artifacts for the service component
+
+<span class="fc" id="L940">		Logger serviceComponentLogger = this.getLogger().getChildLogger(roleEntry.getLogCategory());</span>
+
+<span class="fc" id="L942">		Configuration serviceComponentConfiguration = this.serviceConfiguration.getChild(roleEntry.getShorthand());</span>
+
+<span class="fc" id="L944">		Parameters serviceComponentParameters = this.getParameters();</span>
+
+		// configure the service component with all the artifacts
+
+<span class="fc" id="L948">		serviceComponent.setLogger(serviceComponentLogger);</span>
+<span class="fc" id="L949">		serviceComponent.setServiceManager(this);</span>
+<span class="fc" id="L950">		serviceComponent.setContext(serviceComponentContext);</span>
+<span class="fc" id="L951">		serviceComponent.setConfiguration(serviceComponentConfiguration);</span>
+<span class="fc" id="L952">		serviceComponent.setParameters(serviceComponentParameters);</span>
+
+		// load the implementation class of the service
+
+<span class="fc" id="L956">		serviceComponent.loadImplemtationClass(this.getClassLoader());</span>
+<span class="fc" id="L957">	}</span>
+
+	/**
+	 * Incarnation of a configured service component. After the incarnation the
+	 * service component is operational.
+	 *
+	 * @param serviceComponent The service component to incarnate
+	 * @exception Exception incarnating the service component failed
+	 */
+	private void incarnate(ServiceComponent serviceComponent) throws Exception {
+<span class="fc" id="L967">		this.getLogger().debug(&quot;Incarnating the service &quot; + serviceComponent.getShorthand());</span>
+
+<span class="fc" id="L969">		serviceComponent.incarnate();</span>
+<span class="fc" id="L970">	}</span>
+
+	/**
+	 * De-commission a ist of services.
+	 *
+	 * @param serviceList the list of services to decommission
+	 */
+	private void decommissionAll(List&lt;ServiceComponent&gt; serviceList) {
+<span class="fc bfc" id="L978" title="All 2 branches covered.">		for (int i = serviceList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L979">			ServiceComponent serviceComponent = (ServiceComponent) serviceList.get(i);</span>
+<span class="fc" id="L980">			this.decommission(serviceComponent);</span>
+		}
+<span class="fc" id="L982">	}</span>
+
+	/**
+	 * Decommission of a single service component. Decommission consists of running
+	 * the whole Avalon decommission lifecycle process for a service component.
+	 * After decommission the service is not operational any longer. During
+	 * decommissioning we ignore any exceptions since it is quite common that
+	 * something goes wrong.
+	 *
+	 * @param serviceComponent The service component to decommission
+	 */
+	private void decommission(ServiceComponent serviceComponent) {
+<span class="fc" id="L994">		this.getLogger().debug(&quot;Decommission the service &quot; + serviceComponent.getShorthand());</span>
+
+		try {
+<span class="fc" id="L997">			serviceComponent.decommision();</span>
+<span class="nc" id="L998">		} catch (Throwable e) {</span>
+<span class="nc" id="L999">			String msg = &quot;Decommissioning the following service failed : &quot; + serviceComponent.getName();</span>
+<span class="nc" id="L1000">			this.getLogger().error(msg, e);</span>
+<span class="fc" id="L1001">		}</span>
+<span class="fc" id="L1002">	}</span>
+
+	/**
+	 * Disposing a ist of services
+	 *
+	 * @param serviceList the list of services to dispose
+	 */
+	private void disposeAll(List&lt;ServiceComponent&gt; serviceList) {
+<span class="fc bfc" id="L1010" title="All 2 branches covered.">		for (int i = serviceList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L1011">			ServiceComponent serviceComponent = (ServiceComponent) serviceList.get(i);</span>
+<span class="fc" id="L1012">			this.dispose(serviceComponent);</span>
+		}
+<span class="fc" id="L1014">	}</span>
+
+	/**
+	 * Disposing of a single service component.
+	 * 
+	 * @param serviceComponent The service component to decommission
+	 */
+	private void dispose(ServiceComponent serviceComponent) {
+<span class="fc" id="L1022">		this.getLogger().debug(&quot;Disposing the service &quot; + serviceComponent.getShorthand());</span>
+
+		try {
+<span class="fc" id="L1025">			serviceComponent.dispose();</span>
+<span class="nc" id="L1026">		} catch (Throwable e) {</span>
+<span class="nc" id="L1027">			String msg = &quot;Disposing the following service failed : &quot; + serviceComponent.getName();</span>
+<span class="nc" id="L1028">			this.getLogger().error(msg, e);</span>
+<span class="fc" id="L1029">		}</span>
+<span class="fc" id="L1030">	}</span>
+
+	private boolean isCurrentlyDisposing() {
+<span class="fc" id="L1033">		return isCurrentlyDisposing;</span>
+	}
+
+	private boolean isAlreadyDisposed() {
+<span class="fc" id="L1037">		return isAlreadyDisposed;</span>
+	}
+
+	/**
+	 * @return The list of currently know services
+	 */
+	private List&lt;ServiceComponent&gt; getServiceList() {
+<span class="fc" id="L1044">		return this.serviceList;</span>
+	}
+
+	/**
+	 * @param list The list of known services
+	 */
+	private void setServiceList(List&lt;ServiceComponent&gt; list) {
+<span class="fc" id="L1051">		this.serviceList = list;</span>
+<span class="fc" id="L1052">	}</span>
+
+	/**
+	 * Factory method for creating services. The service instances are not
+	 * initialized at this point.
+	 *
+	 * @param roleConfiguration the role configuration file
+	 * @param logger            the logger
+	 * @return the list of service components
+	 * @throws ConfigurationException creating the service instance failed
+	 */
+	private List&lt;ServiceComponent&gt; createServiceComponents(Configuration roleConfiguration, Logger logger)
+			throws ConfigurationException {
+<span class="fc" id="L1065">		Validate.notNull(roleConfiguration, &quot;roleConfiguration&quot;);</span>
+<span class="fc" id="L1066">		Validate.notNull(logger, &quot;logger&quot;);</span>
+
+<span class="fc" id="L1068">		ArrayList&lt;ServiceComponent&gt; result = new ArrayList&lt;ServiceComponent&gt;();</span>
+<span class="fc" id="L1069">		ServiceComponent serviceComponent = null;</span>
+
+		// create an appropriate instance of role configuration parser
+
+<span class="fc" id="L1073">		RoleConfigurationParser roleConfigurationParser = this.createRoleConfigurationParser();</span>
+
+		// extract the role entries
+
+<span class="fc" id="L1077">		RoleEntry[] roleEntryList = roleConfigurationParser.parse(roleConfiguration);</span>
+
+		// get the default interceptors defined for the container
+
+<span class="fc" id="L1081">		ArrayList&lt;String&gt; defaultInterceptorList = this.getDefaultInterceptorServiceList();</span>
+
+		// create the service components based on the role entries
+
+<span class="fc bfc" id="L1085" title="All 2 branches covered.">		for (int i = 0; i &lt; roleEntryList.length; i++) {</span>
+			try {
+				// add the default interceptors to all role entries
+
+<span class="fc" id="L1089">				RoleEntry roleEntry = roleEntryList[i];</span>
+
+<span class="fc bfc" id="L1091" title="All 2 branches covered.">				if (this.hasDynamicProxies()) {</span>
+<span class="fc" id="L1092">					roleEntry.addInterceptors(defaultInterceptorList);</span>
+				} else {
+<span class="fc" id="L1094">					roleEntry.setHasDynamicProxy(false);</span>
+				}
+
+<span class="fc" id="L1097">				serviceComponent = new AvalonServiceComponentImpl(roleEntry, this.getLogger(), logger);</span>
+
+<span class="fc" id="L1099">				result.add(serviceComponent);</span>
+<span class="nc" id="L1100">			} catch (Throwable t) {</span>
+<span class="nc bnc" id="L1101" title="All 2 branches missed.">				String serviceComponentName = (serviceComponent != null ? serviceComponent.getName() : &quot;unknown&quot;);</span>
+<span class="nc" id="L1102">				String msg = &quot;Failed to load the service &quot; + serviceComponentName;</span>
+<span class="nc" id="L1103">				this.getLogger().error(msg, t);</span>
+<span class="nc" id="L1104">				throw new ConfigurationException(msg, t);</span>
+<span class="fc" id="L1105">			}</span>
+		}
+
+<span class="fc" id="L1108">		return result;</span>
+	}
+
+	/**
+	 * Load a configuration file either from a file or using the class loader.
+	 * 
+	 * @param location    the location of the file
+	 * @param isEncrypted is the configuration encrypted
+	 * @return The loaded configuration
+	 * @throws Exception Something went wrong
+	 */
+	private Configuration loadConfiguration(String location, String isEncrypted) throws Exception {
+<span class="fc" id="L1120">		Configuration result = null;</span>
+<span class="fc" id="L1121">		InputStreamLocator locator = this.createInputStreamLocator();</span>
+<span class="fc" id="L1122">		InputStream is = locator.locate(location);</span>
+<span class="fc" id="L1123">		DefaultConfigurationBuilder builder = new DefaultConfigurationBuilder();</span>
+
+<span class="pc bpc" id="L1125" title="1 of 2 branches missed.">		if (is != null) {</span>
+			try {
+<span class="fc" id="L1127">				is = this.getDecryptingInputStream(is, isEncrypted);</span>
+<span class="fc" id="L1128">				result = builder.build(is);</span>
+<span class="nc" id="L1129">			} catch (Exception e) {</span>
+<span class="nc" id="L1130">				String msg = &quot;Unable to parse the following file : &quot; + location;</span>
+<span class="nc" id="L1131">				this.getLogger().error(msg, e);</span>
+<span class="nc" id="L1132">				throw e;</span>
+			} finally {
+<span class="fc" id="L1134">				safeClose(is);</span>
+			}
+		}
+
+<span class="fc" id="L1138">		return result;</span>
+	}
+
+	/**
+	 * Load a configuration property file either from a file or using the class
+	 * loader.
+	 * 
+	 * @return The loaded property file
+	 * @throws ConfigurationException Something went wrong
+	 */
+	private Properties loadComponentConfigurationProperties() throws ConfigurationException {
+		Properties result;
+		ComponentConfigurationPropertiesResolver resolver;
+
+<span class="fc" id="L1152">		String className = this.componentConfigurationPropertiesResolverConfig.getChild(&quot;resolver&quot;)</span>
+<span class="fc" id="L1153">				.getValue(ComponentConfigurationPropertiesResolverImpl.class.getName());</span>
+
+		try {
+<span class="fc" id="L1156">			Class&lt;?&gt; resolverClass = this.getClassLoader().loadClass(className);</span>
+<span class="fc" id="L1157">			resolver = (ComponentConfigurationPropertiesResolver) resolverClass.newInstance();</span>
+<span class="fc" id="L1158">			ContainerUtil.enableLogging(resolver, this.getLogger());</span>
+<span class="fc" id="L1159">			ContainerUtil.contextualize(resolver, this.getContext());</span>
+<span class="fc" id="L1160">			ContainerUtil.configure(resolver, this.componentConfigurationPropertiesResolverConfig);</span>
+
+<span class="fc" id="L1162">			result = resolver.resolve(null);</span>
+
+<span class="fc" id="L1164">			this.getLogger().debug(&quot;Using the following componentConfigurationProperties: &quot; + result);</span>
+<span class="nc" id="L1165">		} catch (Exception e) {</span>
+<span class="nc" id="L1166">			String msg = &quot;Resolving componentConfigurationProperties failed using the following class : &quot; + className;</span>
+<span class="nc" id="L1167">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L1168">			throw new ConfigurationException(msg, e);</span>
+<span class="fc" id="L1169">		}</span>
+
+<span class="fc" id="L1171">		return result;</span>
+	}
+
+	/**
+	 * Load the parameters
+	 * 
+	 * @param location    The location as a file
+	 * @param isEncrypted is the file encrypted
+	 * @return The loaded configuration
+	 * @throws Exception Something went wrong
+	 */
+	private Parameters loadParameters(String location, String isEncrypted) throws Exception {
+<span class="fc" id="L1183">		InputStreamLocator locator = this.createInputStreamLocator();</span>
+<span class="fc" id="L1184">		InputStream is = locator.locate(location);</span>
+<span class="fc" id="L1185">		Parameters result = new Parameters();</span>
+
+<span class="fc bfc" id="L1187" title="All 2 branches covered.">		if (is != null) {</span>
+			try {
+<span class="fc" id="L1189">				is = this.getDecryptingInputStream(is, isEncrypted);</span>
+<span class="fc" id="L1190">				Properties props = new Properties();</span>
+<span class="fc" id="L1191">				props.load(is);</span>
+<span class="fc" id="L1192">				result = Parameters.fromProperties(props);</span>
+			} finally {
+<span class="fc" id="L1194">				safeClose(is);</span>
+			}
+		}
+
+<span class="fc" id="L1198">		return result;</span>
+	}
+
+	/**
+	 * Creates a locator to find a resource either in the file system or in the
+	 * classpath.
+	 *
+	 * @return the locator
+	 */
+	private InputStreamLocator createInputStreamLocator() {
+<span class="fc" id="L1208">		return new InputStreamLocator(this.getApplicationRootDir(), this.getLogger());</span>
+	}
+
+	/**
+	 * Set the application directory of the container.
+	 *
+	 * @param dir The applicationRootDir to set.
+	 */
+	private void setApplicationRootDir(File dir) {
+<span class="fc" id="L1217">		this.getLogger().debug(&quot;Setting applicationRootDir to &quot; + dir.getAbsolutePath());</span>
+
+<span class="fc" id="L1219">		Validate.notNull(dir, &quot;applicationRootDir is &lt;null&gt;&quot;);</span>
+<span class="fc" id="L1220">		Validate.isTrue(dir.exists(), &quot;applicationRootDir does not exist&quot;);</span>
+
+<span class="fc" id="L1222">		this.applicationRootDir = dir;</span>
+<span class="fc" id="L1223">	}</span>
+
+	/**
+	 * @return Returns the applicationRootDir.
+	 */
+	private File getApplicationRootDir() {
+<span class="fc" id="L1229">		return this.applicationRootDir;</span>
+	}
+
+	/**
+	 * @return Returns the serviceManager of the parent container
+	 */
+	private ServiceManager getParentServiceManager() {
+<span class="nc" id="L1236">		return this.parentServiceManager;</span>
+	}
+
+	/**
+	 * @return is a parent ServiceManager available
+	 */
+	private boolean hasParentServiceManager() {
+<span class="nc bnc" id="L1243" title="All 2 branches missed.">		return this.getParentServiceManager() != null;</span>
+	}
+
+	/**
+	 * Set the temporary directory of the container.
+	 *
+	 * @param dir The tempRootDir to set.
+	 */
+	private void setTempRootDir(File dir) {
+<span class="fc" id="L1252">		this.getLogger().debug(&quot;Setting tempRootDir to &quot; + dir.getAbsolutePath());</span>
+
+<span class="fc" id="L1254">		Validate.notNull(dir, &quot;tempRootDir is &lt;null&gt;&quot;);</span>
+<span class="fc" id="L1255">		Validate.isTrue(dir.exists(), &quot;tempRootDir does not exist&quot;);</span>
+<span class="fc" id="L1256">		Validate.isTrue(dir.canWrite(), &quot;tempRootDir is not writeable&quot;);</span>
+
+<span class="fc" id="L1258">		this.tempRootDir = dir;</span>
+<span class="fc" id="L1259">	}</span>
+
+	/**
+	 * @return Returns the tempRootDir.
+	 */
+	private File getTempRootDir() {
+<span class="fc" id="L1265">		return tempRootDir;</span>
+	}
+
+	/**
+	 * @return Returns the isComponentConfigurationEncrypted.
+	 */
+	private String isComponentConfigurationEncrypted() {
+<span class="fc" id="L1272">		return isComponentConfigurationEncrypted;</span>
+	}
+
+	/**
+	 * @param isComponentConfigurationEncrypted The
+	 *                                          isComponentConfigurationEncrypted to
+	 *                                          set.
+	 */
+	private void setComponentConfigurationEncrypted(String isComponentConfigurationEncrypted) {
+<span class="fc" id="L1281">		this.isComponentConfigurationEncrypted = isComponentConfigurationEncrypted;</span>
+<span class="fc" id="L1282">	}</span>
+
+	/**
+	 * @return Returns the isComponentRolesEncrypted.
+	 */
+	private String isComponentRolesEncrypted() {
+<span class="fc" id="L1288">		return isComponentRolesEncrypted;</span>
+	}
+
+	/**
+	 * @param isComponentRolesEncrypted The isComponentRolesEncrypted to set.
+	 */
+	private void setComponentRolesEncrypted(String isComponentRolesEncrypted) {
+<span class="fc" id="L1295">		this.isComponentRolesEncrypted = isComponentRolesEncrypted;</span>
+<span class="fc" id="L1296">	}</span>
+
+	/**
+	 * @return Returns the isParametersEncrypted.
+	 */
+	private String isParametersEncrypted() {
+<span class="fc" id="L1302">		return isParametersEncrypted;</span>
+	}
+
+	/**
+	 * @param isParametersEncrypted The isParametersEncrypted to set.
+	 */
+	private void setParametersEncrypted(String isParametersEncrypted) {
+<span class="fc" id="L1309">		this.isParametersEncrypted = isParametersEncrypted;</span>
+<span class="fc" id="L1310">	}</span>
+
+	/**
+	 * Create a decrypting input stream using the default password.
+	 *
+	 * @param is          the input stream to be decrypted
+	 * @param isEncrypted the encryption mode (true|false|auto)
+	 * @return an decrypting input stream
+	 * @throws Exception reading the input stream failed
+	 */
+	private InputStream getDecryptingInputStream(InputStream is, String isEncrypted) throws Exception {
+<span class="fc" id="L1321">		return CryptoStreamFactory.getDecryptingInputStream(is, isEncrypted);</span>
+	}
+
+	/**
+	 * @return Returns the containerFlavour.
+	 */
+	private String getContainerFlavour() {
+<span class="fc" id="L1328">		return containerFlavour;</span>
+	}
+
+	/**
+	 * @param containerFlavour The containerFlavour to set.
+	 */
+	private void setContainerFlavour(String containerFlavour) {
+<span class="fc" id="L1335">		this.containerFlavour = containerFlavour;</span>
+<span class="fc" id="L1336">	}</span>
+
+	/**
+	 * @return Returns the componentRolesFlavour.
+	 */
+	private String getComponentRolesFlavour() {
+<span class="fc" id="L1342">		return componentRolesFlavour;</span>
+	}
+
+	/**
+	 * @param componentRolesFlavour The componentRolesFlavour to set.
+	 */
+	private void setComponentRolesFlavour(String componentRolesFlavour) {
+<span class="fc" id="L1349">		this.componentRolesFlavour = componentRolesFlavour;</span>
+<span class="fc" id="L1350">	}</span>
+
+	/**
+	 * @return Returns the context.
+	 */
+	private Context getContext() {
+<span class="fc" id="L1356">		return context;</span>
+	}
+
+	/**
+	 * @return Returns the hasDynamicProxies.
+	 */
+	private boolean hasDynamicProxies() {
+<span class="fc" id="L1363">		return this.hasDynamicProxies;</span>
+	}
+
+	/**
+	 * @return Returns the defaultInterceptorServiceList.
+	 */
+	private ArrayList&lt;String&gt; getDefaultInterceptorServiceList() {
+<span class="fc" id="L1370">		return defaultInterceptorServiceList;</span>
+	}
+
+	/**
+	 * @return the containers class loader
+	 */
+	private ClassLoader getClassLoader() {
+<span class="fc" id="L1377">		return this.getClass().getClassLoader();</span>
+	}
+
+	/**
+	 * Wait for the time configured as 'reconfigurationDelay' before reconfiguring
+	 * the container or services.
+	 */
+	private void waitForReconfiguration() {
+		try {
+<span class="fc" id="L1386">			Thread.sleep(this.reconfigurationDelay);</span>
+<span class="nc" id="L1387">		} catch (InterruptedException e) {</span>
+			// nothing to do
+<span class="fc" id="L1389">		}</span>
+<span class="fc" id="L1390">	}</span>
+
+	/**
+	 * Wait for the time configured as 'disposalDelay' before disposing the
+	 * container.
+	 */
+	private void waitForDisposal() {
+		try {
+<span class="fc" id="L1398">			Thread.sleep(this.disposalDelay);</span>
+<span class="nc" id="L1399">		} catch (InterruptedException e) {</span>
+			// nothing to do
+<span class="fc" id="L1401">		}</span>
+<span class="fc" id="L1402">	}</span>
+
+	private void safeClose(InputStream is) {
+<span class="pc bpc" id="L1405" title="1 of 2 branches missed.">		if (is != null) {</span>
+			try {
+<span class="fc" id="L1407">				is.close();</span>
+<span class="nc" id="L1408">			} catch (Exception e) {</span>
+<span class="nc" id="L1409">				getLogger().error(&quot;Failed to close an input stream&quot;, e);</span>
+<span class="fc" id="L1410">			}</span>
+		}
+<span class="fc" id="L1412">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

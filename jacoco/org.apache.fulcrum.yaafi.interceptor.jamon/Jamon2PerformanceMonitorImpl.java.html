@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Jamon2PerformanceMonitorImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.interceptor.jamon</a> &gt; <span class="el_source">Jamon2PerformanceMonitorImpl.java</span></div><h1>Jamon2PerformanceMonitorImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.interceptor.jamon;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.lang.reflect.Method;
+
+import com.jamonapi.Monitor;
+import com.jamonapi.MonitorFactory;
+import com.jamonapi.RangeHolder;
+import org.apache.fulcrum.yaafi.interceptor.util.MethodToStringBuilderImpl;
+
+/**
+ * Encapsulating the JAMon 2.x related API calls. JAMon 2.x allows for a much
+ * more powerful integration with Avalon services :
+ * &lt;ul&gt;
+ *  &lt;li&gt;custom ranges/units&lt;/li&gt;
+ *  &lt;li&gt;exception monitoring&lt;/li&gt;
+ *  &lt;li&gt;smooth web interface&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class Jamon2PerformanceMonitorImpl implements JamonPerformanceMonitor
+{
+    /** the default label being used */
+    private static final String MONITOR_LABEL = &quot;ms.services&quot;;
+
+    /** our custom range definition */
+    private static RangeHolder rangeHolder;
+
+    /** is monitoring enabled */
+    private boolean isActive;
+
+    /** the method currently monitored */
+    private Method method;
+
+    /** the global JAMON monitor */
+    private Monitor monitor;
+
+    /** the time the monitoring was started */
+    private long startTime;
+
+    static
+    {
+<span class="fc" id="L63">        rangeHolder = Jamon2PerformanceMonitorImpl.createMSHolder();</span>
+<span class="fc" id="L64">    }</span>
+  
+    /**
+     * Constructor.
+     *
+     * @param serviceName the service name of the service being monitored
+     * @param method the method to be monitored
+     * @param isActive is this an active monitor
+     */
+    public Jamon2PerformanceMonitorImpl(String serviceName, Method method, Boolean isActive)
+<span class="fc" id="L74">    {</span>
+<span class="fc" id="L75">        this.method = method;</span>
+<span class="fc" id="L76">        this.isActive = isActive.booleanValue();</span>
+<span class="fc" id="L77">    }</span>
+
+    /**
+     * Start the monitor.
+     */
+    public void start()
+    {
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if(this.isActive)</span>
+        {
+            // when reseting using the JAMon GUI the custom ranges are discarded
+<span class="fc" id="L87">            MonitorFactory.setRangeDefault(MONITOR_LABEL, Jamon2PerformanceMonitorImpl.rangeHolder);</span>
+            // do the internal house-keeping
+<span class="fc" id="L89">            this.startTime = System.currentTimeMillis();</span>
+<span class="fc" id="L90">            MethodToStringBuilderImpl methodToStringBuilder = new MethodToStringBuilderImpl(this.method, 0);</span>
+<span class="fc" id="L91">            String methodSignature = methodToStringBuilder.toString();</span>
+<span class="fc" id="L92">            this.monitor = MonitorFactory.getMonitor(methodSignature, MONITOR_LABEL);</span>
+<span class="fc" id="L93">            this.monitor.start();</span>
+        }
+<span class="fc" id="L95">    }</span>
+
+    /**
+     * Stop the monitor
+     */
+    public void stop()
+    {
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        if(this.isActive) </span>
+        {
+<span class="fc" id="L104">            long duration = System.currentTimeMillis() - this.startTime;</span>
+<span class="fc" id="L105">            this.monitor.add(duration);</span>
+<span class="fc" id="L106">            this.monitor.stop();</span>
+        }
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * Stop the monitor
+     */
+    public void stop(Throwable throwable)
+    {
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if(this.isActive)</span>
+        {
+            // use a negative execution time to mark an exception for an affiliate
+<span class="fc" id="L118">            this.monitor.add(-1);</span>
+<span class="fc" id="L119">            this.monitor.stop();  </span>
+        }
+<span class="fc" id="L121">    }</span>
+
+    /**
+     * Create a performance report.
+     *
+     * @return the textual performance report
+     * @throws Exception generating the report failed
+     */
+    public String createReport() throws Exception
+    {
+<span class="fc" id="L131">        return MonitorFactory.getRootMonitor().getReport();</span>
+    }
+
+    /**
+     * @return a customized range holder for measuring the execution time for services.
+     */
+    private static RangeHolder createMSHolder() {
+<span class="fc" id="L138">      RangeHolder result = new RangeHolder(&quot;&lt;&quot;);</span>
+<span class="fc" id="L139">      result.add(&quot;Exceptions&quot;,0);</span>
+<span class="fc" id="L140">      result.add(&quot;0_10ms&quot;,10);</span>
+<span class="fc" id="L141">      result.add(&quot;10_20ms&quot;,20);</span>
+<span class="fc" id="L142">      result.add(&quot;20_40ms&quot;,40);</span>
+<span class="fc" id="L143">      result.add(&quot;40_80ms&quot;,80);</span>
+<span class="fc" id="L144">      result.add(&quot;80_160ms&quot;,160);</span>
+<span class="fc" id="L145">      result.add(&quot;160_320ms&quot;,320);</span>
+<span class="fc" id="L146">      result.add(&quot;320_640ms&quot;,640);</span>
+<span class="fc" id="L147">      result.add(&quot;640_1280ms&quot;,1280);</span>
+<span class="fc" id="L148">      result.add(&quot;1280_2560ms&quot;,2560);</span>
+<span class="fc" id="L149">      result.add(&quot;2560_5120ms&quot;,5120);</span>
+<span class="fc" id="L150">      result.add(&quot;5120_10240ms&quot;,10240);</span>
+<span class="fc" id="L151">      result.add(&quot;10240_20480ms&quot;,20480);</span>
+<span class="fc" id="L152">      result.addLastHeader(&quot;20480ms_&quot;);</span>
+      // note last range is always called lastRange and is added automatically
+<span class="fc" id="L154">      return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

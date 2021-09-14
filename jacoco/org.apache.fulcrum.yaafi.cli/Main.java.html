@@ -1,0 +1,641 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Main.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.cli</a> &gt; <span class="el_source">Main.java</span></div><h1>Main.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.cli;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+
+import org.apache.avalon.framework.activity.Disposable;
+import org.apache.avalon.framework.logger.ConsoleLogger;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.fulcrum.yaafi.framework.container.ServiceContainer;
+import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerConfiguration;
+import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerFactory;
+
+/**
+ * An example of the embedding of a YAAFI kernel inside an
+ * arbitrary application.
+ */
+
+public class Main implements Runnable, Disposable
+{
+    /** parameter for the application name */
+    public static final String APPLICATION_NAME = &quot;yaafi.cli.applicationName&quot;;
+
+    /** parameter for the application home directory */
+    public static final String APPLICATION_HOME = &quot;yaafi.cli.applicationHome&quot;;
+
+    /** parameter for the application temporary directory */
+    public static final String APPLICATION_TEMP = &quot;yaafi.cli.tempHome&quot;;
+
+    /** parameter for the application container configuration file */
+    public static final String APPLICATION_CONFIG = &quot;yaafi.cli.config&quot;;
+
+    /** parameter for setting a shutdown hook */
+    public static final String APPLICATION_HASSHUTDOWNHOOK = &quot;yaafi.cli.hasShutdownHook&quot;;
+
+    /** parameter for blocking the main thread in Main.run() */
+    public static final String APPLICATION_ISBLOCKING = &quot;yaafi.cli.isBlocking&quot;;
+
+    /** the interval to check for termination */
+    private static final int SLEEP_TIME = 100;
+
+    /** the timeout for joining the shutdown thread */
+    private static final int JOIN_TIME = 1000;
+
+    /** The service manager */
+    private ServiceContainer container;
+
+    /** The location of the container configuration */
+    private String containerConfigValue;
+
+    /** Thread for processing the shutdown notification of the JVM */
+    private Thread shutdownThread;
+
+    /** Do we block the invoking thread until the JVM terminates ?! */
+    private boolean isBlocking;
+
+    /** Do we install a shutdown hook for the JVM ?! */
+    private boolean hasShutdownHook;
+
+    /** The logger being used */
+    private Logger logger;
+
+    /** the name of the application */
+    private String applicationName;
+
+    /** the working directory */
+    private String applicationHome;
+
+    /** the temp directory */
+    private String tempHome;
+
+    /** the command line arguments */
+    private String[] args;
+
+    /** is the instance properly initialized */
+    private volatile boolean isInitialized;
+
+
+    /**
+     * Constructor
+     */
+    public Main()
+<span class="fc" id="L101">    {</span>
+        // default initialization
+
+<span class="fc" id="L104">        this.containerConfigValue   = &quot;./conf/containerConfiguration.xml&quot;;</span>
+<span class="fc" id="L105">        this.logger                 = new ConsoleLogger();</span>
+<span class="fc" id="L106">        this.applicationHome        = &quot;.&quot;;</span>
+<span class="fc" id="L107">        this.tempHome               = System.getProperty(&quot;java.io.tmpdir&quot;,&quot;.&quot;);</span>
+<span class="fc" id="L108">        this.applicationName        = &quot;main&quot;;</span>
+        
+        // Arguments are specified in the constructor, but if 
+        // null, set to an empty string array
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if ( this.args == null ) { this.args = new String[0]; }</span>
+
+<span class="fc" id="L114">        this.isBlocking             = false;</span>
+<span class="fc" id="L115">        this.hasShutdownHook        = true;</span>
+<span class="fc" id="L116">        this.isInitialized          = false;</span>
+
+        // query the system properties
+
+<span class="fc" id="L120">        this.containerConfigValue = System.getProperty(</span>
+                APPLICATION_CONFIG,
+                this.containerConfigValue
+                );
+
+<span class="fc" id="L125">        this.applicationName = System.getProperty(</span>
+                APPLICATION_NAME,
+                this.applicationName
+                );
+
+<span class="fc" id="L130">        this.applicationHome = System.getProperty(</span>
+            APPLICATION_HOME,
+            this.applicationHome
+            );
+
+<span class="fc" id="L135">        this.tempHome = System.getProperty(</span>
+            APPLICATION_TEMP,
+            this.tempHome
+            );
+<span class="fc" id="L139">    }</span>
+
+    /**
+     * Constructor
+     *
+     * The following command line parameters are supported
+     * &lt;ul&gt;
+     *   &lt;li&gt;--yaafi.cli.applicationName name&lt;/li&gt;
+     *   &lt;li&gt;--yaafi.cli.applicationHome dir&lt;/li&gt;
+     *   &lt;li&gt;--yaafi.cli.tempHome dir&lt;/li&gt;
+     *   &lt;li&gt;--yaafi.cli.isBlocking [true|false]&lt;/li&gt;
+     *   &lt;li&gt;--yaafi.cli.hasShutdownHook [true|false]&lt;/li&gt;
+     *   &lt;li&gt;--yaafi.cli.config file&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param args the command line arguments
+     */
+    public Main( String[] args )
+    {
+<span class="fc" id="L158">        this();</span>
+
+<span class="fc" id="L160">        this.args = args;</span>
+
+        // parse the command line
+
+<span class="fc" id="L164">        Getopt getopt = new Getopt(this.args);</span>
+
+<span class="fc" id="L166">        this.setApplicationName(</span>
+<span class="fc" id="L167">            getopt.getStringValue( APPLICATION_NAME, this.getApplicationName() )</span>
+            );
+
+<span class="fc" id="L170">        this.setApplicationHome(</span>
+<span class="fc" id="L171">            getopt.getStringValue( APPLICATION_HOME, this.getApplicationHome() )</span>
+            );
+
+<span class="fc" id="L174">        this.setTempHome(</span>
+<span class="fc" id="L175">            getopt.getStringValue( APPLICATION_TEMP, this.getTempHome() )</span>
+            );
+
+<span class="fc" id="L178">        this.setContainerConfigValue(</span>
+<span class="fc" id="L179">            getopt.getStringValue( APPLICATION_CONFIG, this.getContainerConfigValue() )</span>
+            );
+
+<span class="fc" id="L182">        this.setIsBlocking(</span>
+<span class="fc" id="L183">            getopt.getBooleanValue( APPLICATION_ISBLOCKING, this.isBlocking )</span>
+            );
+
+<span class="fc" id="L186">        this.setHasShutdownHook(</span>
+<span class="fc" id="L187">            getopt.getBooleanValue( APPLICATION_HASSHUTDOWNHOOK, this.hasShutdownHook )</span>
+            );
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * The main method.
+     *
+     * @param args Command line arguments
+     * @throws Exception the execution failed
+     */
+    public static void main( String[] args ) throws Exception
+    {
+<span class="nc" id="L199">       int exitCode = 0;</span>
+
+<span class="nc" id="L201">       Main impl = new Main(args);</span>
+
+       try
+       {
+<span class="nc" id="L205">           impl.run();</span>
+       }
+<span class="nc" id="L207">       catch (Throwable t)</span>
+       {
+<span class="nc" id="L209">           exitCode = 1;</span>
+<span class="nc" id="L210">       }</span>
+
+<span class="nc" id="L212">       System.exit(exitCode);</span>
+<span class="nc" id="L213">    }</span>
+
+    /**
+     * Determines the file location of the given name. If the name denotes
+     * a relative file location it will be resolved using the application
+     * home directory.
+     *
+     * @param baseDir the base directory
+     * @param name the filename
+     * @return the file
+     */
+    public static File makeAbsoluteFile( File baseDir, String name )
+    {
+<span class="nc" id="L226">        File result = new File(name);</span>
+
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if( !result.isAbsolute() )</span>
+        {
+<span class="nc" id="L230">            result = new File( baseDir, name );</span>
+        }
+
+<span class="nc" id="L233">        return result;</span>
+    }
+
+    /**
+     * Dispose the YAAFI container
+     */
+
+    public synchronized void dispose()
+    {
+<span class="nc" id="L242">        this.shutdown();</span>
+<span class="nc" id="L243">    }</span>
+
+    /**
+     * Runs the instance by initializing it and potentially blocking
+     * the invoking thread depending on the configuration.
+     *
+     * @see java.lang.Runnable#run()
+     */
+    public void run()
+    {
+        try
+        {
+<span class="fc" id="L255">            this.initialize();</span>
+<span class="fc" id="L256">            this.onWait();</span>
+        }
+<span class="fc" id="L258">        catch (Throwable t)</span>
+        {
+<span class="fc" id="L260">            String msg = &quot;Failed to run &quot; + this.getClass().getName();</span>
+<span class="fc" id="L261">            this.getLogger().error(msg,t);</span>
+<span class="fc" id="L262">            throw new RuntimeException(t.getMessage());</span>
+<span class="fc" id="L263">        }</span>
+<span class="fc" id="L264">    }</span>
+
+    /**
+     * Depending on the configuration this method might block
+     * the calling thread or return immediately. We currently
+     * poll a volatile variable which is not the most elegant
+     * solution.
+     */
+    public void onWait()
+    {
+<span class="pc bpc" id="L274" title="3 of 4 branches missed.">        while( this.isBlocking() &amp;&amp; this.isInitialized() )</span>
+        {
+            try
+            {
+<span class="nc" id="L278">                Thread.sleep(Main.SLEEP_TIME);</span>
+            }
+<span class="nc" id="L280">            catch (InterruptedException e)</span>
+            {
+                // ignore
+<span class="nc" id="L283">            }</span>
+        }
+<span class="fc" id="L285">    }</span>
+
+    /**
+     * Locates the file for the given file name.
+     * @param fileName the filename
+     * @return an absolute file
+     */
+    public File makeAbsoluteFile( String fileName )
+    {
+<span class="nc" id="L294">        return Main.makeAbsoluteFile(</span>
+<span class="nc" id="L295">            new File(this.getApplicationHome()),</span>
+            fileName
+            );
+    }
+
+    /**
+     * Locates the file for the given file name.
+     * @param fileName the filename
+     * @return an absolute path
+     */
+    public String makeAbsolutePath( String fileName )
+    {
+<span class="nc" id="L307">        return Main.makeAbsoluteFile(</span>
+<span class="nc" id="L308">            new File(this.getApplicationHome()),</span>
+            fileName
+<span class="nc" id="L310">            ).getAbsolutePath();</span>
+    }
+
+    /////////////////////////////////////////////////////////////////////////
+    // Generated getters &amp; setters
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @return Returns the ServiceContainer interface
+     */
+    public ServiceContainer getServiceContainer()
+    {
+<span class="nc" id="L322">        return this.container;</span>
+    }
+
+    /**
+     * @return Returns the ServiceManager interface
+     */
+    public ServiceManager getServiceManager()
+    {
+<span class="fc" id="L330">        return this.container;</span>
+    }
+
+    /**
+     * @return Returns the applicationHome.
+     */
+    public String getApplicationHome()
+    {
+<span class="fc" id="L338">        return this.applicationHome;</span>
+    }
+
+    /**
+     * @param applicationHome The applicationHome to set.
+     */
+    public void setApplicationHome(String applicationHome)
+    {
+<span class="fc" id="L346">        this.applicationHome = applicationHome;</span>
+<span class="fc" id="L347">    }</span>
+
+    /**
+     * @return Returns the containerConfigValue.
+     */
+    public String getContainerConfigValue()
+    {
+<span class="fc" id="L354">        return containerConfigValue;</span>
+    }
+
+    /**
+     * @param containerConfigValue The containerConfigValue to set.
+     */
+    public void setContainerConfigValue(String containerConfigValue)
+    {
+<span class="fc" id="L362">        this.containerConfigValue = containerConfigValue;</span>
+<span class="fc" id="L363">    }</span>
+
+    /**
+     * @return Returns the isBlocking.
+     */
+    public boolean isBlocking()
+    {
+<span class="fc" id="L370">        return isBlocking;</span>
+    }
+
+    /**
+     * @param isBlocking The isBlocking to set.
+     */
+    public void setIsBlocking(boolean isBlocking)
+    {
+<span class="fc" id="L378">        this.isBlocking = isBlocking;</span>
+<span class="fc" id="L379">    }</span>
+
+    /**
+     * @param isBlocking The isBlocking to set.
+     */
+    public void setIsBlocking(Boolean isBlocking)
+    {
+<span class="nc" id="L386">        this.isBlocking = isBlocking.booleanValue();</span>
+<span class="nc" id="L387">    }</span>
+
+    /**
+     * @param isBlocking The isBlocking to set.
+     */
+    public void setIsBlocking(String isBlocking)
+    {
+<span class="nc" id="L394">        this.isBlocking = Boolean.valueOf(isBlocking).booleanValue();</span>
+<span class="nc" id="L395">    }</span>
+
+    /**
+     * @return Returns the tempHome.
+     */
+    public String getTempHome()
+    {
+<span class="fc" id="L402">        return this.tempHome;</span>
+    }
+
+    /**
+     * @param tempHome The tempHome to set.
+     */
+    public void setTempHome(String tempHome)
+    {
+<span class="fc" id="L410">        this.tempHome = tempHome;</span>
+<span class="fc" id="L411">    }</span>
+
+    /**
+     * @return Returns the logger.
+     */
+    public Logger getLogger()
+    {
+<span class="fc" id="L418">        return this.logger;</span>
+    }
+
+    /**
+     * @param logger The logger to set.
+     */
+    public void setLogger(Logger logger)
+    {
+<span class="nc" id="L426">        this.logger = logger;</span>
+<span class="nc" id="L427">    }</span>
+
+    /**
+     * @return Returns the applicationName.
+     */
+    public String getApplicationName()
+    {
+<span class="fc" id="L434">        return applicationName;</span>
+    }
+
+    /**
+     * @param applicationName The applicationName to set.
+     */
+    public void setApplicationName(String applicationName)
+    {
+<span class="fc" id="L442">        this.applicationName = applicationName;</span>
+<span class="fc" id="L443">    }</span>
+
+    /**
+     * @return Returns the args.
+     */
+    public String [] getArgs()
+    {
+<span class="fc" id="L450">        return args;</span>
+    }
+    /**
+     * @param args The args to set.
+     */
+    public void setArgs(String [] args)
+    {
+<span class="nc" id="L457">        this.args = args;</span>
+<span class="nc" id="L458">    }</span>
+
+    /**
+     * @return Returns the hasShutdownHook.
+     */
+    public boolean hasShutdownHook()
+    {
+<span class="fc" id="L465">        return hasShutdownHook;</span>
+    }
+
+    /**
+     * @param hasShutdownHook The hasShutdownHook to set.
+     */
+    public void setHasShutdownHook(boolean hasShutdownHook)
+    {
+<span class="fc" id="L473">        this.hasShutdownHook = hasShutdownHook;</span>
+<span class="fc" id="L474">    }</span>
+
+    /**
+     * @param hasShutdownHook The hasShutdownHook to set.
+     */
+    public void setHasShutdownHook(Boolean hasShutdownHook)
+    {
+<span class="nc" id="L481">        this.hasShutdownHook = hasShutdownHook.booleanValue();</span>
+<span class="nc" id="L482">    }</span>
+
+    /**
+     * @param hasShutdownHook The hasShutdownHook to set.
+     */
+    public void setHasShutdownHook(String hasShutdownHook)
+    {
+<span class="nc" id="L489">        this.hasShutdownHook = Boolean.valueOf(hasShutdownHook).booleanValue();</span>
+<span class="nc" id="L490">    }</span>
+
+    /**
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+<span class="fc" id="L497">        StringBuilder result = new StringBuilder();</span>
+<span class="fc" id="L498">        StringBuilder argsLine = new StringBuilder();</span>
+
+<span class="fc" id="L500">        result.append(getClass().getName() + &quot;@&quot; + Integer.toHexString(hashCode()));</span>
+
+<span class="fc" id="L502">        result.append('[');</span>
+<span class="fc" id="L503">        result.append(&quot;workingDir=&quot; + new File(&quot;&quot;).getAbsolutePath());</span>
+<span class="fc" id="L504">        result.append(',');</span>
+
+<span class="fc" id="L506">        result.append(&quot;args=&quot;);</span>
+
+<span class="fc bfc" id="L508" title="All 2 branches covered.">        for( int i=0; i&lt;this.getArgs().length; i++ )</span>
+        {
+<span class="fc" id="L510">            argsLine.append( this.getArgs()[i] );</span>
+
+<span class="fc bfc" id="L512" title="All 2 branches covered.">            if( (i+1) &lt; this.getArgs().length )</span>
+            {
+<span class="fc" id="L514">                argsLine.append( &quot; &quot; );</span>
+            }
+        }
+
+<span class="fc" id="L518">        result.append( argsLine.toString() );</span>
+<span class="fc" id="L519">        result.append(',');</span>
+
+<span class="fc" id="L521">        result.append(&quot;applicationName=&quot; + this.getApplicationName());</span>
+<span class="fc" id="L522">        result.append(',');</span>
+<span class="fc" id="L523">        result.append(&quot;applicationHome=&quot; + this.getApplicationHome());</span>
+<span class="fc" id="L524">        result.append(',');</span>
+<span class="fc" id="L525">        result.append(&quot;tempHome=&quot; + this.getTempHome());</span>
+<span class="fc" id="L526">        result.append(',');</span>
+<span class="fc" id="L527">        result.append(&quot;logger=&quot; + this.getLogger().getClass().getName());</span>
+<span class="fc" id="L528">        result.append(',');</span>
+<span class="fc" id="L529">        result.append(&quot;isBlocking=&quot; + this.isBlocking);</span>
+<span class="fc" id="L530">        result.append(',');</span>
+<span class="fc" id="L531">        result.append(&quot;hasShutdownHook=&quot; + this.hasShutdownHook());</span>
+<span class="fc" id="L532">        result.append(',');</span>
+<span class="fc" id="L533">        result.append(&quot;containerConfigValue=&quot; + this.getContainerConfigValue());</span>
+<span class="fc" id="L534">        result.append(']');</span>
+
+<span class="fc" id="L536">        return result.toString();</span>
+    }
+
+    /**
+     * @return Returns the isInitialized.
+     */
+    public boolean isInitialized()
+    {
+<span class="fc" id="L544">        return isInitialized;</span>
+    }
+
+    /////////////////////////////////////////////////////////////////////////
+    // Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @param isInitialized The isInitialized to set.
+     */
+    protected void setInitialized(boolean isInitialized)
+    {
+<span class="fc" id="L556">        this.isInitialized = isInitialized;</span>
+<span class="fc" id="L557">    }</span>
+
+    /**
+     * Initialize the instance
+     *
+     * @throws Exception the initialization failed
+     */
+    public void initialize() throws Exception
+    {
+<span class="fc" id="L566">        this.getLogger().debug( &quot;Initializing &quot; + this.getClass().getName() );</span>
+
+<span class="fc" id="L568">        ServiceContainerConfiguration config = new ServiceContainerConfiguration();</span>
+
+        // initialize the Avalon container
+
+<span class="fc" id="L572">        config.setLogger( this.getLogger() );</span>
+<span class="fc" id="L573">        config.setApplicationRootDir( this.getApplicationHome() );</span>
+<span class="fc" id="L574">        config.setTempRootDir( this.getTempHome() );</span>
+<span class="fc" id="L575">        config.loadContainerConfiguration( this.getContainerConfigValue(), &quot;auto&quot; );</span>
+
+<span class="fc" id="L577">        this.container = ServiceContainerFactory.create( config );</span>
+
+        // initialize shutdown hook of JVM for a server application
+
+<span class="pc bpc" id="L581" title="1 of 2 branches missed.">        if( this.hasShutdownHook() )</span>
+        {
+<span class="fc" id="L583">            this.getLogger().debug( &quot;Registering shutdown hook&quot; );</span>
+<span class="fc" id="L584">            Shutdown shutdown = new Shutdown( this );</span>
+<span class="fc" id="L585">            this.shutdownThread = new Thread( shutdown, &quot;ShutdownThread&quot; );</span>
+<span class="fc" id="L586">            Runtime.getRuntime().addShutdownHook( this.shutdownThread );</span>
+        }
+
+<span class="fc" id="L589">        this.setInitialized(true);</span>
+<span class="fc" id="L590">    }</span>
+
+    /**
+     * Terminates the instance
+     */
+    protected void shutdown()
+    {
+<span class="pc bpc" id="L597" title="1 of 2 branches missed.">        if( !this.isInitialized())</span>
+        {
+<span class="nc" id="L599">            return;</span>
+        }
+
+<span class="fc" id="L602">        this.getLogger().debug( &quot;Terminating &quot; + this.getClass().getName() );</span>
+
+        try
+        {
+            // wait for the shutdown thread
+
+<span class="pc bpc" id="L608" title="1 of 2 branches missed.">            if( this.shutdownThread != null )</span>
+            {
+                try
+                {
+<span class="fc" id="L612">                    this.getLogger().debug( &quot;Waiting for shutdown handler thread to terminate&quot; );</span>
+<span class="nc" id="L613">                    this.shutdownThread.join(JOIN_TIME);</span>
+<span class="nc" id="L614">                    this.shutdownThread = null;</span>
+<span class="nc" id="L615">                    this.getLogger().debug( &quot;Shutdown handler thread is terminated&quot; );</span>
+                }
+<span class="nc" id="L617">                catch (InterruptedException e)</span>
+                {
+                    // nothing to do
+<span class="nc" id="L620">                }</span>
+            }
+
+            // dispose the service container
+
+<span class="nc bnc" id="L625" title="All 2 branches missed.">            if( this.getServiceContainer() != null )</span>
+            {
+<span class="nc" id="L627">                this.getServiceContainer().dispose();</span>
+<span class="nc" id="L628">                this.container = null;</span>
+            }
+
+<span class="nc" id="L631">            this.setInitialized(false);</span>
+        }
+
+<span class="nc" id="L634">        catch (Exception e)</span>
+        {
+<span class="nc" id="L636">            String msg = &quot;Failed to terminate &quot; + this.getClass().getName();</span>
+<span class="nc" id="L637">            this.getLogger().error(msg,e);</span>
+<span class="nc" id="L638">        }</span>
+<span class="nc" id="L639">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

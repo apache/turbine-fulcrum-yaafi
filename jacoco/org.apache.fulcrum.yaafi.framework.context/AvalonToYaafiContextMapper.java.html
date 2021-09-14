@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AvalonToYaafiContextMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.context</a> &gt; <span class="el_source">AvalonToYaafiContextMapper.java</span></div><h1>AvalonToYaafiContextMapper.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.context;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.DefaultContext;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonFortressConstants;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonMerlinConstants;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonPhoenixConstants;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonYaafiConstants;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * Helper for converting Avalon Context of Fortress and Phoenix
+ * container to a standard Merlin context.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class AvalonToYaafiContextMapper
+{
+    /** The directory for storing temporary files */
+    private File tempRootDir;
+
+    /** Our default context */
+    private DefaultContext defaultContext;
+
+    /** our defaul class loader */
+    private ClassLoader classLoader;
+
+    /**
+     * Constructor
+     *
+     * @param tempRootDir current temp directory
+     * @param context the existing context
+     * @param classLoader the classloader
+     */
+    public AvalonToYaafiContextMapper(
+        File tempRootDir,
+        Context context,
+        ClassLoader classLoader)
+<span class="fc" id="L62">    {</span>
+<span class="fc" id="L63">        Validate.notNull( tempRootDir, &quot;tempRootDir&quot; );</span>
+<span class="fc" id="L64">        Validate.notNull( context, &quot;context&quot; );</span>
+<span class="fc" id="L65">        Validate.notNull( classLoader, &quot;classLoader&quot; );</span>
+
+<span class="fc" id="L67">        this.tempRootDir = tempRootDir;</span>
+<span class="fc" id="L68">        this.classLoader = classLoader;</span>
+
+        // here we have to create a new DefaultContext since
+        // it contains service specific entries
+
+<span class="fc" id="L73">        this.defaultContext = new DefaultContext( context );</span>
+<span class="fc" id="L74">    }</span>
+
+    /**
+     * Map a Avalon context to the YAAFI (Merlin) incarnation whereas
+     * the following containers are supported
+     * &lt;ul&gt;
+     *   &lt;li&gt;merlin&lt;/li&gt;
+     *   &lt;li&gt;fortress&lt;/li&gt;
+     *   &lt;li&gt;phoenix&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param context the Avalon context to map
+     * @param from Avalon container identifier
+     * @return the mapped Avalon context
+     * @throws ContextException Accessing the context failed
+     */
+    public Context mapFrom( Context context, String from )
+        throws ContextException
+    {
+<span class="fc" id="L93">        Validate.notNull( context, &quot;context&quot; );</span>
+<span class="fc" id="L94">        Validate.notEmpty( from, &quot;from&quot; );</span>
+
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if( AvalonPhoenixConstants.AVALON_CONTAINER_PHOENIX.equals(from) )</span>
+        {
+<span class="fc" id="L98">            return mapFromPhoenix(context);</span>
+
+        }
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        else if( AvalonFortressConstants.AVALON_CONTAINER_FORTESS.equals(from) )</span>
+        {
+<span class="fc" id="L103">            return mapFromFortress(context);</span>
+
+        }
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        else if( AvalonMerlinConstants.AVALON_CONTAINER_MERLIN.equals(from) )</span>
+        {
+<span class="nc" id="L108">            return mapFromMerlin(context);</span>
+        }
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        else if( AvalonYaafiConstants.AVALON_CONTAINER_YAAFI.equals(from) )</span>
+        {
+<span class="fc" id="L112">            return mapFromMerlin(context);</span>
+        }
+        else
+        {
+<span class="nc" id="L116">            String msg = &quot;Don't know the following container type : &quot; + from;</span>
+<span class="nc" id="L117">            throw new IllegalArgumentException(msg);</span>
+        }
+    }
+
+    /**
+     * Map a Avalon Phoenix context to the YAAFI (Merlin) incarnation
+     *
+     * @param context the Avalon context to map
+     * @return the mapped Avalon context
+     * @throws ContextException Accessing the context failed
+     */
+    private Context mapFromPhoenix(Context context)
+        throws ContextException
+    {
+<span class="fc" id="L131">        DefaultContext result = this.getDefaultContext();</span>
+
+<span class="fc" id="L133">        String urnAvalonName = AvalonYaafiConstants.AVALON_CONTAINER_YAAFI;</span>
+<span class="fc" id="L134">        String urnAvalonPartition = (String) context.get( AvalonPhoenixConstants.PHOENIX_APP_NAME );</span>
+<span class="fc" id="L135">        File urnAvalonHome = (File) context.get( AvalonPhoenixConstants.PHOENIX_APP_HOME );</span>
+<span class="fc" id="L136">        File urnAvalonTemp = this.getTempRootDir();</span>
+
+        // add the Merlin specific parameters
+
+<span class="fc" id="L140">        result.put( AvalonYaafiConstants.URN_AVALON_NAME, urnAvalonName );</span>
+<span class="fc" id="L141">        result.put( AvalonYaafiConstants.URN_AVALON_PARTITION, urnAvalonPartition );</span>
+<span class="fc" id="L142">        result.put( AvalonYaafiConstants.URN_AVALON_HOME, urnAvalonHome );</span>
+<span class="fc" id="L143">        result.put( AvalonYaafiConstants.URN_AVALON_TEMP, urnAvalonTemp );</span>
+<span class="fc" id="L144">        result.put( AvalonYaafiConstants.URN_AVALON_CLASSLOADER, this.getClassLoader() );</span>
+
+        // add the deprecated ECM parameter
+
+<span class="fc" id="L148">        result.put(AvalonYaafiConstants.COMPONENT_APP_ROOT, urnAvalonHome.getAbsolutePath());</span>
+
+        // add the Fortress specific parameters
+
+<span class="fc" id="L152">        result.put(AvalonFortressConstants.FORTRESS_COMPONENT_ID,urnAvalonPartition);</span>
+<span class="fc" id="L153">        result.put(AvalonFortressConstants.FORTRESS_COMPONENT_LOGGER,urnAvalonName);</span>
+<span class="fc" id="L154">        result.put(AvalonFortressConstants.FORTRESS_CONTEXT_ROOT,urnAvalonHome);</span>
+<span class="fc" id="L155">        result.put(AvalonFortressConstants.FORTRESS_IMPL_WORKDIR,urnAvalonTemp);</span>
+
+<span class="fc" id="L157">        return result;</span>
+    }
+
+    /**
+     * Map a Avalon Fortress context to the YAAFI (Merlin) incarnation
+     *
+     * @param context the Avalon context to map
+     * @return the mapped Avalon context
+     * @throws ContextException Accessing the context failed
+     */
+    private Context mapFromFortress(Context context)
+        throws ContextException
+    {
+<span class="fc" id="L170">        DefaultContext result = this.getDefaultContext();</span>
+
+<span class="fc" id="L172">        String urnAvalonPartition = (String) context.get( AvalonFortressConstants.FORTRESS_COMPONENT_ID );</span>
+<span class="fc" id="L173">        File urnAvalonHome = (File) context.get( AvalonFortressConstants.FORTRESS_CONTEXT_ROOT );</span>
+<span class="fc" id="L174">        File urnAvalonTemp = (File) context.get( AvalonFortressConstants.FORTRESS_IMPL_WORKDIR );</span>
+
+        // add the Merlin specific parameters
+
+<span class="fc" id="L178">        result.put( AvalonYaafiConstants.URN_AVALON_NAME, AvalonYaafiConstants.AVALON_CONTAINER_YAAFI );</span>
+<span class="fc" id="L179">        result.put( AvalonYaafiConstants.URN_AVALON_PARTITION, urnAvalonPartition );</span>
+<span class="fc" id="L180">        result.put( AvalonYaafiConstants.URN_AVALON_HOME, urnAvalonHome );</span>
+<span class="fc" id="L181">        result.put( AvalonYaafiConstants.URN_AVALON_TEMP, urnAvalonTemp );</span>
+<span class="fc" id="L182">        result.put( AvalonYaafiConstants.URN_AVALON_CLASSLOADER, this.getClassLoader() );</span>
+
+        // add the deprecated ECM parameter
+
+<span class="fc" id="L186">        result.put(AvalonYaafiConstants.COMPONENT_APP_ROOT, urnAvalonHome.getAbsolutePath());</span>
+
+
+<span class="fc" id="L189">        return result;</span>
+    }
+
+    /**
+     * Map a Avalon Merlin context to the YAAFI (Merlin) incarnation
+     *
+     * @param context the Avalon context to map
+     * @return the mapped Avalon context
+     * @throws ContextException Accessing the context failed
+     */
+    private Context mapFromMerlin(Context context)
+        throws ContextException
+    {
+<span class="fc" id="L202">        DefaultContext result = this.getDefaultContext();</span>
+
+<span class="fc" id="L204">        String urnAvalonPartition = (String) context.get(AvalonYaafiConstants.URN_AVALON_PARTITION);</span>
+<span class="fc" id="L205">        File urnAvalonHome = (File) context.get(AvalonYaafiConstants.URN_AVALON_HOME);</span>
+<span class="fc" id="L206">        File urnAvalonTemp = (File) context.get(AvalonYaafiConstants.URN_AVALON_TEMP);</span>
+<span class="fc" id="L207">        String urnAvalonName = (String) (String) context.get(AvalonYaafiConstants.URN_AVALON_NAME);</span>
+
+        // add the Fortress specific parameters
+
+<span class="fc" id="L211">        result.put(AvalonFortressConstants.FORTRESS_COMPONENT_ID,urnAvalonPartition);</span>
+<span class="fc" id="L212">        result.put(AvalonFortressConstants.FORTRESS_COMPONENT_LOGGER,urnAvalonName);</span>
+<span class="fc" id="L213">        result.put(AvalonFortressConstants.FORTRESS_CONTEXT_ROOT,urnAvalonHome);</span>
+<span class="fc" id="L214">        result.put(AvalonFortressConstants.FORTRESS_IMPL_WORKDIR,urnAvalonTemp);</span>
+
+        // add the deprecated ECM parameter
+
+<span class="fc" id="L218">        result.put(AvalonYaafiConstants.COMPONENT_APP_ROOT, urnAvalonHome.getAbsolutePath());</span>
+
+<span class="fc" id="L220">        return result;</span>
+
+    }
+
+    /**
+     * @return Returns the classLoader.
+     */
+    private ClassLoader getClassLoader()
+    {
+<span class="fc" id="L229">        return this.classLoader;</span>
+    }
+
+    /**
+     * @return Returns the defaultContext.
+     */
+    private DefaultContext getDefaultContext()
+    {
+<span class="fc" id="L237">        return this.defaultContext;</span>
+    }
+
+    /**
+     * @return Returns the tempRootDir.
+     */
+    private File getTempRootDir()
+    {
+<span class="fc" id="L245">        return this.tempRootDir;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

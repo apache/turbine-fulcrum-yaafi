@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleConfigurationParserImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.role</a> &gt; <span class="el_source">RoleConfigurationParserImpl.java</span></div><h1>RoleConfigurationParserImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.role;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.util.ArrayList;
+
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonFortressConstants;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonPhoenixConstants;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonYaafiConstants;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * Parses the role configuration file of various Avalon containers.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class RoleConfigurationParserImpl implements RoleConfigurationParser {
+	/** The flavour of Avalon container */
+	private String containerFlavour;
+
+	/**
+	 * Constructor
+	 * 
+	 * @param containerFlavour The flavour of Avalon container
+	 */
+<span class="fc" id="L46">	public RoleConfigurationParserImpl(String containerFlavour) {</span>
+<span class="fc" id="L47">		Validate.notEmpty(containerFlavour, &quot;containerFlavour&quot;);</span>
+<span class="fc" id="L48">		this.containerFlavour = containerFlavour;</span>
+<span class="fc" id="L49">	}</span>
+
+	/**
+	 * Parses a role configuration file.
+	 *
+	 * @param roleConfiguration the role configuration file to parse
+	 * @return the parsed RoleEntries
+	 * @throws ConfigurationException the configuration couldn't be processsed
+	 */
+	public RoleEntry[] parse(Configuration roleConfiguration) throws ConfigurationException {
+<span class="fc" id="L59">		Validate.notNull(roleConfiguration, &quot;roleConfiguration&quot;);</span>
+
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">		if (AvalonYaafiConstants.AVALON_CONTAINER_YAAFI.equals(containerFlavour)) {</span>
+<span class="fc" id="L62">			return mapFromYaafi(roleConfiguration);</span>
+
+		}
+<span class="nc bnc" id="L65" title="All 2 branches missed.">		if (AvalonPhoenixConstants.AVALON_CONTAINER_PHOENIX.equals(containerFlavour)) {</span>
+<span class="nc" id="L66">			return mapFromPhoenix(roleConfiguration);</span>
+
+<span class="nc bnc" id="L68" title="All 2 branches missed.">		} else if (AvalonFortressConstants.AVALON_CONTAINER_FORTESS.equals(containerFlavour)) {</span>
+<span class="nc" id="L69">			return mapFromFortress(roleConfiguration);</span>
+
+		} else {
+<span class="nc" id="L72">			String msg = &quot;Don't know the following container flavour : &quot; + containerFlavour;</span>
+<span class="nc" id="L73">			throw new IllegalArgumentException(msg);</span>
+		}
+	}
+
+	/**
+	 * Parses a YAAFI role configuration file.
+	 *
+	 * @param roleConfiguration the role configuration
+	 * @return the role entries from the configuration file
+	 * @throws ConfigurationException the configuration couldn't be processsed
+	 */
+	private RoleEntry[] mapFromYaafi(Configuration roleConfiguration) throws ConfigurationException {
+<span class="fc" id="L85">		Validate.notNull(roleConfiguration, &quot;roleConfiguration&quot;);</span>
+
+<span class="fc" id="L87">		String clazzName = null;</span>
+<span class="fc" id="L88">		String name = null;</span>
+<span class="fc" id="L89">		String shorthand = null;</span>
+<span class="fc" id="L90">		boolean isEarlyInit = false;</span>
+<span class="fc" id="L91">		String description = null;</span>
+<span class="fc" id="L92">		String componentType = null;</span>
+<span class="fc" id="L93">		String componentFlavour = null;</span>
+<span class="fc" id="L94">		boolean hasProxy = false;</span>
+<span class="fc" id="L95">		ArrayList&lt;String&gt; interceptorList = null;</span>
+<span class="fc" id="L96">		String logCategory = null;</span>
+<span class="fc" id="L97">		RoleEntry roleEntry = null;</span>
+
+<span class="fc" id="L99">		Configuration[] list = roleConfiguration.getChildren(&quot;role&quot;);</span>
+<span class="fc" id="L100">		RoleEntry[] result = new RoleEntry[list.length];</span>
+
+<span class="fc" id="L102">		int roleIndex = 0;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">		for (Configuration entry : list) {</span>
+<span class="fc" id="L104">			clazzName = entry.getAttribute(&quot;default-class&quot;);</span>
+<span class="fc" id="L105">			name = entry.getAttribute(&quot;name&quot;, clazzName);</span>
+<span class="fc" id="L106">			shorthand = entry.getAttribute(&quot;shorthand&quot;, name);</span>
+<span class="fc" id="L107">			isEarlyInit = entry.getAttributeAsBoolean(&quot;early-init&quot;, true);</span>
+<span class="fc" id="L108">			description = entry.getAttribute(&quot;description&quot;, null);</span>
+<span class="fc" id="L109">			componentType = entry.getAttribute(&quot;component-type&quot;, &quot;avalon&quot;);</span>
+<span class="fc" id="L110">			componentFlavour = entry.getAttribute(&quot;component-flavour&quot;, AvalonYaafiConstants.AVALON_CONTAINER_YAAFI);</span>
+<span class="fc" id="L111">			hasProxy = entry.getAttributeAsBoolean(&quot;has-proxy&quot;, true);</span>
+<span class="fc" id="L112">			logCategory = entry.getAttribute(&quot;logger&quot;, shorthand);</span>
+
+			// parse the list of defined interceptors
+<span class="fc" id="L115">			Configuration[] interceptorConfigList = entry.getChild(&quot;interceptors&quot;).getChildren(&quot;interceptor&quot;);</span>
+<span class="fc" id="L116">			interceptorList = new ArrayList&lt;String&gt;();</span>
+
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">			for ( Configuration interceptorConfigEntry : interceptorConfigList )</span>
+			{
+<span class="nc" id="L120">				interceptorList.add(interceptorConfigEntry.getValue(&quot;interceptor&quot;));</span>
+			}
+
+			// create a role entry
+
+<span class="fc" id="L125">			roleEntry = new RoleEntryImpl(name, clazzName, shorthand, isEarlyInit, description, componentType,</span>
+					componentFlavour, hasProxy, interceptorList, logCategory);
+
+<span class="fc" id="L128">			result[roleIndex++] = roleEntry;</span>
+		}
+
+<span class="fc" id="L131">		return result;</span>
+	}
+
+	private RoleEntry[] mapFromPhoenix(Configuration roleConfiguration) throws ConfigurationException {
+<span class="nc" id="L135">		Validate.notNull(roleConfiguration, &quot;roleConfiguration&quot;);</span>
+<span class="nc" id="L136">		throw new ConfigurationException(&quot;Not supported yet&quot;);</span>
+	}
+
+	private RoleEntry[] mapFromFortress(Configuration roleConfiguration) throws ConfigurationException {
+<span class="nc" id="L140">		Validate.notNull(roleConfiguration, &quot;roleConfiguration&quot;);</span>
+<span class="nc" id="L141">		throw new ConfigurationException(&quot;Not supported yet&quot;);</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

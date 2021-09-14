@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JavaSimonInterceptorServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.interceptor.javasimon</a> &gt; <span class="el_source">JavaSimonInterceptorServiceImpl.java</span></div><h1>JavaSimonInterceptorServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.interceptor.javasimon;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
+import java.lang.reflect.Method;
+
+import org.apache.avalon.framework.activity.Disposable;
+import org.apache.avalon.framework.activity.Initializable;
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.Reconfigurable;
+import org.apache.avalon.framework.thread.ThreadSafe;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext;
+import org.apache.fulcrum.yaafi.framework.reflection.Clazz;
+import org.apache.fulcrum.yaafi.interceptor.baseservice.BaseInterceptorServiceImpl;
+
+/**
+ * A service using JavaSimon for performance monitoring. The implementation
+ * relies on reflection to invoke JavaSimon to avoid compile-time coupling.
+ *
+ * @since 1.0.7
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class JavaSimonInterceptorServiceImpl extends BaseInterceptorServiceImpl
+		implements JavaSimonInterceptorService, Reconfigurable, ThreadSafe, Disposable, Initializable {
+	/** are the JavaSimon classes in the classpath */
+	private boolean isJavaSimonAvailable;
+
+	/** the file to hold the report */
+	private File reportFile;
+
+	/** the time in ms between two reports */
+	private long reportTimeout;
+
+	/** do we create a report during disposal of the service */
+	private boolean reportOnExit;
+
+	/** the time when the next report is due */
+	private long nextReportTimestamp;
+
+	/** the implementation class name for the performance monitor */
+	private String performanceMonitorClassName;
+
+	/** the implementation class name for the performance monitor */
+	private Class&lt;?&gt; performanceMonitorClass;
+
+	/** the class name of the JavaSimon factory */
+	private static final String MONITORFACTORY_CLASSNAME = &quot;org.javasimon.SimonManager&quot;;
+
+	/** the class name of the JavaSimon MonitorFactory */
+	private static final String DEFAULT_PERFORMANCEMONITOR_CLASSNAME = &quot;org.apache.fulcrum.yaafi.interceptor.javasimon.JavaSimon4PerformanceMonitorImpl&quot;;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Avalon Service Lifecycle Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Constructor
+	 */
+	public JavaSimonInterceptorServiceImpl() {
+<span class="fc" id="L84">		super();</span>
+<span class="fc" id="L85">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Configurable#configure(Configuration)
+	 */
+	public void configure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L91">		super.configure(configuration);</span>
+<span class="fc" id="L92">		this.reportTimeout = configuration.getChild(&quot;reportTimeout&quot;).getValueAsLong(0);</span>
+
+		// parse the performance monitor class name
+<span class="fc" id="L95">		this.performanceMonitorClassName = configuration.getChild(&quot;performanceMonitorClassName&quot;)</span>
+<span class="fc" id="L96">				.getValue(DEFAULT_PERFORMANCEMONITOR_CLASSNAME);</span>
+
+		// parse the report file name
+<span class="fc" id="L99">		String reportFileName = configuration.getChild(&quot;reportFile&quot;).getValue(&quot;./javasimon.html&quot;);</span>
+<span class="fc" id="L100">		this.reportFile = this.makeAbsoluteFile(reportFileName);</span>
+
+		// determine when to create the next report
+<span class="fc" id="L103">		this.nextReportTimestamp = System.currentTimeMillis() + this.reportTimeout;</span>
+
+		// do we create a report on disposal
+<span class="fc" id="L106">		this.reportOnExit = configuration.getChild(&quot;reportOnExit&quot;).getValueAsBoolean(false);</span>
+<span class="fc" id="L107">	}</span>
+
+	/**
+	 * @see Initializable#initialize()
+	 */
+	public void initialize() throws Exception {
+<span class="fc" id="L113">		ClassLoader classLoader = this.getClassLoader();</span>
+
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">		if (!Clazz.hasClazz(classLoader, MONITORFACTORY_CLASSNAME)) {</span>
+<span class="nc" id="L116">			String msg = &quot;The JavaSimonInterceptorService is disabled since the JavaSimon classes are not found in the classpath&quot;;</span>
+<span class="nc" id="L117">			this.getLogger().warn(msg);</span>
+<span class="nc" id="L118">			this.isJavaSimonAvailable = false;</span>
+<span class="nc" id="L119">			return;</span>
+		}
+
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">		if (!Clazz.hasClazz(classLoader, this.performanceMonitorClassName)) {</span>
+<span class="nc" id="L123">			String msg = &quot;The JavaSimonInterceptorService is disabled since the performance monitor class is not found in the classpath&quot;;</span>
+<span class="nc" id="L124">			this.getLogger().warn(msg);</span>
+<span class="nc" id="L125">			this.isJavaSimonAvailable = false;</span>
+<span class="nc" id="L126">			return;</span>
+		}
+
+		// load the performance monitor class
+<span class="fc" id="L130">		this.performanceMonitorClass = Clazz.getClazz(this.getClassLoader(), this.performanceMonitorClassName);</span>
+
+		// check if we can create an instance of the performance monitor class
+<span class="fc" id="L133">		JavaSimonPerformanceMonitor testMonitor = this.createJavaSimonPerformanceMonitor(null, null, true);</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">		if (testMonitor == null) {</span>
+<span class="nc" id="L135">			String msg = &quot;The JavaSimonInterceptorService is disabled since the performance monitor can't be instantiated&quot;;</span>
+<span class="nc" id="L136">			this.getLogger().warn(msg);</span>
+<span class="nc" id="L137">			this.isJavaSimonAvailable = false;</span>
+<span class="nc" id="L138">			return;</span>
+		}
+
+<span class="fc" id="L141">		this.getLogger().debug(&quot;The JavaSimonInterceptorService is enabled&quot;);</span>
+<span class="fc" id="L142">		this.isJavaSimonAvailable = true;</span>
+<span class="fc" id="L143">	}</span>
+
+	/**
+	 * @see Reconfigurable#reconfigure(Configuration)
+	 */
+	public void reconfigure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L149">		super.reconfigure(configuration);</span>
+<span class="fc" id="L150">		this.configure(configuration);</span>
+<span class="fc" id="L151">	}</span>
+
+	/**
+	 * @see Disposable#dispose()
+	 */
+	public void dispose() {
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">		if (this.reportOnExit) {</span>
+<span class="nc" id="L158">			this.run();</span>
+		}
+
+<span class="fc" id="L161">		this.reportFile = null;</span>
+<span class="fc" id="L162">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service interface implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorService#onEntry(AvalonInterceptorContext)
+	 */
+	public void onEntry(AvalonInterceptorContext interceptorContext) {
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">		if (this.isJavaSimonAvailable()) {</span>
+<span class="fc" id="L173">			this.writeReport();</span>
+
+<span class="fc" id="L175">			String serviceShortHand = interceptorContext.getServiceShorthand();</span>
+<span class="fc" id="L176">			Method serviceMethod = interceptorContext.getMethod();</span>
+<span class="fc" id="L177">			boolean isEnabled = this.isServiceMonitored(interceptorContext);</span>
+<span class="fc" id="L178">			JavaSimonPerformanceMonitor monitor = this.createJavaSimonPerformanceMonitor(serviceShortHand,</span>
+					serviceMethod, isEnabled);
+<span class="fc" id="L180">			monitor.start();</span>
+<span class="fc" id="L181">			interceptorContext.getRequestContext().put(this.getServiceName(), monitor);</span>
+		}
+<span class="fc" id="L183">	}</span>
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorService#onExit(AvalonInterceptorContext,
+	 *      Object)
+	 */
+	public void onExit(AvalonInterceptorContext interceptorContext, Object result) {
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">		if (this.isJavaSimonAvailable()) {</span>
+			JavaSimonPerformanceMonitor monitor;
+<span class="fc" id="L192">			monitor = (JavaSimonPerformanceMonitor) interceptorContext.getRequestContext()</span>
+<span class="fc" id="L193">					.remove(this.getServiceName());</span>
+<span class="fc" id="L194">			monitor.stop();</span>
+		}
+<span class="fc" id="L196">	}</span>
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorService#onError(AvalonInterceptorContext,
+	 *      Throwable)
+	 */
+	public void onError(AvalonInterceptorContext interceptorContext, Throwable t) {
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">		if (this.isJavaSimonAvailable()) {</span>
+			JavaSimonPerformanceMonitor monitor;
+<span class="fc" id="L205">			monitor = (JavaSimonPerformanceMonitor) interceptorContext.getRequestContext()</span>
+<span class="fc" id="L206">					.remove(this.getServiceName());</span>
+<span class="fc" id="L207">			monitor.stop(t);</span>
+		}
+<span class="fc" id="L209">	}</span>
+
+	/**
+	 * Writes the JavaSimon report to the file system.
+	 *
+	 * @see Runnable#run()
+	 */
+	public void run() {
+<span class="nc" id="L217">		this.writeReport(this.reportFile);</span>
+<span class="nc" id="L218">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @return Returns the isJavaSimonAvailable.
+	 */
+	protected final boolean isJavaSimonAvailable() {
+<span class="fc" id="L228">		return this.isJavaSimonAvailable;</span>
+	}
+
+	/**
+	 * Factory method for creating an implementation of a
+	 * JavaSimonPerformanceMonitor.
+	 *
+	 * @param serviceName the service name
+	 * @param method      the method
+	 * @param isEnabled   is the monitor enabled
+	 * @return the instance or &lt;b&gt;null&lt;/b&gt; if the creation failed
+	 */
+	@SuppressWarnings(&quot;rawtypes&quot;)
+	protected JavaSimonPerformanceMonitor createJavaSimonPerformanceMonitor(String serviceName, Method method,
+			boolean isEnabled) {
+<span class="fc" id="L243">		JavaSimonPerformanceMonitor result = null;</span>
+
+		try {
+<span class="fc" id="L246">			Class[] signature = { String.class, Method.class, Boolean.class };</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">			Object[] args = { serviceName, method, isEnabled ? Boolean.TRUE : Boolean.FALSE };</span>
+<span class="fc" id="L248">			result = (JavaSimonPerformanceMonitor) Clazz.newInstance(this.performanceMonitorClass, signature, args);</span>
+<span class="nc" id="L249">		} catch (Exception e) {</span>
+<span class="nc" id="L250">			String msg = &quot;Failed to create a performance monitor instance : &quot; + this.performanceMonitorClassName;</span>
+<span class="nc" id="L251">			this.getLogger().error(msg, e);</span>
+<span class="fc" id="L252">		}</span>
+
+<span class="fc" id="L254">		return result;</span>
+	}
+
+	/**
+	 * Write a report file
+	 */
+	protected void writeReport() {
+<span class="pc bpc" id="L261" title="1 of 2 branches missed.">		if (this.reportTimeout &gt; 0) {</span>
+<span class="nc" id="L262">			long currTimestamp = System.currentTimeMillis();</span>
+
+<span class="nc bnc" id="L264" title="All 2 branches missed.">			if (currTimestamp &gt; this.nextReportTimestamp) {</span>
+<span class="nc" id="L265">				this.nextReportTimestamp = currTimestamp + this.reportTimeout;</span>
+<span class="nc" id="L266">				this.writeReport(this.reportFile);</span>
+			}
+		}
+<span class="fc" id="L269">	}</span>
+
+	/**
+	 * Write the HTML report to the given destination.
+	 *
+	 * @param reportFile the report destination
+	 */
+	protected void writeReport(File reportFile) {
+<span class="nc" id="L277">		PrintWriter printWriter = null;</span>
+
+<span class="nc bnc" id="L279" title="All 2 branches missed.">		if (this.isJavaSimonAvailable()) {</span>
+			try {
+<span class="nc bnc" id="L281" title="All 2 branches missed.">				if (this.getLogger().isDebugEnabled()) {</span>
+<span class="nc" id="L282">					this.getLogger().debug(&quot;Writing JavaSimon report to &quot; + reportFile.getAbsolutePath());</span>
+				}
+
+				// Update to eliminate reliance on default encoding (DM_DEFAULT_ENCODING)
+<span class="nc" id="L286">				Writer w = new OutputStreamWriter(new FileOutputStream(reportFile), &quot;UTF-8&quot;);</span>
+<span class="nc" id="L287">				printWriter = new PrintWriter(w);</span>
+
+				// JavaSimonPerformanceMonitor monitor =
+				// this.createJavaSimonPerformanceMonitor(null, null, true);
+<span class="nc" id="L291">				String report = &quot;Not implemented yet ...&quot;;</span>
+<span class="nc" id="L292">				printWriter.write(report);</span>
+<span class="nc" id="L293">				printWriter.close();</span>
+<span class="nc" id="L294">			} catch (Throwable t) {</span>
+<span class="nc" id="L295">				String msg = &quot;Generating the JavaSimon report failed for &quot; + reportFile.getAbsolutePath();</span>
+<span class="nc" id="L296">				this.getLogger().error(msg, t);</span>
+			} finally {
+<span class="nc bnc" id="L298" title="All 2 branches missed.">				if (printWriter != null) {</span>
+<span class="nc" id="L299">					printWriter.close();</span>
+				}
+			}
+		}
+<span class="nc" id="L303">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CryptoStreamFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.crypto</a> &gt; <span class="el_source">CryptoStreamFactory.java</span></div><h1>CryptoStreamFactory.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.crypto;
+
+import java.io.InputStream;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import org.apache.fulcrum.yaafi.framework.reflection.Clazz;
+
+/**
+ * Factory class to get a decrypting input stream for reading configuration
+ * files. The implementation uses dynamic class loading to make decryption an
+ * optional feature which is highly desirable when avoiding the ECCN export code
+ * problems.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl &lt;/a&gt;
+ */
+
+<span class="nc" id="L35">public class CryptoStreamFactory {</span>
+	/** is the instance already initialized */
+	private static boolean isInitialized;
+
+	/** the factory to create encrypting input streams */
+	private static Object cryptoStreamFactory;
+
+	/** the name of the class to be loaded */
+<span class="fc" id="L43">	private static String className = &quot;org.apache.fulcrum.jce.crypto.CryptoStreamFactoryImpl&quot;;</span>
+
+	/**
+	 * Create a (potentially) decrypting input stream using the default password.
+	 *
+	 * @param is          the input stream to be decrypted
+	 * @param isEncrypted the encryption mode (true|false|auto)
+	 * @return a decrypting input stream
+	 * @throws Exception reading the input stream failed
+	 */
+	public static InputStream getDecryptingInputStream(InputStream is, String isEncrypted) throws Exception {
+		InputStream result;
+
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">		if (isEncrypted.equalsIgnoreCase(&quot;true&quot;)) {</span>
+			// a decrypting input stream was requested
+<span class="nc" id="L58">			result = createDecryptingInputStream(is, &quot;getInputStream&quot;);</span>
+<span class="pc bpc" id="L59" title="1 of 4 branches missed.">		} else if (isEncrypted.equalsIgnoreCase(&quot;auto&quot;) &amp;&amp; hasCryptoStreamFactory()) {</span>
+			// no user-supplied preferences but crypto stream is available
+<span class="fc" id="L61">			result = createDecryptingInputStream(is, &quot;getSmartInputStream&quot;);</span>
+<span class="pc bpc" id="L62" title="3 of 4 branches missed.">		} else if (isEncrypted.equalsIgnoreCase(&quot;auto&quot;) &amp;&amp; !hasCryptoStreamFactory()) {</span>
+			// no user-supplied perferences so we fall back to normal input stream
+<span class="nc" id="L64">			result = is;</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">		} else if (isEncrypted.equalsIgnoreCase(&quot;false&quot;)) {</span>
+			// just use normal input stream
+<span class="fc" id="L67">			result = is;</span>
+		} else {
+<span class="nc" id="L69">			throw new IllegalArgumentException(&quot;Unknown decryption mode : &quot; + isEncrypted);</span>
+		}
+
+<span class="fc" id="L72">		return result;</span>
+	}
+
+	/**
+	 * Factory method to create a decrypting input stream.
+	 *
+	 * @param is                the input stream to be decrypted
+	 * @param factoryMethodName the name of the factory method
+	 * @return a decrypting input stream
+	 * @throws Exception creating the decrypting input stream failed
+	 */
+	private static InputStream createDecryptingInputStream(InputStream is, String factoryMethodName) throws Exception {
+<span class="fc" id="L84">		Class[] signature = { InputStream.class };</span>
+<span class="fc" id="L85">		Object[] args = { is };</span>
+<span class="fc" id="L86">		Object cryptoStreamFactory = getCryptoStreamFactory();</span>
+
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">		if (cryptoStreamFactory == null) {</span>
+<span class="nc" id="L89">			throw new IllegalStateException(</span>
+					&quot;No CryptoStreamFactory available - unable to create a decrypting input stream&quot;);
+		} else {
+<span class="fc" id="L92">			return (InputStream) Clazz.invoke(cryptoStreamFactory, factoryMethodName, signature, args);</span>
+		}
+	}
+
+	/**
+	 * Factory method to create a CryptoStreamFactory.
+	 * 
+	 * @return a CryptoStreamFactory
+	 * @throws Exception generic exception
+	 */
+	private synchronized static Object getCryptoStreamFactory() throws Exception {
+<span class="fc bfc" id="L103" title="All 2 branches covered.">		if (!isInitialized) {</span>
+<span class="fc" id="L104">			isInitialized = true;</span>
+<span class="fc" id="L105">			ClassLoader clazzLoader = CryptoStreamFactory.class.getClassLoader();</span>
+
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">			if (Clazz.hasClazz(clazzLoader, className)) {</span>
+<span class="fc" id="L108">				Class[] signature = {};</span>
+<span class="fc" id="L109">				Object[] args = {};</span>
+<span class="fc" id="L110">				Class&lt;?&gt; clazz = Clazz.getClazz(clazzLoader, className);</span>
+<span class="fc" id="L111">				cryptoStreamFactory = Clazz.newInstance(clazz, signature, args);</span>
+			}
+		}
+
+<span class="fc" id="L115">		return cryptoStreamFactory;</span>
+	}
+
+	/**
+	 * @return true if a CryptoStreamFactory is available
+	 * @throws Exception generic exception
+	 */
+	private static boolean hasCryptoStreamFactory() throws Exception {
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">		return getCryptoStreamFactory() != null;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

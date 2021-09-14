@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShutdownEntry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.service.shutdown</a> &gt; <span class="el_source">ShutdownEntry.java</span></div><h1>ShutdownEntry.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.service.shutdown;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.util.Arrays;
+
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.commons.io.IOUtils;
+import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;
+
+/**
+ * Monitors a resource and checks if it has changed
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class ShutdownEntry {
+
+	/** the location to monitor for changes */
+	private String location;
+
+	/** the last message digest of the location */
+	private byte[] digest;
+
+	/** the locator to load the monitored resource */
+	private InputStreamLocator locator;
+
+	/** keep a notice for the very first invocation */
+	private boolean isFirstInvocation;
+
+	/** the logger to be used */
+	private Logger logger;
+
+	/** use System.exit() to shutdown the JVM */
+	private boolean useSystemExit;
+
+	/**
+	 * Constructor
+	 *
+	 * @param logger         the logger to use
+	 * @param applicationDir the home directory of the application
+	 * @param location       the location to monitor for changes
+	 * @param useSystemExit  use System.exit() on shutdown
+	 */
+<span class="fc" id="L66">	public ShutdownEntry(Logger logger, File applicationDir, String location, boolean useSystemExit) {</span>
+<span class="fc" id="L67">		this.isFirstInvocation = true;</span>
+<span class="fc" id="L68">		this.useSystemExit = useSystemExit;</span>
+<span class="fc" id="L69">		this.location = location;</span>
+<span class="fc" id="L70">		this.locator = new InputStreamLocator(applicationDir);</span>
+<span class="fc" id="L71">		this.logger = logger;</span>
+<span class="fc" id="L72">	}</span>
+
+	/**
+	 * @return has the monitored location changed
+	 */
+	public boolean hasChanged() {
+<span class="fc" id="L78">		boolean result = false;</span>
+<span class="fc" id="L79">		InputStream is = null;</span>
+<span class="fc" id="L80">		byte[] currDigest = null;</span>
+
+		try {
+			// get a grip on our resource
+
+<span class="fc" id="L85">			is = this.locate();</span>
+
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">			if (is == null) {</span>
+<span class="nc" id="L88">				String msg = &quot;Unable to find the following resource : &quot; + this.getLocation();</span>
+<span class="nc" id="L89">				this.logger.warn(msg);</span>
+<span class="nc" id="L90">			} else {</span>
+				// calculate a SHA-1 digest
+
+<span class="fc" id="L93">				currDigest = this.getDigest(is);</span>
+<span class="fc" id="L94">				is.close();</span>
+<span class="fc" id="L95">				is = null;</span>
+
+<span class="fc bfc" id="L97" title="All 2 branches covered.">				if (this.isFirstInvocation() == true) {</span>
+<span class="fc" id="L98">					isFirstInvocation = false;</span>
+<span class="fc" id="L99">					this.logger.debug(&quot;Storing SHA-1 digest of &quot; + this.getLocation());</span>
+<span class="fc" id="L100">					this.setDigest(currDigest);</span>
+				} else {
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">					if (equals(this.digest, currDigest) == false) {</span>
+<span class="nc" id="L103">						this.logger.debug(&quot;The following resource has changed : &quot; + this.getLocation());</span>
+<span class="nc" id="L104">						this.setDigest(currDigest);</span>
+<span class="nc" id="L105">						result = true;</span>
+					}
+				}
+			}
+
+<span class="fc" id="L110">			return result;</span>
+<span class="nc" id="L111">		} catch (Exception e) {</span>
+<span class="nc" id="L112">			String msg = &quot;The ShutdownService encountered an internal error&quot;;</span>
+<span class="nc" id="L113">			this.logger.error(msg, e);</span>
+<span class="nc" id="L114">			return false;</span>
+		} finally {
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">			if (is != null) {</span>
+				try {
+<span class="nc" id="L118">					is.close();</span>
+<span class="nc" id="L119">				} catch (Exception e) {</span>
+<span class="nc" id="L120">					String msg = &quot;Can't close the InputStream during error recovery&quot;;</span>
+<span class="nc" id="L121">					this.logger.error(msg, e);</span>
+<span class="nc" id="L122">				}</span>
+			}
+		}
+
+	}
+
+	/**
+	 * @return Returns the useSystemExit.
+	 */
+	public boolean isUseSystemExit() {
+<span class="nc" id="L132">		return useSystemExit;</span>
+	}
+
+	/**
+	 * @return Returns the isFirstInvocation.
+	 */
+	private boolean isFirstInvocation() {
+<span class="fc" id="L139">		return isFirstInvocation;</span>
+	}
+
+	/**
+	 * @return Returns the location.
+	 */
+	private String getLocation() {
+<span class="fc" id="L146">		return location;</span>
+	}
+
+	/**
+	 * Creates an InputStream
+	 * 
+	 * @return InputStream of the location
+	 * @throws IOException if unable to open the stream
+	 */
+	public InputStream locate() throws IOException {
+<span class="fc" id="L156">		return this.locator.locate(this.getLocation());</span>
+	}
+
+	/**
+	 * Creates a message digest
+	 * 
+	 * @param is Input stream
+	 * @return byte array of the input stream
+	 */
+	private byte[] getDigest(InputStream is) throws Exception {
+<span class="fc" id="L166">		byte[] result = null;</span>
+<span class="fc" id="L167">		byte[] content = null;</span>
+
+		// convert to byte array
+<span class="fc" id="L170">		content = IOUtils.toByteArray(is);</span>
+
+<span class="fc" id="L172">		MessageDigest sha1 = MessageDigest.getInstance(&quot;SHA1&quot;);</span>
+<span class="fc" id="L173">		sha1.update(content);</span>
+<span class="fc" id="L174">		result = sha1.digest();</span>
+
+<span class="fc" id="L176">		return result;</span>
+	}
+
+	/**
+	 * @param digest The digest to set.
+	 */
+	private void setDigest(byte[] digest) {
+<span class="fc" id="L183">		this.digest = digest;</span>
+<span class="fc" id="L184">	}</span>
+
+	/**
+	 * Compares two byte[] for equality
+	 */
+	private static boolean equals(byte[] lhs, byte[] rhs) {
+		// JDK provided method
+<span class="fc" id="L191">		return Arrays.equals(lhs, rhs);</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

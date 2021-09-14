@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ToStringBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.util</a> &gt; <span class="el_source">ToStringBuilder.java</span></div><h1>ToStringBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.fulcrum.yaafi.framework.util;
+
+/**
+ * A simple replacement for the more involved version in commons-lang; this is used
+ * to help construct the description string returned by an object's
+ * &lt;code&gt;toString()&lt;/code&gt; method.
+ *
+ * The code was pasted from the Hivemind container written by
+ * Howard Lewis Ship.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+public class ToStringBuilder
+{
+<span class="fc" id="L34">    private StringBuilder buffer = new StringBuilder();</span>
+
+    private int mode;
+    private int attributeCount;
+
+<span class="fc" id="L39">    private static int defaultMode = 0x03;</span>
+
+    public static final int INCLUDE_PACKAGE_PREFIX = 0x1;
+    public static final int INCLUDE_HASHCODE = 0x02;
+
+    public ToStringBuilder(Object target)
+    {
+<span class="fc" id="L46">        this(target, defaultMode);</span>
+<span class="fc" id="L47">    }</span>
+
+    public ToStringBuilder(Object target, int mode)
+<span class="fc" id="L50">    {</span>
+<span class="fc" id="L51">        this.mode = mode;</span>
+
+<span class="fc" id="L53">        appendClassName(target);</span>
+<span class="fc" id="L54">        appendHashCode(target);</span>
+<span class="fc" id="L55">    }</span>
+
+    private void appendHashCode(Object target)
+    {
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">        if ((this.mode &amp; INCLUDE_HASHCODE) == 0)</span>
+<span class="nc" id="L60">            return;</span>
+
+<span class="fc" id="L62">        this.buffer.append('@');</span>
+<span class="fc" id="L63">        this.buffer.append(Integer.toHexString(target.hashCode()));</span>
+<span class="fc" id="L64">    }</span>
+
+    private void appendClassName(Object target)
+    {
+<span class="fc" id="L68">        String className = target.getClass().getName();</span>
+
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        if ((this.mode &amp; INCLUDE_PACKAGE_PREFIX) != 0)</span>
+        {
+<span class="fc" id="L72">            this.buffer.append(className);</span>
+<span class="fc" id="L73">            return;</span>
+        }
+
+<span class="nc" id="L76">        int lastdotx = className.lastIndexOf('.');</span>
+
+<span class="nc" id="L78">        this.buffer.append(className.substring(lastdotx + 1));</span>
+<span class="nc" id="L79">    }</span>
+
+    public static int getDefaultMode()
+    {
+<span class="nc" id="L83">        return defaultMode;</span>
+    }
+
+    public static void setDefaultMode(int i)
+    {
+<span class="nc" id="L88">        defaultMode = i;</span>
+<span class="nc" id="L89">    }</span>
+
+    /**
+     * Returns the final assembled string. This may only be invoked once, after
+     * all attributes have been appended.
+     */
+    public String toString()
+    {
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">        if (this.attributeCount &gt; 0)</span>
+<span class="fc" id="L98">            this.buffer.append(']');</span>
+
+<span class="fc" id="L100">        String result = this.buffer.toString();</span>
+
+<span class="fc" id="L102">        this.buffer = null;</span>
+
+<span class="fc" id="L104">        return result;</span>
+    }
+
+    public void append(String attributeName, boolean value)
+    {
+<span class="fc" id="L109">        append(attributeName, String.valueOf(value));</span>
+<span class="fc" id="L110">    }</span>
+
+    public void append(String attributeName, byte value)
+    {
+<span class="nc" id="L114">        append(attributeName, String.valueOf(value));</span>
+
+<span class="nc" id="L116">    }</span>
+    public void append(String attributeName, short value)
+    {
+<span class="nc" id="L119">        append(attributeName, String.valueOf(value));</span>
+<span class="nc" id="L120">    }</span>
+
+    public void append(String attributeName, int value)
+    {
+<span class="nc" id="L124">        append(attributeName, String.valueOf(value));</span>
+<span class="nc" id="L125">    }</span>
+
+    public void append(String attributeName, Object value)
+    {
+<span class="fc" id="L129">        append(attributeName, String.valueOf(value));</span>
+<span class="fc" id="L130">    }</span>
+
+    public void append(String attributeName, String value)
+    {
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (this.attributeCount++ == 0)</span>
+<span class="fc" id="L135">            this.buffer.append('[');</span>
+
+        else
+<span class="fc" id="L138">            this.buffer.append(' ');</span>
+
+<span class="fc" id="L140">        this.buffer.append(attributeName);</span>
+
+<span class="fc" id="L142">        this.buffer.append('=');</span>
+
+<span class="fc" id="L144">        this.buffer.append(value);</span>
+<span class="fc" id="L145">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

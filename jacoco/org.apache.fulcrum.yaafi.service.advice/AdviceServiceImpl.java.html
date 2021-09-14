@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdviceServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.service.advice</a> &gt; <span class="el_source">AdviceServiceImpl.java</span></div><h1>AdviceServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.service.advice;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.Reconfigurable;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.Contextualizable;
+import org.apache.avalon.framework.logger.AbstractLogEnabled;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.avalon.framework.service.Serviceable;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorFactory;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorInvocationHandler;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * Simple service providing interceptor advices for ordinary POJOs. Since the
+ * implementation uses Dynamic Proxies only methods invoked by an interface can
+ * be advised.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+<span class="fc" id="L47">public class AdviceServiceImpl extends AbstractLogEnabled</span>
+		implements AdviceService, Serviceable, Contextualizable, Reconfigurable {
+	/** the service manager supplied by the Avalon framework */
+	private ServiceManager serviceManager;
+
+	/** the list of default interceptors */
+	private String[] defaultInterceptorList;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Avalon Service Lifecycle Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+	 */
+	public void service(ServiceManager serviceManager) throws ServiceException {
+<span class="fc" id="L63">		this.serviceManager = serviceManager;</span>
+<span class="fc" id="L64">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+	 */
+	public void contextualize(Context context) throws ContextException {
+		// nothing to do
+<span class="fc" id="L71">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void configure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L77">		Configuration[] interceptorConfigList = configuration.getChild(&quot;interceptors&quot;).getChildren(&quot;interceptor&quot;);</span>
+<span class="fc" id="L78">		this.defaultInterceptorList = new String[interceptorConfigList.length];</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">		for (int i = 0; i &lt; interceptorConfigList.length; i++) {</span>
+<span class="fc" id="L80">			this.defaultInterceptorList[i] = interceptorConfigList[i].getValue();</span>
+		}
+<span class="fc" id="L82">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void reconfigure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L88">		this.configure(configuration);</span>
+<span class="fc" id="L89">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service interface implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @see org.apache.fulcrum.yaafi.service.advice.AdviceService#advice(java.lang.Object)
+	 */
+	public Object advice(Object object) {
+<span class="fc" id="L99">		Validate.notNull(object, &quot;object&quot;);</span>
+<span class="fc" id="L100">		return this.advice(this.getDefaultInterceptorList(), object);</span>
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.apache.fulcrum.yaafi.service.advice.AdviceService#advice(java.lang.
+	 * String, java.lang.Object)
+	 */
+	public Object advice(String name, Object object) {
+<span class="fc" id="L110">		Validate.notNull(object, &quot;object&quot;);</span>
+<span class="fc" id="L111">		return this.doAdvice(name, this.getDefaultInterceptorList(), object);</span>
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.apache.fulcrum.yaafi.service.advice.AdviceService#advice(java.lang.String
+	 * [], java.lang.Object)
+	 */
+	public Object advice(String[] interceptorList, Object object) {
+<span class="fc" id="L122">		Validate.notNull(object, &quot;object&quot;);</span>
+<span class="fc" id="L123">		String className = object.getClass().getName();</span>
+<span class="fc" id="L124">		return this.doAdvice(className, interceptorList, object);</span>
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.apache.fulcrum.yaafi.service.advice.AdviceService#advice(java.lang.
+	 * String, java.lang.String[], java.lang.Object)
+	 */
+	public Object advice(String name, String[] interceptorList, Object object) {
+<span class="fc" id="L134">		Validate.notNull(object, &quot;object&quot;);</span>
+<span class="fc" id="L135">		return this.doAdvice(name, interceptorList, object);</span>
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.apache.fulcrum.yaafi.service.advice.AdviceService#isAdviced(java.lang.
+	 * Object)
+	 */
+	public boolean isAdviced(Object object) {
+<span class="fc" id="L146">		InvocationHandler invocationHandler = null;</span>
+
+<span class="pc bpc" id="L148" title="1 of 4 branches missed.">		if (object != null &amp;&amp; Proxy.isProxyClass(object.getClass())) {</span>
+<span class="fc" id="L149">			invocationHandler = Proxy.getInvocationHandler(object);</span>
+<span class="fc" id="L150">			return invocationHandler instanceof AvalonInterceptorInvocationHandler;</span>
+		}
+
+<span class="fc" id="L153">		return false;</span>
+	}
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Does the actual work of advising the object.
+	 *
+	 * @param name            the name of the object to be advised
+	 * @param interceptorList the list of interceptor services to advise the object
+	 * @param object          the object to be advised
+	 * @return the advised object.
+	 */
+	protected Object doAdvice(String name, String[] interceptorList, Object object) {
+<span class="fc" id="L169">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L170">		Validate.notNull(interceptorList, &quot;interceptorList&quot;);</span>
+<span class="fc" id="L171">		Validate.notNull(object, &quot;object&quot;);</span>
+
+<span class="fc" id="L173">		Object result = null;</span>
+<span class="fc" id="L174">		String clazzName = object.getClass().getName();</span>
+
+		// do nothing if no interceptor services are requested
+
+<span class="pc bpc" id="L178" title="1 of 2 branches missed.">		if (interceptorList.length == 0) {</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">			if (this.getLogger().isInfoEnabled()) {</span>
+<span class="nc" id="L180">				String msg = &quot;Skipping creation of dynamic proxy since no interceptors are requested : &quot; + name;</span>
+<span class="nc" id="L181">				this.getLogger().info(msg);</span>
+			}
+
+<span class="nc" id="L184">			return object;</span>
+		}
+
+		// skip creating a dynamic proxy if it is already advised
+
+<span class="fc bfc" id="L189" title="All 2 branches covered.">		if (this.isAdviced(object)) {</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">			if (this.getLogger().isInfoEnabled()) {</span>
+<span class="fc" id="L191">				String msg = &quot;Skipping creation of dynamic proxy since it is already advised : &quot; + name;</span>
+<span class="fc" id="L192">				this.getLogger().info(msg);</span>
+			}
+
+<span class="fc" id="L195">			return object;</span>
+		}
+
+		// create the advised object
+
+		try {
+<span class="fc" id="L201">			result = AvalonInterceptorFactory.create(clazzName, name, this.getServiceManager(), interceptorList,</span>
+					object);
+<span class="nc" id="L203">		} catch (ServiceException e) {</span>
+<span class="nc" id="L204">			String msg = &quot;Unable to advice the object : &quot; + name;</span>
+<span class="nc" id="L205">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L206">			throw new IllegalArgumentException(msg);</span>
+<span class="fc" id="L207">		}</span>
+
+<span class="fc" id="L209">		return result;</span>
+	}
+
+	/**
+	 * @return Returns the serviceManager.
+	 */
+	private ServiceManager getServiceManager() {
+<span class="fc" id="L216">		return serviceManager;</span>
+	}
+
+	/**
+	 * @return Returns the defaultInterceptorList.
+	 */
+	private String[] getDefaultInterceptorList() {
+<span class="fc" id="L223">		return defaultInterceptorList;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

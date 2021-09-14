@@ -1,0 +1,675 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServiceContainerConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.factory</a> &gt; <span class="el_source">ServiceContainerConfiguration.java</span></div><h1>ServiceContainerConfiguration.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.factory;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Enumeration;
+import java.util.Hashtable;
+
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.DefaultConfiguration;
+import org.apache.avalon.framework.configuration.DefaultConfigurationBuilder;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.DefaultContext;
+import org.apache.avalon.framework.logger.ConsoleLogger;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonMerlinConstants;
+import org.apache.fulcrum.yaafi.framework.container.ServiceConstants;
+import org.apache.fulcrum.yaafi.framework.crypto.CryptoStreamFactory;
+import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * Helper class to capture configuration related stuff. The are two ways for
+ * setting up the configuration:
+ * &lt;ul&gt;
+ * &lt;li&gt;set all parameters manually&lt;/li&gt;
+ * &lt;li&gt;use a containerConfiguration file and provide the remaining settings&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * The Avalon context and configuration are created by
+ * &lt;ul&gt;
+ * &lt;li&gt;createFinalContext()&lt;/li&gt;
+ * &lt;li&gt;createFinalConfiguration()&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class ServiceContainerConfiguration {
+	/** our default implementation class of the service container */
+	private String serviceContainerClazzName;
+
+	/** the location of the component role file */
+	private String componentRolesLocation;
+
+	/** is the component role file encrypted? */
+	private String isComponentRolesEncrypted;
+
+	/** the location of the component configuration file */
+	private String componentConfigurationLocation;
+
+	/** is the component configuration file encrypted? */
+	private String isComponentConfigurationEncrypted;
+
+	/** the location of the paramaters file */
+	private String parametersLocation;
+
+	/** is the parameters file encrypted? */
+	private String isParametersEncrypted;
+
+	/** the user-supplied Avalon context */
+	private DefaultContext context;
+
+	/** the Avalon logger */
+	private Logger logger;
+
+	/** the application directory */
+	private String applicationRootDir;
+
+	/** the temporary directory */
+	private String tempRootDir;
+
+	/** the class loader passed in the Avalon Context */
+	private ClassLoader componentClassLoader;
+
+	/** the type of container where YAAFI is embedded */
+	private String containerFlavour;
+
+	/** the caller-supplied container configuration */
+	private Configuration containerConfiguration;
+
+	/** to lookup service in the parent container */
+	private ServiceManager parentServiceManager;
+
+	/** a list of ServiceManager maintaining their own services */
+	private String[] serviceManagerList;
+
+	/** Constructor */
+	public ServiceContainerConfiguration() {
+<span class="fc" id="L111">		this(ConsoleLogger.LEVEL_DEBUG);</span>
+<span class="fc" id="L112">	}</span>
+
+	/**
+	 * Constructor.
+	 *
+	 * @param logLevel the log level for the console logger.
+	 */
+<span class="fc" id="L119">	public ServiceContainerConfiguration(int logLevel) {</span>
+<span class="fc" id="L120">		this.logger = new ConsoleLogger(logLevel);</span>
+<span class="fc" id="L121">		this.containerFlavour = ServiceConstants.AVALON_CONTAINER_YAAFI;</span>
+<span class="fc" id="L122">		this.serviceContainerClazzName = ServiceConstants.CLAZZ_NAME;</span>
+<span class="fc" id="L123">		this.componentRolesLocation = ServiceConstants.COMPONENT_ROLE_VALUE;</span>
+<span class="fc" id="L124">		this.isComponentRolesEncrypted = &quot;false&quot;;</span>
+<span class="fc" id="L125">		this.componentConfigurationLocation = ServiceConstants.COMPONENT_CONFIG_VALUE;</span>
+<span class="fc" id="L126">		this.isComponentConfigurationEncrypted = &quot;false&quot;;</span>
+<span class="fc" id="L127">		this.parametersLocation = ServiceConstants.COMPONENT_PARAMETERS_VALUE;</span>
+<span class="fc" id="L128">		this.isParametersEncrypted = &quot;false&quot;;</span>
+<span class="fc" id="L129">		this.context = new DefaultContext();</span>
+<span class="fc" id="L130">		this.applicationRootDir = new File(&quot;&quot;).getAbsolutePath();</span>
+<span class="fc" id="L131">		this.tempRootDir = System.getProperty(&quot;java.io.tmpdir&quot;, &quot;.&quot;);</span>
+<span class="fc" id="L132">		this.componentClassLoader = this.getClass().getClassLoader();</span>
+<span class="fc" id="L133">	}</span>
+
+	/**
+	 * Add a new entry to the context by creating a new one.
+	 * 
+	 * @param name  the name of the new entry
+	 * @param value the value of the new entry
+	 */
+	public void addToContext(String name, Object value) {
+<span class="fc" id="L142">		Validate.notEmpty(name, &quot;name&quot;);</span>
+<span class="fc" id="L143">		Validate.notNull(value, &quot;value&quot;);</span>
+<span class="fc" id="L144">		this.getContext().put(name, value);</span>
+<span class="fc" id="L145">	}</span>
+
+	/**
+	 * Add a hashtable to the context
+	 * 
+	 * @param hashtable the Hashtable to be added
+	 */
+	public void addToContext(Hashtable&lt;?, ?&gt; hashtable) {
+<span class="nc" id="L153">		Validate.notNull(hashtable, &quot;hashtable&quot;);</span>
+
+<span class="nc" id="L155">		String name = null;</span>
+<span class="nc" id="L156">		Object value = null;</span>
+<span class="nc" id="L157">		Enumeration&lt;?&gt; keys = hashtable.keys();</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">		while (keys.hasMoreElements()) {</span>
+<span class="nc" id="L160">			name = (String) keys.nextElement();</span>
+<span class="nc" id="L161">			value = hashtable.get(name);</span>
+<span class="nc" id="L162">			this.addToContext(name, value);</span>
+		}
+<span class="nc" id="L164">	}</span>
+
+	/**
+	 * Create the final Avalon context passed to YAAFI containing
+	 * &lt;ul&gt;
+	 * &lt;li&gt;user-supplied context&lt;/li&gt;
+	 * &lt;li&gt;urn:avalon:home&lt;/li&gt;
+	 * &lt;li&gt;urn:avalon:temp&lt;/li&gt;
+	 * &lt;li&gt;urn:avalon:name&lt;/li&gt;
+	 * &lt;li&gt;urn:avalon:partition&lt;/li&gt;
+	 * &lt;li&gt;urn:avalon:classloader&lt;/li&gt;
+	 * &lt;/ul&gt;
+	 *
+	 * @return the final Context
+	 * @throws Exception if filename not defined
+	 * @throws IOException if file not found
+	 */
+
+	public Context createFinalContext() throws IOException, Exception {
+		// 1) add the application root dir
+
+<span class="fc" id="L185">		this.addToContext(AvalonMerlinConstants.URN_AVALON_HOME, this.getApplicationRootDir());</span>
+
+		// 2) add the temp root dir
+
+<span class="fc" id="L189">		this.addToContext(AvalonMerlinConstants.URN_AVALON_TEMP, this.getTempRootDir());</span>
+
+		// 3) add the Avalon name
+
+<span class="fc" id="L193">		this.addToContext(AvalonMerlinConstants.URN_AVALON_NAME, ServiceConstants.ROLE_NAME);</span>
+
+		// 4) add the Avalon partition name
+
+<span class="fc" id="L197">		this.addToContext(AvalonMerlinConstants.URN_AVALON_PARTITION, &quot;root&quot;);</span>
+
+		// 5) add the class loader
+
+<span class="fc" id="L201">		this.addToContext(AvalonMerlinConstants.URN_AVALON_CLASSLOADER, this.getComponentClassLoader());</span>
+
+<span class="fc" id="L203">		return this.getContext();</span>
+	}
+
+	/**
+	 * Create a final configuration.
+	 *
+	 * @return the configuration
+	 */
+	public Configuration createFinalConfiguration() {
+<span class="fc" id="L212">		DefaultConfiguration result = null;</span>
+
+<span class="fc bfc" id="L214" title="All 2 branches covered.">		if (this.getContainerConfiguration() != null) {</span>
+<span class="fc" id="L215">			return this.getContainerConfiguration();</span>
+		} else {
+			// the root element is &quot;fulcrum-yaafi&quot;
+
+<span class="fc" id="L219">			result = new DefaultConfiguration(ServiceConstants.ROLE_NAME);</span>
+
+			// add the following fragement
+			//
+			// &lt;containerFlavour&gt;merlin&lt;/containerFlavour&gt;
+
+<span class="fc" id="L225">			DefaultConfiguration containerFlavourConfig = new DefaultConfiguration(</span>
+					ServiceConstants.CONTAINERFLAVOUR_CONFIG_KEY);
+
+<span class="fc" id="L228">			containerFlavourConfig.setValue(this.getContainerFlavour());</span>
+
+<span class="fc" id="L230">			result.addChild(containerFlavourConfig);</span>
+
+			// add the following fragement
+			//
+			// &lt;containerClazzName&gt;...&lt;/containerClazzName&gt;
+
+<span class="fc" id="L236">			DefaultConfiguration containerClazzNameConfig = new DefaultConfiguration(</span>
+					ServiceConstants.CONTAINERCLAZZNAME_CONFIG_KEY);
+
+<span class="fc" id="L239">			containerClazzNameConfig.setValue(this.getServiceContainerClazzName());</span>
+
+<span class="fc" id="L241">			result.addChild(containerClazzNameConfig);</span>
+
+			// add the following fragement
+			//
+			// &lt;componentRoles&gt;
+			// &lt;location&gt;../conf/componentRoles.xml&lt;/location&gt;
+			// &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;
+			// &lt;/componentRoles&gt;
+
+<span class="fc" id="L250">			DefaultConfiguration componentRolesConfig = new DefaultConfiguration(ServiceConstants.COMPONENT_ROLE_KEYS);</span>
+
+<span class="fc" id="L252">			DefaultConfiguration componentRolesLocation = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_LOCATION_KEY);
+
+<span class="fc" id="L255">			componentRolesLocation.setValue(this.getComponentRolesLocation());</span>
+
+<span class="fc" id="L257">			DefaultConfiguration componentRolesIsEncrypted = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_ISENCRYPTED_KEY);
+
+<span class="fc" id="L260">			componentRolesIsEncrypted.setValue(this.isComponentRolesEncrypted());</span>
+
+<span class="fc" id="L262">			componentRolesConfig.addChild(componentRolesLocation);</span>
+<span class="fc" id="L263">			componentRolesConfig.addChild(componentRolesIsEncrypted);</span>
+
+<span class="fc" id="L265">			result.addChild(componentRolesConfig);</span>
+
+			// add the following fragement
+			//
+			// &lt;componentConfiguration&gt;
+			// &lt;location&gt;../conf/componentRoles.xml&lt;/location&gt;
+			// &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;
+			// &lt;/componentConfiguration&gt;
+
+<span class="fc" id="L274">			DefaultConfiguration componentConfigurationConfig = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_CONFIG_KEY);
+
+<span class="fc" id="L277">			DefaultConfiguration componentConfigurationLocation = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_LOCATION_KEY);
+
+<span class="fc" id="L280">			componentConfigurationLocation.setValue(this.getComponentConfigurationLocation());</span>
+
+<span class="fc" id="L282">			DefaultConfiguration componentConfigurationIsEncrypted = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_ISENCRYPTED_KEY);
+
+<span class="fc" id="L285">			componentConfigurationIsEncrypted.setValue(this.isComponentConfigurationEncrypted());</span>
+
+<span class="fc" id="L287">			componentConfigurationConfig.addChild(componentConfigurationLocation);</span>
+<span class="fc" id="L288">			componentConfigurationConfig.addChild(componentConfigurationIsEncrypted);</span>
+
+<span class="fc" id="L290">			result.addChild(componentConfigurationConfig);</span>
+
+			// Add the following fragement
+			//
+			// &lt;parameters&gt;
+			// &lt;location&gt;../conf/parameters.properties&lt;/location&gt;
+			// &lt;isEncrypted&gt;true&lt;/isEncrypted&gt;
+			// &lt;/parameters&gt;
+
+<span class="fc" id="L299">			DefaultConfiguration parameterConfigurationConfig = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_PARAMETERS_KEY);
+
+<span class="fc" id="L302">			DefaultConfiguration parameterConfigurationLocation = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_LOCATION_KEY);
+
+<span class="fc" id="L305">			parameterConfigurationLocation.setValue(this.getParametersLocation());</span>
+
+<span class="fc" id="L307">			DefaultConfiguration parameterConfigurationIsEncrypted = new DefaultConfiguration(</span>
+					ServiceConstants.COMPONENT_ISENCRYPTED_KEY);
+
+<span class="fc" id="L310">			parameterConfigurationIsEncrypted.setValue(this.isParametersEncrypted());</span>
+
+<span class="fc" id="L312">			parameterConfigurationConfig.addChild(parameterConfigurationLocation);</span>
+<span class="fc" id="L313">			parameterConfigurationConfig.addChild(parameterConfigurationIsEncrypted);</span>
+
+<span class="fc" id="L315">			result.addChild(parameterConfigurationConfig);</span>
+
+			// Add the following fragement
+			//
+			// &lt;serviceManagers&gt;
+			// &lt;serviceManagers&gt;springFrameworkService&lt;/serviceManager&gt;
+			// &lt;/serviceManagers&gt;
+
+<span class="pc bpc" id="L323" title="1 of 2 branches missed.">			if (this.hasServiceManagerList()) {</span>
+<span class="nc" id="L324">				DefaultConfiguration serviceManagerListConfig = new DefaultConfiguration(</span>
+						ServiceConstants.SERVICEMANAGER_LIST_KEY);
+
+<span class="nc bnc" id="L327" title="All 2 branches missed.">				for (int i = 0; i &lt; this.serviceManagerList.length; i++) {</span>
+<span class="nc" id="L328">					DefaultConfiguration serviceManagerConfig = new DefaultConfiguration(</span>
+							ServiceConstants.SERVICEMANAGER_KEY);
+
+<span class="nc" id="L331">					serviceManagerConfig.setValue(this.serviceManagerList[i]);</span>
+
+<span class="nc" id="L333">					serviceManagerListConfig.addChild(serviceManagerConfig);</span>
+				}
+
+<span class="nc" id="L336">				result.addChild(serviceManagerListConfig);</span>
+			}
+
+<span class="fc" id="L339">			return result;</span>
+		}
+	}
+
+	/////////////////////////////////////////////////////////////////////////
+	// Generated Getters/Setters
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * @return Returns the serviceContainerClazzName.
+	 */
+	private String getServiceContainerClazzName() {
+<span class="fc" id="L351">		return this.serviceContainerClazzName;</span>
+	}
+
+	/**
+	 * @return Returns the componentConfigurationLocation.
+	 */
+	private String getComponentConfigurationLocation() {
+<span class="fc" id="L358">		return componentConfigurationLocation;</span>
+	}
+
+	/**
+	 * @param componentConfigurationLocation The componentConfigurationLocation to
+	 *                                       set.
+	 */
+	public void setComponentConfigurationLocation(String componentConfigurationLocation) {
+<span class="fc" id="L366">		Validate.notNull(componentConfigurationLocation, &quot;componentConfigurationLocation&quot;);</span>
+<span class="fc" id="L367">		this.componentConfigurationLocation = componentConfigurationLocation;</span>
+<span class="fc" id="L368">	}</span>
+
+	/**
+	 * @return Returns the componentRolesLocation.
+	 */
+	private String getComponentRolesLocation() {
+<span class="fc" id="L374">		return componentRolesLocation;</span>
+	}
+
+	/**
+	 * @param componentRolesLocation The componentRolesLocation to set.
+	 */
+	public void setComponentRolesLocation(String componentRolesLocation) {
+<span class="fc" id="L381">		this.componentRolesLocation = componentRolesLocation;</span>
+<span class="fc" id="L382">	}</span>
+
+	/**
+	 * @return Returns the context.
+	 */
+	private DefaultContext getContext() {
+<span class="fc" id="L388">		return context;</span>
+	}
+
+	/**
+	 * @param context The context to set.
+	 */
+	public void setContext(Context context) {
+<span class="nc bnc" id="L395" title="All 2 branches missed.">		if (context instanceof DefaultContext) {</span>
+<span class="nc" id="L396">			this.context = (DefaultContext) context;</span>
+		} else {
+<span class="nc" id="L398">			this.context = new DefaultContext(context);</span>
+		}
+<span class="nc" id="L400">	}</span>
+
+	/**
+	 * @return Returns the isComponentConfigurationEncrypted.
+	 */
+	private String isComponentConfigurationEncrypted() {
+<span class="fc" id="L406">		return isComponentConfigurationEncrypted;</span>
+	}
+
+	/**
+	 * @param isComponentConfigurationEncrypted The
+	 *                                          isComponentConfigurationEncrypted to
+	 *                                          set.
+	 */
+	public void setComponentConfigurationEncrypted(String isComponentConfigurationEncrypted) {
+<span class="nc" id="L415">		this.isComponentConfigurationEncrypted = isComponentConfigurationEncrypted;</span>
+<span class="nc" id="L416">	}</span>
+
+	/**
+	 * @return Returns the isComponentRolesEncrypted.
+	 */
+	private String isComponentRolesEncrypted() {
+<span class="fc" id="L422">		return isComponentRolesEncrypted;</span>
+	}
+
+	/**
+	 * @param isComponentRolesEncrypted The isComponentRolesEncrypted to set.
+	 */
+	public void setComponentRolesEncrypted(String isComponentRolesEncrypted) {
+<span class="nc" id="L429">		this.isComponentRolesEncrypted = isComponentRolesEncrypted;</span>
+<span class="nc" id="L430">	}</span>
+
+	/**
+	 * @return Returns the isParametersEncrypted.
+	 */
+	private String isParametersEncrypted() {
+<span class="fc" id="L436">		return isParametersEncrypted;</span>
+	}
+
+	/**
+	 * @param isParametersEncrypted The isParametersEncrypted to set.
+	 */
+	public void setParametersEncrypted(String isParametersEncrypted) {
+<span class="nc" id="L443">		Validate.notEmpty(isParametersEncrypted, &quot;isParametersEncrypted&quot;);</span>
+<span class="nc" id="L444">		this.isParametersEncrypted = isParametersEncrypted;</span>
+<span class="nc" id="L445">	}</span>
+
+	/**
+	 * @return Returns the logger.
+	 */
+	public Logger getLogger() {
+<span class="fc" id="L451">		return logger;</span>
+	}
+
+	/**
+	 * @param logger The logger to set.
+	 */
+	public void setLogger(Logger logger) {
+<span class="fc" id="L458">		this.logger = logger;</span>
+<span class="fc" id="L459">	}</span>
+
+	/**
+	 * @return Returns the parametersLocation.
+	 */
+	private String getParametersLocation() {
+<span class="fc" id="L465">		return parametersLocation;</span>
+	}
+
+	/**
+	 * @param parametersLocation The parametersLocation to set.
+	 */
+	public void setParametersLocation(String parametersLocation) {
+<span class="fc" id="L472">		this.parametersLocation = parametersLocation;</span>
+<span class="fc" id="L473">	}</span>
+
+	/**
+	 * @return Returns the applicationRootDir.
+	 */
+	private File getApplicationRootDir() {
+<span class="fc" id="L479">		return new File(applicationRootDir);</span>
+	}
+
+	/**
+	 * @param applicationRootDir The applicationRootDir to set.
+	 */
+	public void setApplicationRootDir(String applicationRootDir) {
+<span class="fc" id="L486">		Validate.notNull(applicationRootDir, &quot;applicationRootDir&quot;);</span>
+
+<span class="pc bpc" id="L488" title="1 of 2 branches missed.">		if (applicationRootDir.equals(&quot;.&quot;)) {</span>
+<span class="fc" id="L489">			this.applicationRootDir = new File(&quot;&quot;).getAbsolutePath();</span>
+		} else {
+<span class="nc" id="L491">			this.applicationRootDir = new File(applicationRootDir).getAbsolutePath();</span>
+		}
+<span class="fc" id="L493">	}</span>
+
+	/**
+	 * @return Returns the tempRootDir.
+	 * @throws Exception 
+	 * @throws IOException 
+	 */
+	private File getTempRootDir() throws IOException, Exception {
+<span class="fc" id="L501">		return makeAbsoluteFile(this.getApplicationRootDir(), this.tempRootDir);</span>
+	}
+
+	/**
+	 * @param tempRootDir The tempRootDir to set.
+	 */
+	public void setTempRootDir(String tempRootDir) {
+<span class="fc" id="L508">		Validate.notNull(tempRootDir, &quot;tempRootDir&quot;);</span>
+<span class="fc" id="L509">		this.tempRootDir = tempRootDir;</span>
+<span class="fc" id="L510">	}</span>
+
+	/**
+	 * @return Returns the classLoader.
+	 */
+	private ClassLoader getComponentClassLoader() {
+<span class="fc" id="L516">		return componentClassLoader;</span>
+	}
+
+	/**
+	 * @param componentClassLoader The classLoader to set.
+	 */
+	public void setComponentClassLoader(ClassLoader componentClassLoader) {
+<span class="nc" id="L523">		Validate.notNull(componentClassLoader, &quot;componentClassLoader&quot;);</span>
+<span class="nc" id="L524">		this.componentClassLoader = componentClassLoader;</span>
+<span class="nc" id="L525">	}</span>
+
+	/**
+	 * @return Returns the containerFlavour.
+	 */
+	private String getContainerFlavour() {
+<span class="fc" id="L531">		return containerFlavour;</span>
+	}
+
+	/**
+	 * @param containerFlavour The containerFlavour to set.
+	 */
+	public void setContainerFlavour(String containerFlavour) {
+<span class="nc" id="L538">		this.containerFlavour = containerFlavour;</span>
+<span class="nc" id="L539">	}</span>
+
+	/**
+	 * @return Returns the containerConfiguration.
+	 */
+	private Configuration getContainerConfiguration() {
+<span class="fc" id="L545">		return containerConfiguration;</span>
+	}
+
+	/**
+	 * @param containerConfiguration The containerConfiguration to set.
+	 */
+	public void setContainerConfiguration(Configuration containerConfiguration) {
+<span class="fc" id="L552">		this.containerConfiguration = containerConfiguration;</span>
+<span class="fc" id="L553">	}</span>
+
+	/**
+	 * Get the parent service manager to find service managed by the parent
+	 * container.
+	 *
+	 * @return the parent container
+	 */
+
+	public ServiceManager getParentServiceManager() {
+<span class="fc" id="L563">		return parentServiceManager;</span>
+	}
+
+	/**
+	 * Set the parent service manager to find service managed by the parent
+	 * container.
+	 *
+	 * @param parentServiceManager the parent container
+	 */
+	public void setParentServiceManager(ServiceManager parentServiceManager) {
+<span class="nc" id="L573">		this.parentServiceManager = parentServiceManager;</span>
+<span class="nc" id="L574">	}</span>
+
+	/**
+	 * Get a list of service manager managing their own set of services.
+	 *
+	 * @return a list of service implementing the ServiceManager interface
+	 */
+	public String[] getServiceManagerList() {
+<span class="nc" id="L582">		return serviceManagerList;</span>
+	}
+
+	/**
+	 * Set a list of service manager managing their own set of services.
+	 *
+	 * @param serviceManagerList a list of service implementing the ServiceManager
+	 *                           interface
+	 */
+	public void setServiceManagerList(String[] serviceManagerList) {
+<span class="nc" id="L592">		this.serviceManagerList = serviceManagerList;</span>
+<span class="nc" id="L593">	}</span>
+
+	/**
+	 * @return true if there is a service manager defined
+	 */
+	public boolean hasServiceManagerList() {
+<span class="pc bpc" id="L599" title="3 of 4 branches missed.">		if (this.serviceManagerList != null &amp;&amp; this.serviceManagerList.length &gt; 0)</span>
+<span class="nc" id="L600">			return true;</span>
+<span class="fc" id="L601">		return false;</span>
+	}
+
+	/**
+	 * Loads a containerConfiguration file and set is as the Avalon configuration to
+	 * be used for Configurable.configure(). Take care that the implementation uses
+	 * an InputStreamLocator to find the containerConfiguration which uses the
+	 * previously set application root directory.
+	 *
+	 * @param location the location of the containerConfiguration
+	 * @throws IOException loading the configuration failed
+	 */
+	public void loadContainerConfiguration(String location) throws IOException {
+<span class="fc" id="L614">		this.loadContainerConfiguration(location, &quot;false&quot;);</span>
+<span class="fc" id="L615">	}</span>
+
+	/**
+	 * Loads a containerConfiguration file and set is as the Avalon configuration to
+	 * be used for Configurable.configure(). Take care that the implementation uses
+	 * an InputStreamLocator to find the containerConfiguration which uses the
+	 * previously set application root directory.
+	 *
+	 * @param location    the location of the containerConfiguration
+	 * @param isEncrypted is the file encrypted
+	 * @throws IOException loading the configuration failed
+	 */
+	public void loadContainerConfiguration(String location, String isEncrypted) throws IOException {
+<span class="fc" id="L628">		Configuration result = null;</span>
+
+<span class="fc" id="L630">		InputStreamLocator locator = new InputStreamLocator(this.getApplicationRootDir(), this.getLogger());</span>
+
+<span class="fc" id="L632">		DefaultConfigurationBuilder builder = new DefaultConfigurationBuilder();</span>
+<span class="fc" id="L633">		InputStream is = locator.locate(location);</span>
+
+<span class="fc bfc" id="L635" title="All 2 branches covered.">		if (is != null) {</span>
+			try {
+<span class="fc" id="L637">				is = CryptoStreamFactory.getDecryptingInputStream(is, isEncrypted);</span>
+<span class="fc" id="L638">				result = builder.build(is);</span>
+<span class="fc" id="L639">				this.setContainerConfiguration(result);</span>
+<span class="nc" id="L640">			} catch (Exception e) {</span>
+<span class="nc" id="L641">				String msg = &quot;Unable to parse the following file : &quot; + location;</span>
+<span class="nc" id="L642">				this.getLogger().error(msg, e);</span>
+<span class="nc" id="L643">				throw new IOException(msg);</span>
+<span class="fc" id="L644">			}</span>
+		} else {
+<span class="fc" id="L646">			String msg = &quot;Unable to locate the containerConfiguration file : &quot; + location;</span>
+<span class="fc" id="L647">			this.getLogger().error(msg);</span>
+<span class="fc" id="L648">			throw new IOException(msg);</span>
+		}
+<span class="fc" id="L650">	}</span>
+
+	/**
+	 * Determines the absolute file.
+	 * 
+	 * @param baseDir  the base directory
+	 * @param fileName the filename
+	 * @return the absolute path
+	 */
+	private static File makeAbsoluteFile(File baseDir, String fileName) throws IOException, Exception {
+<span class="pc bpc" id="L660" title="1 of 2 branches missed.">		if (baseDir.exists()) {</span>
+<span class="pc bpc" id="L661" title="1 of 2 branches missed.">			if (!StringUtils.isEmpty(fileName)) {</span>
+<span class="fc" id="L662">				File result = new File(fileName);</span>
+<span class="pc bpc" id="L663" title="1 of 2 branches missed.">				if (!result.isAbsolute()) {</span>
+<span class="nc" id="L664">					result = new File(baseDir, fileName);</span>
+				}
+<span class="fc" id="L666">				return result;</span>
+			} else {
+<span class="nc" id="L668">				throw new Exception(&quot;No filename specified&quot;);</span>
+			}
+		} else {
+<span class="nc" id="L671">			throw new IOException(&quot;The directory does not exist&quot;);</span>
+		}
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AvalonServiceComponentImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.component</a> &gt; <span class="el_source">AvalonServiceComponentImpl.java</span></div><h1>AvalonServiceComponentImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.component;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import org.apache.avalon.framework.activity.Disposable;
+import org.apache.avalon.framework.activity.Executable;
+import org.apache.avalon.framework.activity.Initializable;
+import org.apache.avalon.framework.activity.Startable;
+import org.apache.avalon.framework.activity.Suspendable;
+import org.apache.avalon.framework.configuration.Configurable;
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.Reconfigurable;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.Contextualizable;
+import org.apache.avalon.framework.logger.LogEnabled;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.avalon.framework.parameters.ParameterException;
+import org.apache.avalon.framework.parameters.Parameterizable;
+import org.apache.avalon.framework.parameters.Parameters;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.avalon.framework.service.Serviceable;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorFactory;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorService;
+import org.apache.fulcrum.yaafi.framework.role.RoleEntry;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * This class implements a service component singleton with
+ * an arbitrary lifecycle.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class AvalonServiceComponentImpl
+    extends ServiceComponentImpl
+{
+    /**
+     * Constructor to parse the configuration.
+     *
+     * @param roleEntry The information extracted from the role configuration file
+     * @param parentLogger the logger of the service container
+     * @param logger The logger for the service instance
+     */
+    public AvalonServiceComponentImpl(
+        RoleEntry roleEntry, Logger parentLogger, Logger logger)
+    {
+<span class="fc" id="L67">        super( roleEntry, parentLogger, logger );</span>
+<span class="fc" id="L68">    }</span>
+
+    /////////////////////////////////////////////////////////////////////////
+    // Service Component Lifecycle Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /* (non-Javadoc)
+     * @see org.apache.fulcrum.yaafi.framework.component.ServiceComponentImpl#incarnateInstance()
+     */
+    protected void incarnateInstance() throws Exception
+    {
+<span class="fc" id="L79">        this.getParentLogger().debug( &quot;Incarnating the service &quot; + this.getShorthand() );</span>
+
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">        if( this.getLogger() != null )</span>
+        {
+<span class="fc" id="L83">            this.enableLogging( this.getLogger() );</span>
+        }
+
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if( this.getContext() != null )</span>
+        {
+<span class="fc" id="L88">            this.contextualize( this.getContext() );</span>
+        }
+
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if( this.getServiceManager() != null )</span>
+        {
+<span class="fc" id="L93">            this.service( this.getServiceManager() );</span>
+        }
+
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">        if( this.getConfiguration() != null )</span>
+        {
+<span class="fc" id="L98">            this.configure( this.getConfiguration() );</span>
+        }
+
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">        if( this.getParamaters() != null )</span>
+        {
+<span class="fc" id="L103">            this.parameterize( this.getParamaters() );</span>
+        }
+
+<span class="fc" id="L106">        this.initialize();</span>
+<span class="fc" id="L107">        this.execute();</span>
+<span class="fc" id="L108">        this.start();</span>
+
+        // create a dynamic proxy only if
+        //
+        // +) interceptors are enabled
+        // +) the instance is not an AvalonServiceInterceptor
+
+<span class="fc" id="L115">        boolean isInterceptor = AvalonInterceptorService.class.isAssignableFrom(</span>
+<span class="fc" id="L116">            this.getImplementationClazz()</span>
+            );
+
+<span class="fc bfc" id="L119" title="All 4 branches covered.">        if( this.getRoleEntry().hasDynamicProxy() &amp;&amp; isInterceptor == false )</span>
+        {
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">            if( this.getParentLogger().isDebugEnabled() )</span>
+            {
+<span class="fc" id="L123">                this.getParentLogger().debug( &quot;Creating a dynamic proxy for &quot; + this.getShorthand() );</span>
+            }
+
+<span class="fc" id="L126">            Object proxyInstance = AvalonInterceptorFactory.create(</span>
+<span class="fc" id="L127">                this.getName(),</span>
+<span class="fc" id="L128">                this.getShorthand(),</span>
+<span class="fc" id="L129">                this.getServiceManager(),</span>
+<span class="fc" id="L130">                this.getRoleEntry().getInterceptorList(),</span>
+<span class="fc" id="L131">                this.getRawInstance(false)</span>
+                );
+
+<span class="fc" id="L134">            this.setProxyInstance(proxyInstance);</span>
+<span class="fc" id="L135">        }</span>
+        else
+        {
+<span class="fc" id="L138">            this.getRoleEntry().setHasDynamicProxy(false);</span>
+        }
+<span class="fc" id="L140">    }</span>
+
+    /* (non-Javadoc)
+     * @see org.apache.fulcrum.yaafi.framework.component.ServiceComponentImpl#reconfigure()
+     */
+    public void reconfigure() throws Exception
+    {
+<span class="fc" id="L147">        Throwable lastThrowable = null;</span>
+
+<span class="fc" id="L149">        this.getParentLogger().debug( &quot;Reconfiguring &quot; + this.getShorthand() );</span>
+
+        try
+        {
+<span class="fc" id="L153">            this.suspend();</span>
+        }
+<span class="nc" id="L155">        catch (Throwable t)</span>
+        {
+<span class="nc" id="L157">            String msg = &quot;Suspending the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L158">            this.getParentLogger().error( msg, t );</span>
+<span class="nc" id="L159">            lastThrowable = t;</span>
+<span class="fc" id="L160">        }</span>
+
+        try
+        {
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">            if( this.getConfiguration() != null )</span>
+            {
+<span class="fc" id="L166">                this.reconfigure( this.getConfiguration() );</span>
+            }
+        }
+<span class="nc" id="L169">        catch (Throwable t)</span>
+        {
+<span class="nc" id="L171">            String msg = &quot;Reconfiguring the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L172">            this.getParentLogger().error( msg, t );</span>
+<span class="nc" id="L173">            lastThrowable = t;</span>
+<span class="fc" id="L174">        }</span>
+
+        try
+        {
+<span class="fc" id="L178">            this.resume();</span>
+        }
+<span class="nc" id="L180">        catch (Throwable t)</span>
+        {
+<span class="nc" id="L182">            String msg = &quot;Resuming the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L183">            this.getParentLogger().error( msg, t );</span>
+<span class="nc" id="L184">            lastThrowable = t;</span>
+<span class="fc" id="L185">        }</span>
+
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        if( lastThrowable != null )</span>
+        {
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            if( lastThrowable instanceof Exception )</span>
+            {
+<span class="nc" id="L191">                throw (Exception) lastThrowable;</span>
+            }
+            else
+            {
+<span class="nc" id="L195">                throw new RuntimeException( lastThrowable.getMessage() );</span>
+            }
+        }
+<span class="fc" id="L198">    }</span>
+
+    /* (non-Javadoc)
+     * Stop and dispose the service implementation.
+     * @see org.apache.fulcrum.yaafi.framework.component.ServiceComponentImpl#decommision()
+     */
+    public void decommision() throws Exception
+    {
+<span class="fc" id="L206">        this.getParentLogger().debug( &quot;Decommisioning the service &quot; + this.getShorthand() );</span>
+
+        try
+        {
+<span class="fc" id="L210">            this.stop();</span>
+        }
+<span class="nc" id="L212">        catch (Throwable e)</span>
+        {
+<span class="nc" id="L214">            String msg = &quot;Stopping the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L215">            this.getParentLogger().error( msg, e );</span>
+<span class="fc" id="L216">        }</span>
+
+        try
+        {
+<span class="fc" id="L220">            Object rawInstance = this.getRawInstance(false);</span>
+
+            // dispose the service implementation class
+
+<span class="fc bfc" id="L224" title="All 2 branches covered.">            if( rawInstance instanceof Disposable )</span>
+            {
+                try
+                {
+<span class="fc" id="L228">                    this.getParentLogger().debug( &quot;Disposable.dispose() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L229">                    ((Disposable) rawInstance).dispose();</span>
+                }
+<span class="nc" id="L231">                catch (Exception e)</span>
+                {
+<span class="nc" id="L233">                    String msg = &quot;Disposing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L234">                    this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L235">                    throw new RuntimeException(msg);</span>
+<span class="fc" id="L236">                }</span>
+            }
+        }
+<span class="nc" id="L239">        catch (Throwable e)</span>
+        {
+<span class="nc" id="L241">            String msg = &quot;Disposing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L242">            this.getParentLogger().error( msg, e );</span>
+<span class="fc" id="L243">        }</span>
+
+<span class="fc" id="L245">        super.decommision();</span>
+<span class="fc" id="L246">    }</span>
+
+    /////////////////////////////////////////////////////////////////////////
+    // Avalon Lifecycle Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @see org.apache.avalon.framework.logger.LogEnabled#enableLogging(org.apache.avalon.framework.logger.Logger)
+     * @param logger logger to enable
+     */
+    public void enableLogging(Logger logger)
+    {
+<span class="fc" id="L258">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">        if( rawInstance instanceof LogEnabled )</span>
+        {
+            try
+            {
+<span class="fc" id="L264">                this.getParentLogger().debug( &quot;LogEnabled.enableLogging() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L265">                ((LogEnabled) rawInstance).enableLogging(logger);</span>
+            }
+<span class="nc" id="L267">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L269">                String msg = &quot;LogEnable the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L270">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L271">                throw new RuntimeException(msg);</span>
+<span class="fc" id="L272">            }</span>
+        }
+<span class="fc" id="L274">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+     * @param context the context to add to this service
+     * @throws ContextException if unable to contextualize
+     */
+    public void contextualize(Context context) throws ContextException
+    {
+<span class="fc" id="L283">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L285" title="All 2 branches covered.">        if( rawInstance instanceof Contextualizable )</span>
+        {
+            try
+            {
+<span class="fc" id="L289">                this.getParentLogger().debug( &quot;Contextualizable.contextualize() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L290">                ((Contextualizable) rawInstance).contextualize(context);</span>
+            }
+<span class="nc" id="L292">            catch (ContextException e)</span>
+            {
+<span class="nc" id="L294">                String msg = &quot;Contextualizing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L295">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L296">                throw e;</span>
+            }
+<span class="nc" id="L298">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L300">                String msg = &quot;Contextualizing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L301">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L302">                throw new ContextException(msg,t);</span>
+<span class="fc" id="L303">            }</span>
+        }
+<span class="fc" id="L305">    }</span>
+
+   /**
+    * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+    * @param serviceManager instance of the service manager to work with
+    * @throws ServiceException throws exception if service failed for any reason
+    */
+    public void service(ServiceManager serviceManager) throws ServiceException
+    {
+<span class="fc" id="L314">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L316" title="All 2 branches covered.">        if( rawInstance instanceof Serviceable )</span>
+        {
+            try
+            {
+<span class="fc" id="L320">                this.getParentLogger().debug( &quot;Serviceable.service() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L321">                ((Serviceable) rawInstance).service(serviceManager);</span>
+            }
+<span class="nc" id="L323">            catch (ServiceException e)</span>
+            {
+<span class="nc" id="L325">                String msg = &quot;Servicing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L326">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L327">                throw e;</span>
+            }
+<span class="nc" id="L329">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L331">                String msg = &quot;Servicing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L332">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L333">                throw new ServiceException(this.getShorthand(),msg,t);</span>
+<span class="fc" id="L334">            }</span>
+        }
+<span class="fc" id="L336">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+     * 
+     * @param configuration the configuration
+     * @throws ConfigurationException if fails to contextualize the config
+     */
+    public void configure(Configuration configuration) throws ConfigurationException
+    {
+<span class="fc" id="L346">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        if( rawInstance instanceof Configurable )</span>
+        {
+            try
+            {
+<span class="fc" id="L352">                this.getParentLogger().debug( &quot;Configurable.configure() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L353">                ((Configurable) rawInstance).configure(configuration);</span>
+            }
+<span class="nc" id="L355">            catch (ConfigurationException e)</span>
+            {
+<span class="nc" id="L357">                String msg = &quot;Configuring the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L358">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L359">                throw e;</span>
+            }
+<span class="nc" id="L361">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L363">                String msg = &quot;Configuring the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L364">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L365">                throw new ConfigurationException(msg,t);</span>
+<span class="fc" id="L366">            }</span>
+        }
+<span class="fc" id="L368">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.parameters.Parameterizable#parameterize(org.apache.avalon.framework.parameters.Parameters)
+     * @param parameters the parameters
+     * @throws ParameterException if unable to set the parameters
+     */
+    public void parameterize(Parameters parameters) throws ParameterException
+    {
+<span class="fc" id="L377">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L379" title="All 2 branches covered.">        if( rawInstance instanceof Parameterizable )</span>
+        {
+            try
+            {
+<span class="fc" id="L383">                this.getParentLogger().debug( &quot;Parameterizable.parametrize() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L384">                ((Parameterizable) rawInstance).parameterize(parameters);</span>
+            }
+<span class="nc" id="L386">            catch (ParameterException e)</span>
+            {
+<span class="nc" id="L388">                String msg = &quot;Parameterizing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L389">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L390">                throw e;</span>
+            }
+<span class="nc" id="L392">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L394">                String msg = &quot;Parameterizing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L395">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L396">                throw new ParameterException(msg,t);</span>
+<span class="fc" id="L397">            }</span>
+        }
+<span class="fc" id="L399">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Initializable#initialize()
+     * @throws Exception generic exception
+     */
+    public void initialize() throws Exception
+    {
+<span class="fc" id="L407">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L409" title="All 2 branches covered.">        if( rawInstance instanceof Initializable )</span>
+        {
+            try
+            {
+<span class="fc" id="L413">                this.getParentLogger().debug( &quot;Initializable.initialize() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L414">                ((Initializable) rawInstance).initialize();</span>
+            }
+<span class="nc" id="L416">            catch (Exception e)</span>
+            {
+<span class="nc" id="L418">                String msg = &quot;Initializing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L419">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L420">                throw e;</span>
+            }
+<span class="nc" id="L422">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L424">                String msg = &quot;Initializing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L425">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L426">                throw new RuntimeException(msg);</span>
+<span class="fc" id="L427">            }</span>
+        }
+<span class="fc" id="L429">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Executable#execute()
+     * @throws Exception generic exception
+     */
+    public void execute() throws Exception
+    {
+<span class="fc" id="L437">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="pc bpc" id="L439" title="1 of 2 branches missed.">        if( rawInstance instanceof Executable )</span>
+        {
+            try
+            {
+<span class="nc" id="L443">                this.getParentLogger().debug( &quot;Executable.execute() for &quot; + this.getShorthand() );</span>
+<span class="nc" id="L444">                ((Executable) rawInstance).execute();</span>
+            }
+<span class="nc" id="L446">            catch (Exception e)</span>
+            {
+<span class="nc" id="L448">                String msg = &quot;Executing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L449">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L450">                throw e;</span>
+            }
+<span class="nc" id="L452">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L454">                String msg = &quot;Executing the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L455">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L456">                throw new RuntimeException(msg);</span>
+<span class="nc" id="L457">            }</span>
+        }
+<span class="fc" id="L459">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Startable#start()
+     * @throws Exception generic exception
+     */
+    public void start() throws Exception
+    {
+<span class="fc" id="L467">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L469" title="All 2 branches covered.">        if( rawInstance instanceof Startable )</span>
+        {
+            try
+            {
+<span class="fc" id="L473">                this.getParentLogger().debug( &quot;Startable.start() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L474">                ((Startable) rawInstance).start();</span>
+            }
+<span class="nc" id="L476">            catch (Exception e)</span>
+            {
+<span class="nc" id="L478">                String msg = &quot;Starting the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L479">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L480">                throw e;</span>
+            }
+<span class="nc" id="L482">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L484">                String msg = &quot;Starting the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L485">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L486">                throw new RuntimeException(msg);</span>
+<span class="fc" id="L487">            }</span>
+        }
+<span class="fc" id="L489">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Startable#stop()
+     * @throws Exception generic exception
+     */
+    public void stop() throws Exception
+    {
+<span class="fc" id="L497">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L499" title="All 2 branches covered.">        if( rawInstance instanceof Startable )</span>
+        {
+            try
+            {
+<span class="fc" id="L503">                this.getParentLogger().debug( &quot;Startable.stop() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L504">                ((Startable) rawInstance).stop();</span>
+            }
+<span class="nc" id="L506">            catch (Exception e)</span>
+            {
+<span class="nc" id="L508">                String msg = &quot;Stopping the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L509">                this.getParentLogger().error(msg,e);</span>
+<span class="nc" id="L510">                throw e;</span>
+            }
+<span class="nc" id="L512">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L514">                String msg = &quot;Stopping the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L515">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L516">                throw new RuntimeException(msg);</span>
+<span class="fc" id="L517">            }</span>
+        }
+<span class="fc" id="L519">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Suspendable#resume()
+     */
+    public void resume()
+    {
+<span class="fc" id="L526">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="pc bpc" id="L528" title="1 of 2 branches missed.">        if( rawInstance instanceof Suspendable )</span>
+        {
+            try
+            {
+<span class="nc" id="L532">                this.getParentLogger().debug( &quot;Suspendable.resume() for &quot; + this.getShorthand() );</span>
+<span class="nc" id="L533">                ((Suspendable) rawInstance).resume();</span>
+            }
+<span class="nc" id="L535">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L537">                String msg = &quot;Resuming the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L538">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L539">                throw new RuntimeException(msg);</span>
+<span class="nc" id="L540">            }</span>
+        }
+<span class="fc" id="L542">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Suspendable#suspend()
+     */
+    public void suspend()
+    {
+<span class="fc" id="L549">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="pc bpc" id="L551" title="1 of 2 branches missed.">        if( rawInstance instanceof Suspendable )</span>
+        {
+            try
+            {
+<span class="nc" id="L555">                this.getParentLogger().debug( &quot;Suspendable.suspend() for &quot; + this.getShorthand() );</span>
+<span class="nc" id="L556">                ((Suspendable) rawInstance).suspend();</span>
+            }
+<span class="nc" id="L558">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L560">                String msg = &quot;Suspending the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L561">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L562">                throw new RuntimeException(msg);</span>
+<span class="nc" id="L563">            }</span>
+        }
+<span class="fc" id="L565">    }</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+	 * @param configuration the configuration
+	 * @throws ConfigurationException if unable to configure
+	 */
+    public void reconfigure(Configuration configuration) throws ConfigurationException
+    {
+<span class="fc" id="L574">        Validate.notNull( configuration, &quot;configuration&quot; );</span>
+
+<span class="fc" id="L576">        Object rawInstance = this.getRawInstance(false);</span>
+
+<span class="fc bfc" id="L578" title="All 2 branches covered.">        if( rawInstance instanceof Reconfigurable )</span>
+        {
+            try
+            {
+<span class="fc" id="L582">                this.getParentLogger().debug( &quot;Reconfigurable.reconfigure() for &quot; + this.getShorthand() );</span>
+<span class="fc" id="L583">                ((Reconfigurable) rawInstance).reconfigure(configuration);</span>
+            }
+<span class="nc" id="L585">            catch (Throwable t)</span>
+            {
+<span class="nc" id="L587">                String msg = &quot;Reconfiguring the following service failed : &quot; + this.getShorthand();</span>
+<span class="nc" id="L588">                this.getParentLogger().error(msg,t);</span>
+<span class="nc" id="L589">                throw new RuntimeException(msg);</span>
+<span class="fc" id="L590">            }</span>
+        }
+<span class="fc" id="L592">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

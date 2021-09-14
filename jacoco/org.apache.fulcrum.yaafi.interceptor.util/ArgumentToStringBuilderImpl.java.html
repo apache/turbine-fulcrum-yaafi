@@ -1,0 +1,1036 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ArgumentToStringBuilderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.interceptor.util</a> &gt; <span class="el_source">ArgumentToStringBuilderImpl.java</span></div><h1>ArgumentToStringBuilderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.fulcrum.yaafi.interceptor.util;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Collection;
+import java.util.Dictionary;
+import java.util.Iterator;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * Creates a string representation of method argument.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+public class ArgumentToStringBuilderImpl implements InterceptorToStringBuilder
+{
+    /** include the class name in the result */
+    public static final int INCLUDE_CLASSNAME = 0x1;
+
+    /** include the hashcode in the result */
+    public static final int INCLUDE_HASHCODE = 0x02;
+
+    /** the default mode using class names and hashcode */
+<span class="fc" id="L44">    private static int defaultMode = INCLUDE_CLASSNAME &amp; INCLUDE_HASHCODE;</span>
+
+    /** our current formatting mode */
+    private int mode;
+
+    /** the maximum length of a dumped argument */
+    private static final int MAX_LINE_LENGTH = 2000;
+
+    /** seperator for the arguments in the logfile */
+    private static final String SEPERATOR = &quot;;&quot;;
+
+    /** the output for a NULL value **/
+    private static final String NULL_STRING = &quot;&lt;null&gt;&quot;;
+
+    /** the output for a length string **/
+    private static final String LENGTH_STRING = &quot;length=&quot;;
+
+    /** the output for a value string **/
+    private static final String VALUE_STRING = &quot;value=&quot;;
+
+    /** maximum line length for dumping arguments */
+    private int maxArgLength;
+
+    /** the result of the invocation */
+    private StringBuilder buffer;
+
+    /** the target object */
+    private Object target;
+
+    /**
+     * Constructor
+     */
+    public ArgumentToStringBuilderImpl()
+<span class="fc" id="L77">    {</span>
+<span class="fc" id="L78">        this.mode = ArgumentToStringBuilderImpl.defaultMode;</span>
+<span class="fc" id="L79">        this.maxArgLength = MAX_LINE_LENGTH;</span>
+<span class="fc" id="L80">        this.buffer = new StringBuilder();</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Constructor
+     *
+     * @param target the object to print
+     */
+    public ArgumentToStringBuilderImpl(Object target)
+    {
+<span class="nc" id="L90">        this(target,MAX_LINE_LENGTH);</span>
+<span class="nc" id="L91">    }</span>
+
+    /**
+     * Constructor
+     *
+     * @param target the object to print
+     * @param maxArgLength the maximum length
+     */
+    public ArgumentToStringBuilderImpl(Object target, int maxArgLength)
+    {
+<span class="nc" id="L101">        this(target,</span>
+            maxArgLength,
+            ArgumentToStringBuilderImpl.defaultMode
+            );
+<span class="nc" id="L105">    }</span>
+
+    /**
+     * Constructor
+     *
+     * @param target the object to print
+     * @param maxArgLength the maximum length
+     * @param mode the formatting mode to use
+     */
+    public ArgumentToStringBuilderImpl(Object target, int maxArgLength, int mode)
+<span class="fc" id="L115">    {</span>
+<span class="fc" id="L116">        this.buffer = new StringBuilder();</span>
+<span class="fc" id="L117">        this.target = target;</span>
+<span class="fc" id="L118">        this.maxArgLength = maxArgLength;</span>
+<span class="fc" id="L119">        this.mode = mode;</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMaxArgLength(int)
+     */
+    public void setMaxArgLength(int maxArgLength)
+    {
+<span class="fc" id="L127">        this.maxArgLength = maxArgLength;</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setTarget(java.lang.Object)
+     */
+    public void setTarget(Object target)
+    {
+<span class="fc" id="L135">        this.target = target;</span>
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMode(int)
+     */
+    public void setMode(int mode)
+    {
+<span class="fc" id="L143">        this.mode = mode;</span>
+<span class="fc" id="L144">    }</span>
+
+    /**
+     * @return Returns the mode.
+     */
+    public int getMode()
+    {
+<span class="fc" id="L151">        return this.mode;</span>
+    }
+
+        /**
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+        try
+        {
+<span class="fc bfc" id="L161" title="All 2 branches covered.">            if( this.target == null )</span>
+            {
+<span class="fc" id="L163">                this.buffer.append(NULL_STRING);</span>
+            }
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            else if( this.target instanceof Object[] )</span>
+            {
+<span class="fc" id="L167">                this.appendClassName(target);</span>
+<span class="fc" id="L168">                this.appendHashCode(target);</span>
+<span class="fc" id="L169">                this.appendChar('[');</span>
+<span class="fc" id="L170">                this.append( this.toString((Object[]) this.target) );</span>
+<span class="fc" id="L171">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L173" title="All 2 branches covered.">            else if( this.target instanceof boolean[] )</span>
+            {
+<span class="fc" id="L175">                this.appendClassName(target);</span>
+<span class="fc" id="L176">                this.appendHashCode(target);</span>
+<span class="fc" id="L177">                this.appendChar('[');</span>
+<span class="fc" id="L178">                this.append( this.toString((boolean[]) this.target) );</span>
+<span class="fc" id="L179">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L181" title="All 2 branches covered.">            else if( this.target instanceof char[] )</span>
+            {
+<span class="fc" id="L183">                this.appendClassName(target);</span>
+<span class="fc" id="L184">                this.appendHashCode(target);</span>
+<span class="fc" id="L185">                this.appendChar('[');</span>
+<span class="fc" id="L186">                this.append( this.toString((char[]) this.target) );</span>
+<span class="fc" id="L187">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            else if( this.target instanceof byte[] )</span>
+            {
+<span class="fc" id="L191">                this.appendClassName(target);</span>
+<span class="fc" id="L192">                this.appendHashCode(target);</span>
+<span class="fc" id="L193">                this.appendChar('[');</span>
+<span class="fc" id="L194">                this.append( this.toString((byte[]) this.target) );</span>
+<span class="fc" id="L195">                this.appendChar(']');</span>
+            }
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">            else if( this.target instanceof short[] )</span>
+            {
+<span class="nc" id="L199">                this.appendClassName(target);</span>
+<span class="nc" id="L200">                this.appendHashCode(target);</span>
+<span class="nc" id="L201">                this.appendChar('[');</span>
+<span class="nc" id="L202">                this.append( this.toString((short[]) this.target) );</span>
+<span class="nc" id="L203">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L205" title="All 2 branches covered.">            else if( this.target instanceof int[] )</span>
+            {
+<span class="fc" id="L207">                this.appendClassName(target);</span>
+<span class="fc" id="L208">                this.appendHashCode(target);</span>
+<span class="fc" id="L209">                this.appendChar('[');</span>
+<span class="fc" id="L210">                this.append( this.toString((int[]) this.target) );</span>
+<span class="fc" id="L211">                this.appendChar(']');</span>
+            }
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">            else if( this.target instanceof long[] )</span>
+            {
+<span class="nc" id="L215">                this.appendClassName(target);</span>
+<span class="nc" id="L216">                this.appendHashCode(target);</span>
+<span class="nc" id="L217">                this.appendChar('[');</span>
+<span class="nc" id="L218">                this.append( this.toString((long[]) this.target) );</span>
+<span class="nc" id="L219">                this.appendChar(']');</span>
+            }
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">            else if( this.target instanceof float[] )</span>
+            {
+<span class="nc" id="L223">                this.appendClassName(target);</span>
+<span class="nc" id="L224">                this.appendHashCode(target);</span>
+<span class="nc" id="L225">                this.appendChar('[');</span>
+<span class="nc" id="L226">                this.append( this.toString((float[]) this.target) );</span>
+<span class="nc" id="L227">                this.appendChar(']');</span>
+            }
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">            else if( this.target instanceof double[] )</span>
+            {
+<span class="nc" id="L231">                this.appendClassName(target);</span>
+<span class="nc" id="L232">                this.appendHashCode(target);</span>
+<span class="nc" id="L233">                this.appendChar('[');</span>
+<span class="nc" id="L234">                this.append( this.toString((double[]) this.target) );</span>
+<span class="nc" id="L235">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L237" title="All 2 branches covered.">            else if( this.target instanceof String )</span>
+            {
+<span class="fc" id="L239">                this.appendClassName(target);</span>
+<span class="fc" id="L240">                this.appendHashCode(target);</span>
+<span class="fc" id="L241">                this.appendChar('[');</span>
+<span class="fc" id="L242">                this.append( this.toString((String) this.target) );</span>
+<span class="fc" id="L243">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L245" title="All 2 branches covered.">            else if( this.target instanceof Collection )</span>
+            {
+<span class="fc" id="L247">                this.appendClassName(target);</span>
+<span class="fc" id="L248">                this.appendHashCode(target);</span>
+<span class="fc" id="L249">                this.appendChar('[');</span>
+<span class="fc" id="L250">                this.append( this.toString((Collection&lt;?&gt;) this.target) );</span>
+<span class="fc" id="L251">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L253" title="All 2 branches covered.">            else if( this.target instanceof Dictionary )</span>
+            {
+<span class="fc" id="L255">                this.appendClassName(target);</span>
+<span class="fc" id="L256">                this.appendHashCode(target);</span>
+<span class="fc" id="L257">                this.appendChar('[');</span>
+<span class="fc" id="L258">                this.append( this.toString((Dictionary&lt;?, ?&gt;) this.target) );</span>
+<span class="fc" id="L259">                this.appendChar(']');</span>
+            }
+<span class="fc bfc" id="L261" title="All 2 branches covered.">            else if( this.target instanceof Throwable )</span>
+            {
+<span class="fc" id="L263">                this.append( this.toString((Throwable) this.target) );</span>
+            }
+            else
+            {
+<span class="fc" id="L267">                this.append( this.toString( (Object) this.target ) );</span>
+            }
+        }
+<span class="nc" id="L270">        catch (Throwable t)</span>
+        {
+<span class="nc" id="L272">            t.printStackTrace();</span>
+<span class="nc" id="L273">            return &quot;&lt;&quot; + t + &quot;&gt;&quot;;</span>
+<span class="fc" id="L274">        }</span>
+
+<span class="fc" id="L276">        return this.buffer.toString();</span>
+    }
+
+
+    /**
+     * Create a String representation for a Throwable.
+     *
+     * @param throwable the Throwable
+     * @return the string representation
+     */
+    protected String toString(Throwable throwable)
+    {
+<span class="fc" id="L288">        String result = null;</span>
+
+<span class="pc bpc" id="L290" title="1 of 2 branches missed.">        if( throwable == null )</span>
+        {
+<span class="nc" id="L292">            result = NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L296">            result = this.getStackTrace(throwable);</span>
+        }
+
+<span class="fc" id="L299">        return result;</span>
+    }
+
+    /**
+     * Create a string representation of an object array.
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(Object[] array)
+    {
+<span class="fc" id="L310">        StringBuilder temp = new StringBuilder();</span>
+<span class="fc" id="L311">        ArgumentToStringBuilderImpl toStringBuilder = null;</span>
+
+<span class="pc bpc" id="L313" title="1 of 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L315">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L319">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L320">            temp.append(array.length);</span>
+<span class="fc" id="L321">            temp.append(',');</span>
+
+<span class="fc bfc" id="L323" title="All 2 branches covered.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="fc" id="L325">                temp.append('[');</span>
+<span class="fc" id="L326">                temp.append(i);</span>
+<span class="fc" id="L327">                temp.append(']');</span>
+<span class="fc" id="L328">                temp.append('=');</span>
+<span class="fc" id="L329">                toStringBuilder = new ArgumentToStringBuilderImpl(array[i],this.getMaxArgLength(),this.getMode());</span>
+<span class="fc" id="L330">                temp.append(toStringBuilder.toString());</span>
+
+<span class="fc bfc" id="L332" title="All 2 branches covered.">                if( i&lt;array.length-1)</span>
+                {
+<span class="fc" id="L334">                    temp.append(',');</span>
+                }
+
+<span class="fc bfc" id="L337" title="All 2 branches covered.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="fc" id="L339">                    break;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L344">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a boolean[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(boolean[] array)
+    {
+<span class="fc" id="L355">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L359">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L363">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L364">            temp.append(array.length);</span>
+<span class="fc" id="L365">            temp.append(',');</span>
+<span class="fc" id="L366">            temp.append(VALUE_STRING);</span>
+
+<span class="fc bfc" id="L368" title="All 2 branches covered.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="fc" id="L370">                temp.append(array[i]);</span>
+<span class="fc bfc" id="L371" title="All 2 branches covered.">                if( i&lt;array.length-1)</span>
+                {
+<span class="fc" id="L373">                    temp.append(',');</span>
+                }
+
+<span class="pc bpc" id="L376" title="1 of 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L378">                    break;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L383">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a char[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(char[] array)
+    {
+<span class="fc" id="L394">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L396" title="1 of 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L398">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L402">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L403">            temp.append(array.length);</span>
+<span class="fc" id="L404">            temp.append(',');</span>
+<span class="fc" id="L405">            temp.append(VALUE_STRING);</span>
+
+<span class="pc bpc" id="L407" title="1 of 2 branches missed.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="fc" id="L409">                temp.append(array[i]);</span>
+<span class="pc bpc" id="L410" title="1 of 2 branches missed.">                if( i&lt;array.length-1)</span>
+                {
+<span class="fc" id="L412">                    temp.append('.');</span>
+                }
+
+<span class="fc bfc" id="L415" title="All 2 branches covered.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="fc" id="L417">                    break;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L422">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a short[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(short[] array)
+    {
+<span class="nc" id="L433">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="nc bnc" id="L435" title="All 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L437">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="nc" id="L441">            temp.append(LENGTH_STRING);</span>
+<span class="nc" id="L442">            temp.append(array.length);</span>
+<span class="nc" id="L443">            temp.append(',');</span>
+<span class="nc" id="L444">            temp.append(VALUE_STRING);</span>
+
+<span class="nc bnc" id="L446" title="All 2 branches missed.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="nc" id="L448">                temp.append(array[i]);</span>
+<span class="nc bnc" id="L449" title="All 2 branches missed.">                if( i&lt;array.length-1)</span>
+                {
+<span class="nc" id="L451">                    temp.append(',');</span>
+                }
+
+<span class="nc bnc" id="L454" title="All 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L456">                    break;</span>
+                }
+            }
+        }
+
+<span class="nc" id="L461">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a int[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(int[] array)
+    {
+<span class="fc" id="L472">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L474" title="1 of 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L476">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L480">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L481">            temp.append(array.length);</span>
+<span class="fc" id="L482">            temp.append(',');</span>
+<span class="fc" id="L483">            temp.append(VALUE_STRING);</span>
+
+<span class="fc bfc" id="L485" title="All 2 branches covered.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="fc" id="L487">                temp.append(array[i]);</span>
+<span class="fc bfc" id="L488" title="All 2 branches covered.">                if( i&lt;array.length-1)</span>
+                {
+<span class="fc" id="L490">                    temp.append(',');</span>
+                }
+
+<span class="pc bpc" id="L493" title="1 of 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L495">                    break;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L500">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a char[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(long[] array)
+    {
+<span class="nc" id="L511">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="nc bnc" id="L513" title="All 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L515">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="nc" id="L519">            temp.append(LENGTH_STRING);</span>
+<span class="nc" id="L520">            temp.append(array.length);</span>
+<span class="nc" id="L521">            temp.append(',');</span>
+<span class="nc" id="L522">            temp.append(VALUE_STRING);</span>
+
+<span class="nc bnc" id="L524" title="All 2 branches missed.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="nc" id="L526">                temp.append(array[i]);</span>
+<span class="nc bnc" id="L527" title="All 2 branches missed.">                if( i&lt;array.length-1)</span>
+                {
+<span class="nc" id="L529">                    temp.append(',');</span>
+                }
+
+<span class="nc bnc" id="L532" title="All 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L534">                    break;</span>
+                }
+            }
+        }
+
+<span class="nc" id="L539">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a float[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(float[] array)
+    {
+<span class="nc" id="L550">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="nc bnc" id="L552" title="All 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L554">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="nc" id="L558">            temp.append(LENGTH_STRING);</span>
+<span class="nc" id="L559">            temp.append(array.length);</span>
+<span class="nc" id="L560">            temp.append(',');</span>
+<span class="nc" id="L561">            temp.append(VALUE_STRING);</span>
+
+<span class="nc bnc" id="L563" title="All 2 branches missed.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="nc" id="L565">                temp.append(array[i]);</span>
+<span class="nc bnc" id="L566" title="All 2 branches missed.">                if( i&lt;array.length-1)</span>
+                {
+<span class="nc" id="L568">                    temp.append(',');</span>
+                }
+
+<span class="nc bnc" id="L571" title="All 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L573">                    break;</span>
+                }
+            }
+        }
+
+<span class="nc" id="L578">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a double[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(double[] array)
+    {
+<span class="nc" id="L589">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="nc bnc" id="L591" title="All 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L593">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="nc" id="L597">            temp.append(LENGTH_STRING);</span>
+<span class="nc" id="L598">            temp.append(array.length);</span>
+<span class="nc" id="L599">            temp.append(',');</span>
+<span class="nc" id="L600">            temp.append(VALUE_STRING);</span>
+
+<span class="nc bnc" id="L602" title="All 2 branches missed.">            for( int i=0; i&lt;array.length; i++ )</span>
+            {
+<span class="nc" id="L604">                temp.append(array[i]);</span>
+<span class="nc bnc" id="L605" title="All 2 branches missed.">                if( i&lt;array.length-1)</span>
+                {
+<span class="nc" id="L607">                    temp.append(',');</span>
+                }
+
+<span class="nc bnc" id="L610" title="All 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L612">                    break;</span>
+                }
+            }
+        }
+
+<span class="nc" id="L617">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a String.
+     *
+     * @param string the string to print
+     * @return the result
+     */
+    protected String toString(String string)
+    {
+<span class="fc" id="L628">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L630" title="1 of 2 branches missed.">        if( string == null )</span>
+        {
+<span class="nc" id="L632">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L636">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L637">            temp.append(string.length());</span>
+<span class="fc" id="L638">            temp.append(',');</span>
+<span class="fc" id="L639">            temp.append(VALUE_STRING);</span>
+<span class="fc" id="L640">            temp.append(string);</span>
+        }
+
+<span class="fc" id="L643">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a char[].
+     *
+     * @param array the array to print
+     * @return the result
+     */
+    protected String toString(byte[] array)
+    {
+<span class="fc" id="L654">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L656" title="1 of 2 branches missed.">        if( array == null )</span>
+        {
+<span class="nc" id="L658">            temp.append(NULL_STRING);</span>
+        }
+        else
+        {
+<span class="fc" id="L662">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L663">            temp.append(array.length);</span>
+        }
+
+<span class="fc" id="L666">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a java.util.Collection.
+     *
+     * @param collection the collection to print
+     * @return the result
+     */
+    protected String toString(Collection&lt;?&gt; collection)
+    {
+<span class="fc" id="L677">        int index = 0;</span>
+<span class="fc" id="L678">        StringBuilder temp = new StringBuilder();</span>
+<span class="fc" id="L679">        ArgumentToStringBuilderImpl toStringBuilder = null;</span>
+
+<span class="pc bpc" id="L681" title="1 of 2 branches missed.">        if( collection == null )</span>
+        {
+<span class="nc" id="L683">          return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L687">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L688">            temp.append(collection.size());</span>
+<span class="fc" id="L689">            temp.append(',');</span>
+
+<span class="fc" id="L691">            Iterator&lt;?&gt; iterator = collection.iterator();</span>
+
+<span class="fc bfc" id="L693" title="All 2 branches covered.">            while (iterator.hasNext())</span>
+            {
+<span class="fc" id="L695">                temp.append('[');</span>
+<span class="fc" id="L696">                temp.append(index++);</span>
+<span class="fc" id="L697">                temp.append(']');</span>
+<span class="fc" id="L698">                temp.append('=');</span>
+
+<span class="fc" id="L700">                toStringBuilder = new ArgumentToStringBuilderImpl(</span>
+<span class="fc" id="L701">                    iterator.next(),</span>
+<span class="fc" id="L702">                    this.getMaxArgLength(),</span>
+<span class="fc" id="L703">                    this.getMode()</span>
+                    );
+
+<span class="fc" id="L706">                temp.append(toStringBuilder.toString());</span>
+
+<span class="pc bpc" id="L708" title="1 of 2 branches missed.">                if( index&lt;collection.size()-1)</span>
+                {
+<span class="nc" id="L710">                    temp.append(',');</span>
+                }
+
+<span class="pc bpc" id="L713" title="1 of 2 branches missed.">                if( temp.length() &gt; this.getMaxArgLength() )</span>
+                {
+<span class="nc" id="L715">                    break;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L720">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a string representation of a Dictionary.
+     *
+     * @param dictionary the collection to print
+     * @return the result
+     */
+    protected String toString(Dictionary&lt;?, ?&gt; dictionary)
+    {
+<span class="fc" id="L731">        StringBuilder temp = new StringBuilder();</span>
+
+<span class="pc bpc" id="L733" title="1 of 2 branches missed.">        if( dictionary == null )</span>
+        {
+<span class="nc" id="L735">            return NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L739">            temp.append(LENGTH_STRING);</span>
+<span class="fc" id="L740">            temp.append(dictionary.size());</span>
+<span class="fc" id="L741">            temp.append(',');</span>
+<span class="fc" id="L742">            temp.append(VALUE_STRING);</span>
+<span class="fc" id="L743">            temp.append(dictionary.toString());</span>
+        }
+
+<span class="fc" id="L746">        return temp.toString();</span>
+    }
+
+    /**
+     * Create a String representation for an arbitrary object.
+     *
+     * @param object the object
+     * @return string representation
+     */
+    protected String toString(Object object)
+    {
+<span class="fc" id="L757">        String result = null;</span>
+<span class="fc" id="L758">        String temp = null;</span>
+<span class="fc" id="L759">        String className = null;</span>
+
+<span class="pc bpc" id="L761" title="1 of 2 branches missed.">        if( object == null )</span>
+        {
+<span class="nc" id="L763">            result = NULL_STRING;</span>
+        }
+        else
+        {
+<span class="fc" id="L767">            temp = object.toString();</span>
+
+<span class="fc" id="L769">            className = StringUtils.replace(</span>
+<span class="fc" id="L770">                object.getClass().getName(),</span>
+                &quot;java.lang.&quot;, &quot;&quot;
+                );
+
+<span class="fc bfc" id="L774" title="All 2 branches covered.">            if( temp.startsWith(className) == false )</span>
+            {
+<span class="fc" id="L776">                int hashCode = object.hashCode();</span>
+<span class="fc" id="L777">                StringBuilder tempBuffer = new StringBuilder();</span>
+<span class="fc" id="L778">                tempBuffer.append(className);</span>
+<span class="fc" id="L779">                tempBuffer.append('@');</span>
+<span class="fc" id="L780">                tempBuffer.append(hashCode);</span>
+<span class="fc" id="L781">                tempBuffer.append('[');</span>
+<span class="fc" id="L782">                tempBuffer.append(temp);</span>
+<span class="fc" id="L783">                tempBuffer.append(']');</span>
+
+<span class="fc" id="L785">                result = tempBuffer.toString();</span>
+<span class="fc" id="L786">            }</span>
+            else
+            {
+<span class="fc" id="L789">                result = temp;</span>
+            }
+        }
+
+<span class="fc" id="L793">        return result;</span>
+    }
+
+    /**
+     * Append the hash code.
+     * @param target the object to print
+     */
+    protected void appendHashCode(Object target)
+    {
+<span class="fc bfc" id="L802" title="All 2 branches covered.">            if ((this.mode &amp; INCLUDE_HASHCODE) == 0)</span>
+            {
+<span class="fc" id="L804">                    return;</span>
+            }
+
+<span class="pc bpc" id="L807" title="1 of 2 branches missed.">        if( this.target != null )</span>
+        {
+<span class="fc" id="L809">            this.buffer.append('@');</span>
+<span class="fc" id="L810">            this.buffer.append(Integer.toHexString(target.hashCode()));</span>
+        }
+<span class="fc" id="L812">    }</span>
+
+    /**
+     * Append the class name.
+     * @param target the object to print
+     */
+    protected void appendClassName(Object target)
+    {
+<span class="fc" id="L820">        boolean skipClassName = true;</span>
+
+<span class="pc bpc" id="L822" title="1 of 2 branches missed.">        if ((this.mode &amp; INCLUDE_CLASSNAME) == 0)</span>
+        {
+<span class="nc" id="L824">            return;</span>
+        }
+
+<span class="pc bpc" id="L827" title="1 of 2 branches missed.">        if( this.target != null )</span>
+        {
+<span class="fc" id="L829">            String className = target.getClass().getName();</span>
+
+<span class="fc bfc" id="L831" title="All 2 branches covered.">            if( target instanceof boolean[] )</span>
+            {
+<span class="fc" id="L833">                this.buffer.append(&quot;boolean[]&quot;);</span>
+            }
+<span class="fc bfc" id="L835" title="All 2 branches covered.">            else if( target instanceof byte[] )</span>
+            {
+<span class="fc" id="L837">                this.buffer.append(&quot;byte[]&quot;);</span>
+            }
+<span class="fc bfc" id="L839" title="All 2 branches covered.">            else if( target instanceof char[] )</span>
+            {
+<span class="fc" id="L841">                this.buffer.append(&quot;char[]&quot;);</span>
+            }
+<span class="pc bpc" id="L843" title="1 of 2 branches missed.">            else if( target instanceof short[] )</span>
+            {
+<span class="nc" id="L845">                this.buffer.append(&quot;short[]&quot;);</span>
+            }
+<span class="fc bfc" id="L847" title="All 2 branches covered.">            else if( target instanceof int[] )</span>
+            {
+<span class="fc" id="L849">                this.buffer.append(&quot;int[]&quot;);</span>
+            }
+<span class="pc bpc" id="L851" title="1 of 2 branches missed.">            else if( target instanceof long[] )</span>
+            {
+<span class="nc" id="L853">                this.buffer.append(&quot;[ong[]&quot;);</span>
+            }
+<span class="pc bpc" id="L855" title="1 of 2 branches missed.">            else if( target instanceof float[] )</span>
+            {
+<span class="nc" id="L857">                this.buffer.append(&quot;float[]&quot;);</span>
+            }
+<span class="pc bpc" id="L859" title="1 of 2 branches missed.">            else if( target instanceof double[] )</span>
+            {
+<span class="nc" id="L861">                this.buffer.append(&quot;double[]&quot;);</span>
+            }
+<span class="pc bpc" id="L863" title="1 of 2 branches missed.">            else if( target instanceof Boolean )</span>
+            {
+<span class="nc" id="L865">                this.buffer.append(&quot;Boolean&quot;);</span>
+            }
+<span class="pc bpc" id="L867" title="1 of 2 branches missed.">            else if( target instanceof Character )</span>
+            {
+<span class="nc" id="L869">                this.buffer.append(&quot;Character&quot;);</span>
+            }
+<span class="pc bpc" id="L871" title="1 of 2 branches missed.">            else if( target instanceof Short )</span>
+            {
+<span class="nc" id="L873">                this.buffer.append(&quot;Short&quot;);</span>
+            }
+<span class="pc bpc" id="L875" title="1 of 2 branches missed.">            else if( target instanceof Integer )</span>
+            {
+<span class="nc" id="L877">                this.buffer.append(&quot;Integer&quot;);</span>
+            }
+<span class="pc bpc" id="L879" title="1 of 2 branches missed.">            else if( target instanceof Long )</span>
+            {
+<span class="nc" id="L881">                this.buffer.append(&quot;Long&quot;);</span>
+            }
+<span class="pc bpc" id="L883" title="1 of 2 branches missed.">            else if( target instanceof Float )</span>
+            {
+<span class="nc" id="L885">                this.buffer.append(&quot;Float&quot;);</span>
+            }
+<span class="pc bpc" id="L887" title="1 of 2 branches missed.">            else if( target instanceof Double )</span>
+            {
+<span class="nc" id="L889">                this.buffer.append(&quot;Double&quot;);</span>
+            }
+<span class="fc bfc" id="L891" title="All 2 branches covered.">            else if( target instanceof String )</span>
+            {
+<span class="fc" id="L893">                this.buffer.append(&quot;String&quot;);</span>
+            }
+<span class="pc bpc" id="L895" title="1 of 2 branches missed.">            else if( target instanceof Boolean[] )</span>
+            {
+<span class="nc" id="L897">                this.buffer.append(&quot;Boolean[]&quot;);</span>
+            }
+<span class="pc bpc" id="L899" title="1 of 2 branches missed.">            else if( target instanceof Character[] )</span>
+            {
+<span class="nc" id="L901">                this.buffer.append(&quot;Character[]&quot;);</span>
+            }
+<span class="pc bpc" id="L903" title="1 of 2 branches missed.">            else if( target instanceof Short[] )</span>
+            {
+<span class="nc" id="L905">                this.buffer.append(&quot;Short[]&quot;);</span>
+            }
+<span class="fc bfc" id="L907" title="All 2 branches covered.">            else if( target instanceof Integer[] )</span>
+            {
+<span class="fc" id="L909">                this.buffer.append(&quot;Integer[]&quot;);</span>
+            }
+<span class="pc bpc" id="L911" title="1 of 2 branches missed.">            else if( target instanceof Long[] )</span>
+            {
+<span class="nc" id="L913">                this.buffer.append(&quot;Long[]&quot;);</span>
+            }
+<span class="pc bpc" id="L915" title="1 of 2 branches missed.">            else if( target instanceof Float[] )</span>
+            {
+<span class="nc" id="L917">                this.buffer.append(&quot;Float[]&quot;);</span>
+            }
+<span class="pc bpc" id="L919" title="1 of 2 branches missed.">            else if( target instanceof Double[] )</span>
+            {
+<span class="nc" id="L921">                this.buffer.append(&quot;Double[]&quot;);</span>
+            }
+<span class="fc bfc" id="L923" title="All 2 branches covered.">            else if( target instanceof String[] )</span>
+            {
+<span class="fc" id="L925">                this.buffer.append(&quot;String[]&quot;);</span>
+            }
+            else
+            {
+<span class="fc" id="L929">                skipClassName = false;</span>
+            }
+
+<span class="fc bfc" id="L932" title="All 2 branches covered.">            if( skipClassName == false )</span>
+            {
+<span class="fc" id="L934">                className = StringUtils.replace(className, &quot;java.lang.&quot;, &quot;&quot;);</span>
+
+<span class="fc bfc" id="L936" title="All 2 branches covered.">                if( className.endsWith(&quot;;&quot;) )</span>
+                {
+<span class="fc" id="L938">                    this.buffer.append(className.substring(0,className.length()-1));</span>
+                }
+                else
+                {
+<span class="fc" id="L942">                    this.buffer.append(className);</span>
+                }
+            }
+        }
+<span class="fc" id="L946">    }</span>
+
+    /**
+     * Append the hash code.
+     * @param ch the object to print
+     */
+    protected void appendChar(char ch)
+    {
+<span class="fc" id="L954">        this.buffer.append(ch);</span>
+<span class="fc" id="L955">    }</span>
+
+    /**
+     * @return Returns the maxLineLength.
+     */
+    protected int getMaxArgLength()
+    {
+<span class="fc" id="L962">        return maxArgLength;</span>
+    }
+
+    /**
+     * &lt;p&gt;Gets the stack trace from a Throwable as a String.&lt;/p&gt;
+     *
+     * @param throwable  the &lt;code&gt;Throwable&lt;/code&gt; to be examined
+     * @return the stack trace as generated by the exception's
+     *  &lt;code&gt;printStackTrace(PrintWriter)&lt;/code&gt; method
+     */
+    protected String getStackTrace(Throwable throwable)
+    {
+<span class="fc" id="L974">        StringWriter sw = new StringWriter();</span>
+<span class="fc" id="L975">        PrintWriter pw = new PrintWriter( sw, true );</span>
+<span class="fc" id="L976">        throwable.printStackTrace( pw );</span>
+<span class="fc" id="L977">        return sw.getBuffer().toString();</span>
+    }
+
+    /**
+     * Append a string to the internal buffer
+     * @param source the string to append
+     */
+    protected void append(String source)
+    {
+<span class="fc" id="L986">        String formattedSource = this.format(source);</span>
+<span class="fc" id="L987">        this.buffer.append(formattedSource);</span>
+<span class="fc" id="L988">    }</span>
+
+    /**
+     * Format the buffer by replacing the whitespaces and cutting
+     * away excessive fluff.
+     *
+     * @param source the source string
+     * @return formatted string
+     */
+    protected String format( String source )
+    {
+<span class="fc" id="L999">        boolean isTruncated = false;</span>
+
+        // test for null or empty string
+<span class="pc bpc" id="L1002" title="1 of 2 branches missed.">        if ( StringUtils.isEmpty(source) )</span>
+<span class="nc" id="L1003">        	return &quot;&quot;;</span>
+
+        // remove the line breaks and tabs for logging output and replace
+<span class="fc" id="L1006">        StringUtils.replace(source,  &quot;\r&quot;,  &quot; &quot;);</span>
+<span class="fc" id="L1007">        StringUtils.replace(source,  &quot;\n&quot;,  &quot; &quot;);</span>
+<span class="fc" id="L1008">        StringUtils.replace(source,  &quot;\t&quot;,  &quot; &quot;);</span>
+<span class="fc" id="L1009">        StringUtils.replace(source,  SEPERATOR,  &quot; &quot;);</span>
+
+        // Build the output
+<span class="fc" id="L1012">        StringBuilder stringBuilder = new StringBuilder(source);</span>
+
+        // trim the string to avoid dumping tons of data
+<span class="fc bfc" id="L1015" title="All 2 branches covered.">        if( stringBuilder.length() &gt; this.getMaxArgLength() )</span>
+        {
+<span class="fc" id="L1017">            stringBuilder.delete(this.getMaxArgLength()-1, stringBuilder.length());</span>
+<span class="fc" id="L1018">            isTruncated = true;</span>
+        }
+        
+        // show the user that we truncated the ouptut
+<span class="fc bfc" id="L1022" title="All 2 branches covered.">        if( isTruncated )</span>
+        {
+<span class="fc bfc" id="L1024" title="All 2 branches covered.">            if (source.endsWith(&quot;]&quot;))</span>
+            {
+<span class="fc" id="L1026">                stringBuilder.append(&quot; ...]&quot;);</span>
+            }
+            else
+            {
+<span class="fc" id="L1030">                stringBuilder.append(&quot; ...&quot;);</span>
+            }
+        }
+<span class="fc" id="L1033">        return stringBuilder.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

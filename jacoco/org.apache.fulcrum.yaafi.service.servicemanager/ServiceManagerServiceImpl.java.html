@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServiceManagerServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.service.servicemanager</a> &gt; <span class="el_source">ServiceManagerServiceImpl.java</span></div><h1>ServiceManagerServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.service.servicemanager;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import org.apache.avalon.framework.activity.Disposable;
+import org.apache.avalon.framework.context.Context;
+import org.apache.avalon.framework.context.ContextException;
+import org.apache.avalon.framework.context.Contextualizable;
+import org.apache.avalon.framework.context.DefaultContext;
+import org.apache.avalon.framework.logger.AbstractLogEnabled;
+import org.apache.avalon.framework.logger.Logger;
+import org.apache.avalon.framework.parameters.ParameterException;
+import org.apache.avalon.framework.parameters.Parameterizable;
+import org.apache.avalon.framework.parameters.Parameters;
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.avalon.framework.service.Serviceable;
+
+
+/**
+ * This is a sort of &quot;edelhack&quot; to solve the problem of accessing
+ * the Avalon infrastructure without having an instance of the
+ * container. The implementation stores the very first instance
+ * of itself in a static variable which can be accessed using
+ * getInstance().
+ *
+ * This allows access to the various Avalon artifacts.
+ *
+ *  @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class ServiceManagerServiceImpl
+    extends AbstractLogEnabled
+    implements ServiceManagerService, Contextualizable, Parameterizable, Serviceable, Disposable
+{
+    /** The one and only instance */
+    private static ServiceManagerServiceImpl instance;
+
+    /** Store the ServiceContainer on a per instance base */
+    private ServiceManager serviceManager;
+
+    /** Store the passed parameters on a per instance base */
+    private Parameters parameters;
+
+    /** Store the passed parameters on a per instance base */
+    private Context context;
+
+    /**
+     * Constructor
+     */
+    public ServiceManagerServiceImpl()
+<span class="fc" id="L69">    {</span>
+<span class="fc" id="L70">        setInstance(this);</span>
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * @return the one and only instance of this class
+     */
+    public static synchronized ServiceManagerService getInstance()
+    {
+<span class="fc" id="L78">        return instance;</span>
+    }
+
+    /**
+     * Create the one and only instance
+     * @param instance the instance
+     */
+    protected static synchronized void setInstance( ServiceManagerServiceImpl instance )
+    {
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if( ServiceManagerServiceImpl.instance == null )</span>
+        {
+<span class="fc" id="L89">            ServiceManagerServiceImpl.instance = instance;</span>
+        }
+<span class="fc" id="L91">    }</span>
+
+    /////////////////////////////////////////////////////////////////////////
+    // Avalon Lifecycle Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @see org.apache.avalon.framework.service.Serviceable#service(org.apache.avalon.framework.service.ServiceManager)
+     */
+    public void service(ServiceManager serviceManager) throws ServiceException
+    {
+<span class="fc" id="L102">        this.serviceManager = serviceManager;</span>
+<span class="fc" id="L103">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.context.Contextualizable#contextualize(org.apache.avalon.framework.context.Context)
+     */
+    public void contextualize(Context context) throws ContextException
+    {
+<span class="fc" id="L110">        this.context = context;</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.parameters.Parameterizable#parameterize(org.apache.avalon.framework.parameters.Parameters)
+     */
+    public void parameterize(Parameters parameters) throws ParameterException
+    {
+<span class="fc" id="L118">        this.parameters = parameters;</span>
+<span class="fc" id="L119">    }</span>
+
+    /**
+     * @see org.apache.avalon.framework.activity.Disposable#dispose()
+     */
+    public void dispose()
+    {
+<span class="fc" id="L126">        this.serviceManager = null;</span>
+<span class="fc" id="L127">        this.parameters = new Parameters();</span>
+<span class="fc" id="L128">        this.context = new DefaultContext();</span>
+<span class="fc" id="L129">        ServiceManagerServiceImpl.instance = null;</span>
+<span class="fc" id="L130">    }</span>
+
+    /////////////////////////////////////////////////////////////////////////
+    // ServiceContainer Implementation
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @see org.apache.avalon.framework.service.ServiceManager#hasService(java.lang.String)
+     */
+    public boolean hasService(String name)
+    {
+<span class="fc" id="L141">        return this.serviceManager.hasService(name);</span>
+    }
+
+    /**
+     * @see org.apache.avalon.framework.service.ServiceManager#lookup(java.lang.String)
+     */
+    public Object lookup(String name) throws ServiceException
+    {
+<span class="fc" id="L149">        return this.serviceManager.lookup(name);</span>
+    }
+
+    /**
+     * @see org.apache.avalon.framework.service.ServiceManager#release(java.lang.Object)
+     */
+    public void release(Object object)
+    {
+<span class="fc" id="L157">        this.serviceManager.release(object);</span>
+<span class="fc" id="L158">    }</span>
+
+    /**
+     * @return the ServiceManager for the container
+     */
+    public ServiceManager getServiceManager()
+    {
+<span class="fc" id="L165">        return this.serviceManager;</span>
+    }
+
+    /**
+     * @return the Parameters for the container
+     */
+    public Parameters getParameters()
+    {
+<span class="fc" id="L173">        return this.parameters;</span>
+    }
+
+    /**
+     * @return the Context for the container
+     */
+    public Context getContext()
+    {
+<span class="fc" id="L181">        return this.context;</span>
+    }
+
+    /**
+     * @see org.apache.fulcrum.yaafi.service.servicemanager.ServiceManagerService#getAvalonLogger()
+     */
+    public Logger getAvalonLogger()
+    {
+<span class="fc" id="L189">        return this.getLogger();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

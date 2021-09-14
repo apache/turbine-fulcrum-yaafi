@@ -1,0 +1,8 @@
+org.apache.fulcrum.yaafi
+org.apache.fulcrum.yaafi.baseservice
+org.apache.fulcrum.yaafi.cli
+org.apache.fulcrum.yaafi.framework.container
+org.apache.fulcrum.yaafi.framework.factory
+org.apache.fulcrum.yaafi.interceptor.util
+org.apache.fulcrum.yaafi.service
+org.apache.fulcrum.yaafi.testcontainer

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AvalonInterceptorContextImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.interceptor</a> &gt; <span class="el_source">AvalonInterceptorContextImpl.java</span></div><h1>AvalonInterceptorContextImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.interceptor;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.fulcrum.yaafi.framework.tls.ThreadLocalStorage;
+import org.apache.fulcrum.yaafi.framework.tls.ThreadLocalStorageImpl;
+import org.apache.fulcrum.yaafi.framework.util.ToStringBuilder;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+/**
+ * Contains context information for the interceptors being invoked. The
+ * class contains a request context which allows to store data from within an
+ * interceptor. It also provides access to a ThreadLocalStorage to associate
+ * data with the current thread.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class AvalonInterceptorContextImpl implements AvalonInterceptorContext
+{
+    /** key for looking up the transaction id */
+    private static final String TRANSACTIONID_KEY =
+        &quot;$org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext#transactionId&quot;;
+
+    /** key for looking up the service invocation depth */
+    private static final String INVOCATIONDEPTH_KEY =
+        &quot;$org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext#invocationDepth&quot;;
+
+    /** the name of the service being intercepted */
+    private String serviceName;
+
+    /** the shorthand of the service being intercepted */
+    private String serviceShorthand;
+
+    /** the real service implementation */
+    private Object serviceDelegate;
+
+    /** the method being invoked */
+    private Method method;
+
+    /** the arguments for the method invocation */
+    private Object[] args;
+
+    /** context information associated with the current invocation */
+    private Map&lt;String, Object&gt; requestContext;
+
+    /** context information associated with the current thread */
+<span class="fc" id="L69">    private static ThreadLocalStorageImpl tls = new ThreadLocalStorageImpl();</span>
+
+    /** works as invocation counter */
+<span class="fc" id="L72">    private static volatile long invocationCounter = 0L;</span>
+
+    /** the associated transaction id */
+    private Long invocationId;
+
+    /**
+     * Constructor.
+     *
+     * @param serviceName the name of the service being intercepted
+     * @param serviceShorthand the shorthand of the service being intercepted
+     * @param serviceDelegate the real service implementation
+     * @param method the method being invoked
+     * @param args the list of arguments for the method invocation
+     */
+    public AvalonInterceptorContextImpl(
+        String serviceName, String serviceShorthand, Object serviceDelegate, Method method, Object[] args )
+<span class="fc" id="L88">    {</span>
+<span class="fc" id="L89">        Validate.notEmpty(serviceName,&quot;serviceName&quot;);</span>
+<span class="fc" id="L90">        Validate.notEmpty(serviceShorthand,&quot;serviceShorthand&quot;);</span>
+<span class="fc" id="L91">        Validate.notNull(serviceDelegate,&quot;serviceDelegate&quot;);</span>
+<span class="fc" id="L92">        Validate.notNull(method,&quot;method&quot;);</span>
+
+<span class="fc" id="L94">        this.invocationId = Long.valueOf(++AvalonInterceptorContextImpl.invocationCounter);</span>
+<span class="fc" id="L95">        this.serviceName = serviceName;</span>
+<span class="fc" id="L96">        this.serviceShorthand = serviceShorthand;</span>
+<span class="fc" id="L97">        this.serviceDelegate = serviceDelegate;</span>
+<span class="fc" id="L98">        this.method = method;</span>
+<span class="fc" id="L99">        this.args = args;</span>
+<span class="fc" id="L100">        this.requestContext = new HashMap&lt;String, Object&gt;();</span>
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * @return Returns the context for the given request.
+     */
+    public final Map&lt;String, Object&gt; getRequestContext()
+    {
+<span class="fc" id="L108">        return requestContext;</span>
+    }
+
+    /**
+     * @return Returns the serviceDelegate.
+     */
+    public final Object getServiceDelegate()
+    {
+<span class="nc" id="L116">        return serviceDelegate;</span>
+    }
+
+    /**
+     * @return Returns the serviceName.
+     */
+    public final String getServiceName()
+    {
+<span class="nc" id="L124">        return serviceName;</span>
+    }
+
+    /**
+     * @return Returns the serviceShorthand.
+     */
+    public String getServiceShorthand()
+    {
+<span class="fc" id="L132">        return serviceShorthand;</span>
+    }
+
+    /**
+     * @return Returns the args.
+     */
+    public final Object [] getArgs()
+    {
+<span class="fc" id="L140">        return args;</span>
+    }
+
+    /**
+     * @return Returns the method.
+     */
+    public final Method getMethod()
+    {
+<span class="fc" id="L148">        return method;</span>
+    }
+
+    /**
+     * @return Returns the ThreadLocalStorage
+     */
+    public final ThreadLocalStorage getThreadContext()
+    {
+<span class="fc" id="L156">        return AvalonInterceptorContextImpl.tls;</span>
+    }
+
+    /**
+     * @return is a transaction id defined for the current thread
+     */
+    public boolean hasTransactionId()
+    {
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        return ( this.getTransactionId() != null ? true : false );</span>
+    }
+
+    /**
+     * @return get the transaction id defined for the current thread
+     */
+    public Object getTransactionId()
+    {
+<span class="fc" id="L172">        return this.getThreadContext().get(TRANSACTIONID_KEY);</span>
+    }
+
+    /**
+     * Set the transaction id for the current thread.
+     * @param transactionId the transaction id
+     */
+    public void setTransactionId( Object transactionId )
+    {
+<span class="fc" id="L181">        this.getThreadContext().put(TRANSACTIONID_KEY,transactionId);</span>
+<span class="fc" id="L182">    }</span>
+
+    /**
+     * Clears the transaction id for the current thread.
+     */
+    public void clearTransactionId()
+    {
+<span class="fc" id="L189">        this.setTransactionId(null);</span>
+<span class="fc" id="L190">    }</span>
+
+    /**
+     * Increment the current service invocation depth
+     */
+    public void incrementInvocationDepth()
+    {
+<span class="fc" id="L197">        Integer invocationDepth = (Integer) this.getThreadContext().get(INVOCATIONDEPTH_KEY);</span>
+
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        if( invocationDepth != null )</span>
+        {
+<span class="fc" id="L201">            int currInvocationDepth = invocationDepth.intValue();</span>
+<span class="fc" id="L202">            this.getThreadContext().put(INVOCATIONDEPTH_KEY, Integer.valueOf(++currInvocationDepth));</span>
+<span class="fc" id="L203">        }</span>
+        else
+        {
+<span class="fc" id="L206">            this.getThreadContext().put(INVOCATIONDEPTH_KEY, Integer.valueOf(0));</span>
+        }
+<span class="fc" id="L208">    }</span>
+
+    /**
+     * Decrement the current service invocation depth
+     */
+    public void decrementInvocationDepth()
+    {
+<span class="fc" id="L215">        Integer invocationDepth = (Integer) this.getThreadContext().get(INVOCATIONDEPTH_KEY);</span>
+
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">        if( invocationDepth != null )</span>
+        {
+<span class="fc" id="L219">            int currInvocationDepth = invocationDepth.intValue();</span>
+<span class="fc" id="L220">            this.getThreadContext().put(INVOCATIONDEPTH_KEY, Integer.valueOf(--currInvocationDepth));</span>
+        }
+<span class="fc" id="L222">    }</span>
+
+    /**
+     * Get the current service invocation depth
+     * @return the current service invocation depth
+     */
+    public int getInvocationDepth()
+    {
+<span class="fc" id="L230">        Integer invocationDepth = (Integer) this.getThreadContext().get(INVOCATIONDEPTH_KEY);</span>
+
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        if( invocationDepth != null )</span>
+        {
+<span class="fc" id="L234">            return invocationDepth.intValue();</span>
+        }
+        else
+        {
+<span class="nc" id="L238">            return 0;</span>
+        }
+    }
+
+    /**
+     * @return Returns the invocationId.
+     */
+    public final Long getInvocationId()
+    {
+<span class="fc" id="L247">        return invocationId;</span>
+    }
+
+    /**
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+<span class="nc" id="L255">        ToStringBuilder toStringBuilder = new ToStringBuilder(this);</span>
+
+<span class="nc" id="L257">        toStringBuilder.append(&quot;serviceShorthand&quot;,this.serviceShorthand);</span>
+<span class="nc" id="L258">        toStringBuilder.append(&quot;serviceName&quot;,this.serviceName);</span>
+<span class="nc" id="L259">        toStringBuilder.append(&quot;serviceDelegate&quot;,this.serviceDelegate);</span>
+<span class="nc" id="L260">        toStringBuilder.append(&quot;method&quot;,this.method.getName());</span>
+<span class="nc" id="L261">        toStringBuilder.append(&quot;args&quot;,this.args.length);</span>
+<span class="nc" id="L262">        toStringBuilder.append(&quot;transactionId&quot;,this.getTransactionId());</span>
+<span class="nc" id="L263">        toStringBuilder.append(&quot;invocationId&quot;,this.invocationId);</span>
+<span class="nc" id="L264">        toStringBuilder.append(&quot;invocationDepth&quot;,this.getInvocationDepth());</span>
+<span class="nc" id="L265">        toStringBuilder.append(&quot;requestContext&quot;,this.requestContext);</span>
+
+<span class="nc" id="L267">        return toStringBuilder.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

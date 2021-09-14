@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AvalonInterceptorFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.framework.interceptor</a> &gt; <span class="el_source">AvalonInterceptorFactory.java</span></div><h1>AvalonInterceptorFactory.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.framework.interceptor;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.util.List;
+
+import org.apache.avalon.framework.service.ServiceException;
+import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.fulcrum.yaafi.framework.constant.AvalonYaafiConstants;
+import org.apache.fulcrum.yaafi.framework.reflection.Clazz;
+import org.apache.fulcrum.yaafi.framework.util.Validate;
+
+
+/**
+ * A factory for creating dynamic proxies for Avalon services.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+<span class="nc" id="L39">public class AvalonInterceptorFactory</span>
+{
+    /**
+     * Creates a dynamic proxy wrapping a service instance.
+     *
+     * @param serviceName the name of the service
+     * @param serviceShorthand the shorthand of the service being intercepted
+     * @param serviceManager the corresponding service manager
+     * @param serviceInterceptorList the list of interceptors to be installed
+     * @param serviceDelegate the service implementation
+     * @return a dynamic proxy
+     * @throws ServiceException an interceptor was not found
+     */
+    public static Object create(
+        String serviceName,
+        String serviceShorthand,
+        ServiceManager serviceManager,
+        String[] serviceInterceptorList,
+        Object serviceDelegate )
+        throws ServiceException
+    {
+<span class="fc" id="L60">        Validate.notEmpty(serviceName,&quot;serviceName&quot;);</span>
+<span class="fc" id="L61">        Validate.notEmpty(serviceShorthand,&quot;serviceShorthand&quot;);</span>
+<span class="fc" id="L62">        Validate.notNull(serviceManager,&quot;serviceManager&quot;);</span>
+<span class="fc" id="L63">        Validate.notNull(serviceInterceptorList,&quot;serviceInterceptorList&quot;);</span>
+<span class="fc" id="L64">        Validate.notNull(serviceDelegate,&quot;serviceDelegate&quot;);</span>
+
+        Object result;
+
+<span class="fc" id="L68">        Class&lt;? extends Object&gt; clazz = serviceDelegate.getClass();</span>
+<span class="fc" id="L69">        ClassLoader classLoader = clazz.getClassLoader();</span>
+<span class="fc" id="L70">        List&lt;?&gt; interfaceList = Clazz.getAllInterfaces(clazz);</span>
+
+        // get the service interfaces to avoid look-ups
+
+<span class="fc" id="L74">        AvalonInterceptorService[] avalonInterceptorServices = resolve(</span>
+            serviceManager,
+            serviceInterceptorList
+            );
+
+<span class="fc" id="L79">        InvocationHandler invocationHandler = new AvalonInterceptorInvocationHandler(</span>
+            serviceName,
+            serviceShorthand,
+            serviceDelegate,
+            avalonInterceptorServices
+            );
+
+<span class="fc" id="L86">        result = Proxy.newProxyInstance(</span>
+            classLoader,
+<span class="fc" id="L88">            (Class[]) interfaceList.toArray(new Class[interfaceList.size()]),</span>
+            invocationHandler
+            );
+
+<span class="fc" id="L92">        return result;</span>
+    }
+
+    /**
+     * Resolve all interceptor service names to service interfaces.
+     *
+     * @param serviceManager to lookup the services
+     * @param interceptorList the list of service names
+     * @return a list of interceptor services
+     * @throws ServiceException an interceptor service was not found
+     */
+    private static AvalonInterceptorService[] resolve( ServiceManager serviceManager, String[] interceptorList )
+        throws ServiceException
+    {
+        String interceptorServiceName;
+<span class="fc" id="L107">        AvalonInterceptorService[] result = new AvalonInterceptorService[interceptorList.length];</span>
+
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        for( int i=0; i&lt;interceptorList.length; i++ )</span>
+        {
+<span class="fc" id="L111">            interceptorServiceName = interceptorList[i];</span>
+<span class="fc" id="L112">            Object currService = serviceManager.lookup(interceptorServiceName);</span>
+
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">            if (currService instanceof AvalonInterceptorService)</span>
+            {
+<span class="fc" id="L116">                result[i] = (AvalonInterceptorService) currService;</span>
+            }
+            else
+            {
+<span class="nc" id="L120">                String msg = &quot;The following service is not an AvalonInterceptorService : &quot; + interceptorServiceName;</span>
+<span class="nc" id="L121">                throw new ServiceException(AvalonYaafiConstants.AVALON_CONTAINER_YAAFI,msg);</span>
+            }
+        }
+
+<span class="fc" id="L125">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

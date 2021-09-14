@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoggingInterceptorServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Fulcrum YAAFI</a> &gt; <a href="index.source.html" class="el_package">org.apache.fulcrum.yaafi.interceptor.logging</a> &gt; <span class="el_source">LoggingInterceptorServiceImpl.java</span></div><h1>LoggingInterceptorServiceImpl.java</h1><pre class="source lang-java linenums">package org.apache.fulcrum.yaafi.interceptor.logging;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.lang.reflect.Method;
+
+import org.apache.avalon.framework.activity.Initializable;
+import org.apache.avalon.framework.configuration.Configuration;
+import org.apache.avalon.framework.configuration.ConfigurationException;
+import org.apache.avalon.framework.configuration.Reconfigurable;
+import org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext;
+import org.apache.fulcrum.yaafi.framework.reflection.Clazz;
+import org.apache.fulcrum.yaafi.interceptor.baseservice.BaseInterceptorServiceImpl;
+import org.apache.fulcrum.yaafi.interceptor.util.ArgumentToStringBuilderImpl;
+import org.apache.fulcrum.yaafi.interceptor.util.DefaultToStringBuilderImpl;
+import org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder;
+import org.apache.fulcrum.yaafi.interceptor.util.MethodToStringBuilderImpl;
+import org.apache.fulcrum.yaafi.interceptor.util.StopWatch;
+
+/**
+ * A service logging of service invocations. The service allows to monitor a
+ * list of services defined in the configuration.
+ *
+ * @author &lt;a href=&quot;mailto:siegfried.goeschl@it20one.at&quot;&gt;Siegfried Goeschl&lt;/a&gt;
+ */
+
+public class LoggingInterceptorServiceImpl extends BaseInterceptorServiceImpl
+		implements LoggingInterceptorService, Reconfigurable, Initializable {
+	/** the maximum length of a dumped argument */
+	private static final int MAX_ARG_LENGTH = 2000;
+
+	/** seperator for the arguments in the logfile */
+	private static final String SEPERATOR = &quot;;&quot;;
+
+	/** maximum argument length for dumping arguments */
+	private int maxArgLength;
+
+	/** the class name of the string builder to use */
+	private String toStringBuilderClassName;
+
+	/** monitor all excpetions independent from the monitored services */
+	private boolean monitorAllExceptions;
+
+	/** the ReflectionToStringBuilder class */
+	private Class&lt;?&gt; toStringBuilderClass;
+
+	/////////////////////////////////////////////////////////////////////////
+	// Avalon Service Lifecycle Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Constructor
+	 */
+	public LoggingInterceptorServiceImpl() {
+<span class="fc" id="L72">		super();</span>
+<span class="fc" id="L73">		this.maxArgLength = MAX_ARG_LENGTH;</span>
+<span class="fc" id="L74">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Configurable#configure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void configure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L80">		super.configure(configuration);</span>
+
+<span class="fc" id="L82">		this.maxArgLength = configuration.getChild(&quot;maxArgLength&quot;).getValueAsInteger(MAX_ARG_LENGTH);</span>
+<span class="fc" id="L83">		this.toStringBuilderClassName = configuration.getChild(&quot;toStringBuilderClass&quot;)</span>
+<span class="fc" id="L84">				.getValue(ArgumentToStringBuilderImpl.class.getName());</span>
+<span class="fc" id="L85">		this.monitorAllExceptions = configuration.getChild(&quot;monitorAllExceptions&quot;).getValueAsBoolean(true);</span>
+<span class="fc" id="L86">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.activity.Initializable#initialize()
+	 */
+	public void initialize() throws Exception {
+		// load the string builder class
+
+<span class="fc" id="L94">		ClassLoader classLoader = this.getClass().getClassLoader();</span>
+
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">		if (Clazz.hasClazz(classLoader, this.getToStringBuilderClassName())) {</span>
+<span class="fc" id="L97">			this.toStringBuilderClass = Clazz.getClazz(classLoader, this.getToStringBuilderClassName());</span>
+		}
+
+		// create an instance of the StringBuilder to see if everything works
+
+<span class="fc" id="L102">		InterceptorToStringBuilder interceptorToStringBuilder = this.createArgumentToStringBuilder(this);</span>
+
+<span class="fc" id="L104">		interceptorToStringBuilder.toString();</span>
+<span class="fc" id="L105">	}</span>
+
+	/**
+	 * @see org.apache.avalon.framework.configuration.Reconfigurable#reconfigure(org.apache.avalon.framework.configuration.Configuration)
+	 */
+	public void reconfigure(Configuration configuration) throws ConfigurationException {
+<span class="fc" id="L111">		super.reconfigure(configuration);</span>
+<span class="fc" id="L112">		this.configure(configuration);</span>
+<span class="fc" id="L113">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service interface implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.apache.fulcrum.yaafi.interceptor.baseservice.BaseInterceptorServiceImpl#
+	 * onEntry(org.apache.fulcrum.yaafi.framework.interceptor.
+	 * AvalonInterceptorContext)
+	 */
+	public void onEntry(AvalonInterceptorContext interceptorContext) {
+<span class="pc bpc" id="L128" title="1 of 4 branches missed.">		if (this.isServiceMonitored(interceptorContext) &amp;&amp; this.getLogger().isInfoEnabled() == true) {</span>
+<span class="fc" id="L129">			String msg = this.toString(interceptorContext, null, ON_ENTRY);</span>
+<span class="fc" id="L130">			this.getLogger().info(msg);</span>
+<span class="fc" id="L131">			this.createStopWatch(interceptorContext);</span>
+		}
+<span class="fc" id="L133">	}</span>
+
+	/* (non-Javadoc)
+	 * @see org.apache.fulcrum.yaafi.interceptor.baseservice.BaseInterceptorServiceImpl#onError(org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext, java.lang.Throwable)
+	 */
+	public void onError(AvalonInterceptorContext interceptorContext, Throwable t) {
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">		if (this.getLogger().isErrorEnabled()</span>
+<span class="pc bpc" id="L140" title="3 of 4 branches missed.">				&amp;&amp; (this.isMonitorAllExceptions() || this.isServiceMonitored(interceptorContext))) {</span>
+<span class="fc" id="L141">			StopWatch stopWatch = this.getStopWatch(interceptorContext);</span>
+<span class="fc" id="L142">			stopWatch.stop();</span>
+<span class="fc" id="L143">			String msg = this.toString(interceptorContext, stopWatch, t);</span>
+<span class="fc" id="L144">			this.getLogger().error(msg);</span>
+		}
+<span class="fc" id="L146">	}</span>
+
+	/* (non-Javadoc)
+	 * @see org.apache.fulcrum.yaafi.interceptor.baseservice.BaseInterceptorServiceImpl#onExit(org.apache.fulcrum.yaafi.framework.interceptor.AvalonInterceptorContext, java.lang.Object)
+	 */
+	public void onExit(AvalonInterceptorContext interceptorContext, Object result) {
+<span class="pc bpc" id="L152" title="1 of 4 branches missed.">		if (this.isServiceMonitored(interceptorContext) &amp;&amp; this.getLogger().isDebugEnabled() == true) {</span>
+<span class="fc" id="L153">			StopWatch stopWatch = this.getStopWatch(interceptorContext);</span>
+<span class="fc" id="L154">			stopWatch.stop();</span>
+<span class="fc" id="L155">			String msg = this.toString(interceptorContext, stopWatch, result);</span>
+<span class="fc" id="L156">			this.getLogger().debug(msg);</span>
+		}
+<span class="fc" id="L158">	}</span>
+
+	/////////////////////////////////////////////////////////////////////////
+	// Service Implementation
+	/////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Creates a stop watch
+	 *
+	 * @param interceptorContext the current interceptor context
+	 */
+	protected void createStopWatch(AvalonInterceptorContext interceptorContext) {
+<span class="fc" id="L170">		StopWatch stopWatch = new StopWatch();</span>
+<span class="fc" id="L171">		stopWatch.start();</span>
+<span class="fc" id="L172">		interceptorContext.getRequestContext().put(this.getServiceName(), stopWatch);</span>
+<span class="fc" id="L173">	}</span>
+
+	/**
+	 * Gets the stop watch. Even if none is defined we return one in a proper state.
+	 *
+	 * @param interceptorContext the current interceptor context
+	 * @return the stop watch
+	 */
+	protected StopWatch getStopWatch(AvalonInterceptorContext interceptorContext) {
+<span class="fc" id="L182">		StopWatch result = (StopWatch) interceptorContext.getRequestContext().remove(this.getServiceName());</span>
+
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">		if (result == null) {</span>
+<span class="nc" id="L185">			result = new StopWatch();</span>
+<span class="nc" id="L186">			result.start();</span>
+		}
+
+<span class="fc" id="L189">		return result;</span>
+	}
+
+	/**
+	 * @return Returns the maxLineLength.
+	 */
+	protected int getMaxArgLength() {
+<span class="fc" id="L196">		return maxArgLength;</span>
+	}
+
+	/**
+	 * @return Returns the monitorAllExceptions.
+	 */
+	protected boolean isMonitorAllExceptions() {
+<span class="fc" id="L203">		return monitorAllExceptions;</span>
+	}
+
+	/**
+	 * @return Returns the toStringBuilderClass.
+	 */
+	protected Class&lt;?&gt; getToStringBuilderClass() {
+<span class="fc" id="L210">		return toStringBuilderClass;</span>
+	}
+
+	/**
+	 * @return Returns the toStringBuilderClassName.
+	 */
+	protected String getToStringBuilderClassName() {
+<span class="fc" id="L217">		return toStringBuilderClassName;</span>
+	}
+
+	/**
+	 * Create an instance of an InterceptorToStringBuilder
+	 *
+	 * @param target the object to stringify
+	 * @return the string builder
+	 */
+	protected InterceptorToStringBuilder createArgumentToStringBuilder(Object target) {
+<span class="fc" id="L227">		InterceptorToStringBuilder result = null;</span>
+
+		try {
+<span class="fc" id="L230">			result = (InterceptorToStringBuilder) this.getToStringBuilderClass().newInstance();</span>
+<span class="nc" id="L231">		} catch (Exception e) {</span>
+<span class="nc" id="L232">			String msg = &quot;Unable to create an instance for &quot; + this.getToStringBuilderClassName();</span>
+<span class="nc" id="L233">			this.getLogger().error(msg, e);</span>
+<span class="nc" id="L234">			result = new DefaultToStringBuilderImpl();</span>
+<span class="fc" id="L235">		}</span>
+
+<span class="fc" id="L237">		result.setTarget(target);</span>
+<span class="fc" id="L238">		result.setMaxArgLength(this.getMaxArgLength());</span>
+<span class="fc" id="L239">		result.setMode(1);</span>
+
+<span class="fc" id="L241">		return result;</span>
+	}
+
+	/**
+	 * Create a string representation of a service invocation returning a result.
+	 *
+	 * @param avalonInterceptorContext the interceptor context
+	 * @param stopWatch                the stopwatch for the execution time
+	 * @param result                   the result of the service invocation
+	 * @return the string representation of the result
+	 */
+	protected String toString(AvalonInterceptorContext avalonInterceptorContext, StopWatch stopWatch, Object result) {
+<span class="fc" id="L253">		StringBuilder methodSignature = new StringBuilder();</span>
+<span class="fc" id="L254">		InterceptorToStringBuilder toStringBuilder = this.createArgumentToStringBuilder(result);</span>
+
+<span class="fc" id="L256">		methodSignature.append(this.toString(avalonInterceptorContext, stopWatch, ON_EXIT));</span>
+<span class="fc" id="L257">		methodSignature.append(SEPERATOR);</span>
+<span class="fc" id="L258">		methodSignature.append(&quot;result={&quot;);</span>
+<span class="fc" id="L259">		methodSignature.append(toStringBuilder.toString());</span>
+<span class="fc" id="L260">		methodSignature.append(&quot;}&quot;);</span>
+
+<span class="fc" id="L262">		return methodSignature.toString();</span>
+	}
+
+	/**
+	 * Create a string representation of a service invocation throwing a Throwable
+	 *
+	 * @param avalonInterceptorContext the interceptor context
+	 * @param stopWatch                the stopwatch for the execution time
+	 * @param throwable                the result of the service invocation
+	 * @return the string representation of the result
+	 */
+	protected String toString(AvalonInterceptorContext avalonInterceptorContext, StopWatch stopWatch,
+			Throwable throwable) {
+<span class="fc" id="L275">		StringBuilder methodSignature = new StringBuilder();</span>
+<span class="fc" id="L276">		InterceptorToStringBuilder toStringBuilder = this.createArgumentToStringBuilder(throwable);</span>
+
+<span class="fc" id="L278">		methodSignature.append(this.toString(avalonInterceptorContext, stopWatch, ON_ERROR));</span>
+<span class="fc" id="L279">		methodSignature.append(SEPERATOR);</span>
+<span class="fc" id="L280">		methodSignature.append(throwable.getClass().getName());</span>
+<span class="fc" id="L281">		methodSignature.append(SEPERATOR);</span>
+<span class="fc" id="L282">		methodSignature.append(toStringBuilder.toString());</span>
+
+<span class="fc" id="L284">		return methodSignature.toString();</span>
+	}
+
+	/**
+	 * Create a method signature.
+	 *
+	 * @param interceptorContext the avalonInterceptorContext
+	 * @param stopWatch          the stopwatch for the execution time
+	 * @param mode               the mode (onEntry, onExit, onError)
+	 * @return the debug output
+	 */
+	protected String toString(AvalonInterceptorContext interceptorContext, StopWatch stopWatch, int mode) {
+<span class="fc" id="L296">		StringBuilder result = new StringBuilder();</span>
+<span class="fc" id="L297">		Method method = interceptorContext.getMethod();</span>
+<span class="fc" id="L298">		Object[] args = interceptorContext.getArgs();</span>
+<span class="fc" id="L299">		InterceptorToStringBuilder toStringBuilder = null;</span>
+<span class="fc" id="L300">		MethodToStringBuilderImpl methodToStringBuilder = new MethodToStringBuilderImpl(method);</span>
+
+<span class="fc bfc" id="L302" title="All 2 branches covered.">		if (args == null) {</span>
+<span class="fc" id="L303">			args = new Object[0];</span>
+		}
+
+<span class="fc" id="L306">		result.append(interceptorContext.getTransactionId());</span>
+<span class="fc" id="L307">		result.append(SEPERATOR);</span>
+<span class="fc" id="L308">		result.append(interceptorContext.getInvocationId());</span>
+<span class="fc" id="L309">		result.append(SEPERATOR);</span>
+<span class="fc" id="L310">		result.append(interceptorContext.getInvocationDepth());</span>
+<span class="fc" id="L311">		result.append(SEPERATOR);</span>
+<span class="fc" id="L312">		result.append(mode);</span>
+<span class="fc" id="L313">		result.append(SEPERATOR);</span>
+<span class="fc" id="L314">		result.append(interceptorContext.getServiceShorthand());</span>
+<span class="fc" id="L315">		result.append(SEPERATOR);</span>
+<span class="fc" id="L316">		result.append(method.getName());</span>
+<span class="fc" id="L317">		result.append(SEPERATOR);</span>
+
+<span class="fc bfc" id="L319" title="All 2 branches covered.">		if (stopWatch != null) {</span>
+<span class="fc" id="L320">			result.append(stopWatch.getTime());</span>
+		} else {
+<span class="fc" id="L322">			result.append('0');</span>
+		}
+
+<span class="fc" id="L325">		result.append(SEPERATOR);</span>
+<span class="fc" id="L326">		result.append(methodToStringBuilder.toString());</span>
+
+<span class="fc bfc" id="L328" title="All 4 branches covered.">		if (ON_ENTRY == mode || ON_ERROR == mode) {</span>
+<span class="fc bfc" id="L329" title="All 2 branches covered.">			for (int i = 0; i &lt; args.length; i++) {</span>
+<span class="fc" id="L330">				toStringBuilder = this.createArgumentToStringBuilder(args[i]);</span>
+<span class="fc" id="L331">				result.append(SEPERATOR);</span>
+<span class="fc" id="L332">				result.append(&quot;arg[&quot; + i + &quot;]:={&quot;);</span>
+<span class="fc" id="L333">				result.append(toStringBuilder.toString());</span>
+<span class="fc" id="L334">				result.append(&quot;}&quot;);</span>
+			}
+		}
+
+<span class="fc" id="L338">		return result.toString();</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>
