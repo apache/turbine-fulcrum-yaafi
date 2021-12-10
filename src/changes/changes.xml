@@ -24,7 +24,26 @@
   </properties>
 
   <body>
-    <release version="1.0.9-SNAPSHOT" date="as in SVN">
+    <release version="1.0.9-SNAPSHOT" date="as in GIT">
+       <action dev="gk" type="update">
+         Update scm to git and configure project
+      </action>
+      <action dev="gk" type="update">
+        Add Log4j2Logger here to use in Fulcrums more easily in upcoming releases.
+        Deprecate the same class in Turbine core and Fulcrum Testcontainer.
+      </action>
+       <action dev="gk" type="update">
+        Update Tests to Junit 5
+      </action>
+     <action dev="painter" type="fix">
+        Add missing NOTICE
+      </action>
+       <action dev="tv" type="fix">
+         Make YAAFI less chatty
+      </action>
+     <action dev="gk" type="update">
+         git patch 1 merged to svn repo (w/o maven.xml), thanks to Jimmy Casey <casey.jimmy@gmail.com>.
+      </action>
       <action dev="painter" type="update">
         Updating dependencies
       </action>
