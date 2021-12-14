@@ -141,6 +141,5 @@
 		<turbine.site.path>turbine-fulcrum-yaafi</turbine.site.path>
 		<turbine.scmPubCheckoutDirectory>${turbine.site.cache}/fulcrum/yaafi</turbine.scmPubCheckoutDirectory>
 		<turbine.site.cache>${project.build.directory}/turbine-sites</turbine.site.cache>
-		<siteContent.path>${project.build.directory}/staging</siteContent.path><!-- default stagingSiteURL -->
-			</properties>
+	</properties>
 </project>
