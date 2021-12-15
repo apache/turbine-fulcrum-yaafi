@@ -25,7 +25,7 @@ import org.apache.logging.log4j.LogManager;
  * 
  * Replaces same class in Fulcrum Testcontainer and Turbine 
  *
- * @author <a href="mailto:tv@apache.org">Thomas Vandahl</a>
+ * @author <a href="mailto:gk@apache.org">Georg Kallidis</a>
  */
 public final class Log4j2Logger
         implements Logger
