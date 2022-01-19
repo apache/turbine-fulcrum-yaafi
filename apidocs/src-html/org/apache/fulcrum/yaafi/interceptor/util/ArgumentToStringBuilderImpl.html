@@ -1,1047 +1,1046 @@
-<!DOCTYPE HTML>
-<html lang="de">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
 <head>
 <title>Source code</title>
 <link rel="stylesheet" type="text/css" href="../../../../../../../stylesheet.css" title="Style">
 </head>
 <body>
-<main role="main">
 <div class="sourceContainer">
-<pre><span class="sourceLineNo">001</span><a id="line.1">/*</a>
-<span class="sourceLineNo">002</span><a id="line.2"> * Licensed to the Apache Software Foundation (ASF) under one</a>
-<span class="sourceLineNo">003</span><a id="line.3"> * or more contributor license agreements.  See the NOTICE file</a>
-<span class="sourceLineNo">004</span><a id="line.4"> * distributed with this work for additional information</a>
-<span class="sourceLineNo">005</span><a id="line.5"> * regarding copyright ownership.  The ASF licenses this file</a>
-<span class="sourceLineNo">006</span><a id="line.6"> * to you under the Apache License, Version 2.0 (the</a>
-<span class="sourceLineNo">007</span><a id="line.7"> * "License"); you may not use this file except in compliance</a>
-<span class="sourceLineNo">008</span><a id="line.8"> * with the License.  You may obtain a copy of the License at</a>
-<span class="sourceLineNo">009</span><a id="line.9"> *</a>
-<span class="sourceLineNo">010</span><a id="line.10"> *   http://www.apache.org/licenses/LICENSE-2.0</a>
-<span class="sourceLineNo">011</span><a id="line.11"> *</a>
-<span class="sourceLineNo">012</span><a id="line.12"> * Unless required by applicable law or agreed to in writing,</a>
-<span class="sourceLineNo">013</span><a id="line.13"> * software distributed under the License is distributed on an</a>
-<span class="sourceLineNo">014</span><a id="line.14"> * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</a>
-<span class="sourceLineNo">015</span><a id="line.15"> * KIND, either express or implied.  See the License for the</a>
-<span class="sourceLineNo">016</span><a id="line.16"> * specific language governing permissions and limitations</a>
-<span class="sourceLineNo">017</span><a id="line.17"> * under the License.</a>
-<span class="sourceLineNo">018</span><a id="line.18"> */</a>
-<span class="sourceLineNo">019</span><a id="line.19"></a>
-<span class="sourceLineNo">020</span><a id="line.20">package org.apache.fulcrum.yaafi.interceptor.util;</a>
-<span class="sourceLineNo">021</span><a id="line.21"></a>
-<span class="sourceLineNo">022</span><a id="line.22">import java.io.PrintWriter;</a>
-<span class="sourceLineNo">023</span><a id="line.23">import java.io.StringWriter;</a>
-<span class="sourceLineNo">024</span><a id="line.24">import java.util.Collection;</a>
-<span class="sourceLineNo">025</span><a id="line.25">import java.util.Dictionary;</a>
-<span class="sourceLineNo">026</span><a id="line.26">import java.util.Iterator;</a>
-<span class="sourceLineNo">027</span><a id="line.27"></a>
-<span class="sourceLineNo">028</span><a id="line.28">import org.apache.commons.lang3.StringUtils;</a>
-<span class="sourceLineNo">029</span><a id="line.29"></a>
-<span class="sourceLineNo">030</span><a id="line.30">/**</a>
-<span class="sourceLineNo">031</span><a id="line.31"> * Creates a string representation of method argument.</a>
-<span class="sourceLineNo">032</span><a id="line.32"> *</a>
-<span class="sourceLineNo">033</span><a id="line.33"> * @author &lt;a href="mailto:siegfried.goeschl@it20one.at"&gt;Siegfried Goeschl&lt;/a&gt;</a>
-<span class="sourceLineNo">034</span><a id="line.34"> */</a>
-<span class="sourceLineNo">035</span><a id="line.35">public class ArgumentToStringBuilderImpl implements InterceptorToStringBuilder</a>
-<span class="sourceLineNo">036</span><a id="line.36">{</a>
-<span class="sourceLineNo">037</span><a id="line.37">    /** include the class name in the result */</a>
-<span class="sourceLineNo">038</span><a id="line.38">    public static final int INCLUDE_CLASSNAME = 0x1;</a>
-<span class="sourceLineNo">039</span><a id="line.39"></a>
-<span class="sourceLineNo">040</span><a id="line.40">    /** include the hashcode in the result */</a>
-<span class="sourceLineNo">041</span><a id="line.41">    public static final int INCLUDE_HASHCODE = 0x02;</a>
-<span class="sourceLineNo">042</span><a id="line.42"></a>
-<span class="sourceLineNo">043</span><a id="line.43">    /** the default mode using class names and hashcode */</a>
-<span class="sourceLineNo">044</span><a id="line.44">    private static int defaultMode = INCLUDE_CLASSNAME &amp; INCLUDE_HASHCODE;</a>
-<span class="sourceLineNo">045</span><a id="line.45"></a>
-<span class="sourceLineNo">046</span><a id="line.46">    /** our current formatting mode */</a>
-<span class="sourceLineNo">047</span><a id="line.47">    private int mode;</a>
-<span class="sourceLineNo">048</span><a id="line.48"></a>
-<span class="sourceLineNo">049</span><a id="line.49">    /** the maximum length of a dumped argument */</a>
-<span class="sourceLineNo">050</span><a id="line.50">    private static final int MAX_LINE_LENGTH = 2000;</a>
-<span class="sourceLineNo">051</span><a id="line.51"></a>
-<span class="sourceLineNo">052</span><a id="line.52">    /** seperator for the arguments in the logfile */</a>
-<span class="sourceLineNo">053</span><a id="line.53">    private static final String SEPERATOR = ";";</a>
-<span class="sourceLineNo">054</span><a id="line.54"></a>
-<span class="sourceLineNo">055</span><a id="line.55">    /** the output for a NULL value **/</a>
-<span class="sourceLineNo">056</span><a id="line.56">    private static final String NULL_STRING = "&lt;null&gt;";</a>
-<span class="sourceLineNo">057</span><a id="line.57"></a>
-<span class="sourceLineNo">058</span><a id="line.58">    /** the output for a length string **/</a>
-<span class="sourceLineNo">059</span><a id="line.59">    private static final String LENGTH_STRING = "length=";</a>
-<span class="sourceLineNo">060</span><a id="line.60"></a>
-<span class="sourceLineNo">061</span><a id="line.61">    /** the output for a value string **/</a>
-<span class="sourceLineNo">062</span><a id="line.62">    private static final String VALUE_STRING = "value=";</a>
-<span class="sourceLineNo">063</span><a id="line.63"></a>
-<span class="sourceLineNo">064</span><a id="line.64">    /** maximum line length for dumping arguments */</a>
-<span class="sourceLineNo">065</span><a id="line.65">    private int maxArgLength;</a>
-<span class="sourceLineNo">066</span><a id="line.66"></a>
-<span class="sourceLineNo">067</span><a id="line.67">    /** the result of the invocation */</a>
-<span class="sourceLineNo">068</span><a id="line.68">    private StringBuilder buffer;</a>
-<span class="sourceLineNo">069</span><a id="line.69"></a>
-<span class="sourceLineNo">070</span><a id="line.70">    /** the target object */</a>
-<span class="sourceLineNo">071</span><a id="line.71">    private Object target;</a>
-<span class="sourceLineNo">072</span><a id="line.72"></a>
-<span class="sourceLineNo">073</span><a id="line.73">    /**</a>
-<span class="sourceLineNo">074</span><a id="line.74">     * Constructor</a>
-<span class="sourceLineNo">075</span><a id="line.75">     */</a>
-<span class="sourceLineNo">076</span><a id="line.76">    public ArgumentToStringBuilderImpl()</a>
-<span class="sourceLineNo">077</span><a id="line.77">    {</a>
-<span class="sourceLineNo">078</span><a id="line.78">        this.mode = ArgumentToStringBuilderImpl.defaultMode;</a>
-<span class="sourceLineNo">079</span><a id="line.79">        this.maxArgLength = MAX_LINE_LENGTH;</a>
-<span class="sourceLineNo">080</span><a id="line.80">        this.buffer = new StringBuilder();</a>
-<span class="sourceLineNo">081</span><a id="line.81">    }</a>
-<span class="sourceLineNo">082</span><a id="line.82"></a>
-<span class="sourceLineNo">083</span><a id="line.83">    /**</a>
-<span class="sourceLineNo">084</span><a id="line.84">     * Constructor</a>
-<span class="sourceLineNo">085</span><a id="line.85">     *</a>
-<span class="sourceLineNo">086</span><a id="line.86">     * @param target the object to print</a>
-<span class="sourceLineNo">087</span><a id="line.87">     */</a>
-<span class="sourceLineNo">088</span><a id="line.88">    public ArgumentToStringBuilderImpl(Object target)</a>
-<span class="sourceLineNo">089</span><a id="line.89">    {</a>
-<span class="sourceLineNo">090</span><a id="line.90">        this(target,MAX_LINE_LENGTH);</a>
-<span class="sourceLineNo">091</span><a id="line.91">    }</a>
-<span class="sourceLineNo">092</span><a id="line.92"></a>
-<span class="sourceLineNo">093</span><a id="line.93">    /**</a>
-<span class="sourceLineNo">094</span><a id="line.94">     * Constructor</a>
-<span class="sourceLineNo">095</span><a id="line.95">     *</a>
-<span class="sourceLineNo">096</span><a id="line.96">     * @param target the object to print</a>
-<span class="sourceLineNo">097</span><a id="line.97">     * @param maxArgLength the maximum length</a>
-<span class="sourceLineNo">098</span><a id="line.98">     */</a>
-<span class="sourceLineNo">099</span><a id="line.99">    public ArgumentToStringBuilderImpl(Object target, int maxArgLength)</a>
-<span class="sourceLineNo">100</span><a id="line.100">    {</a>
-<span class="sourceLineNo">101</span><a id="line.101">        this(target,</a>
-<span class="sourceLineNo">102</span><a id="line.102">            maxArgLength,</a>
-<span class="sourceLineNo">103</span><a id="line.103">            ArgumentToStringBuilderImpl.defaultMode</a>
-<span class="sourceLineNo">104</span><a id="line.104">            );</a>
-<span class="sourceLineNo">105</span><a id="line.105">    }</a>
-<span class="sourceLineNo">106</span><a id="line.106"></a>
-<span class="sourceLineNo">107</span><a id="line.107">    /**</a>
-<span class="sourceLineNo">108</span><a id="line.108">     * Constructor</a>
-<span class="sourceLineNo">109</span><a id="line.109">     *</a>
-<span class="sourceLineNo">110</span><a id="line.110">     * @param target the object to print</a>
-<span class="sourceLineNo">111</span><a id="line.111">     * @param maxArgLength the maximum length</a>
-<span class="sourceLineNo">112</span><a id="line.112">     * @param mode the formatting mode to use</a>
-<span class="sourceLineNo">113</span><a id="line.113">     */</a>
-<span class="sourceLineNo">114</span><a id="line.114">    public ArgumentToStringBuilderImpl(Object target, int maxArgLength, int mode)</a>
-<span class="sourceLineNo">115</span><a id="line.115">    {</a>
-<span class="sourceLineNo">116</span><a id="line.116">        this.buffer = new StringBuilder();</a>
-<span class="sourceLineNo">117</span><a id="line.117">        this.target = target;</a>
-<span class="sourceLineNo">118</span><a id="line.118">        this.maxArgLength = maxArgLength;</a>
-<span class="sourceLineNo">119</span><a id="line.119">        this.mode = mode;</a>
-<span class="sourceLineNo">120</span><a id="line.120">    }</a>
-<span class="sourceLineNo">121</span><a id="line.121"></a>
-<span class="sourceLineNo">122</span><a id="line.122">    /**</a>
-<span class="sourceLineNo">123</span><a id="line.123">     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMaxArgLength(int)</a>
-<span class="sourceLineNo">124</span><a id="line.124">     */</a>
-<span class="sourceLineNo">125</span><a id="line.125">    public void setMaxArgLength(int maxArgLength)</a>
-<span class="sourceLineNo">126</span><a id="line.126">    {</a>
-<span class="sourceLineNo">127</span><a id="line.127">        this.maxArgLength = maxArgLength;</a>
-<span class="sourceLineNo">128</span><a id="line.128">    }</a>
-<span class="sourceLineNo">129</span><a id="line.129"></a>
-<span class="sourceLineNo">130</span><a id="line.130">    /**</a>
-<span class="sourceLineNo">131</span><a id="line.131">     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setTarget(java.lang.Object)</a>
-<span class="sourceLineNo">132</span><a id="line.132">     */</a>
-<span class="sourceLineNo">133</span><a id="line.133">    public void setTarget(Object target)</a>
-<span class="sourceLineNo">134</span><a id="line.134">    {</a>
-<span class="sourceLineNo">135</span><a id="line.135">        this.target = target;</a>
-<span class="sourceLineNo">136</span><a id="line.136">    }</a>
-<span class="sourceLineNo">137</span><a id="line.137"></a>
-<span class="sourceLineNo">138</span><a id="line.138">    /**</a>
-<span class="sourceLineNo">139</span><a id="line.139">     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMode(int)</a>
-<span class="sourceLineNo">140</span><a id="line.140">     */</a>
-<span class="sourceLineNo">141</span><a id="line.141">    public void setMode(int mode)</a>
-<span class="sourceLineNo">142</span><a id="line.142">    {</a>
-<span class="sourceLineNo">143</span><a id="line.143">        this.mode = mode;</a>
-<span class="sourceLineNo">144</span><a id="line.144">    }</a>
-<span class="sourceLineNo">145</span><a id="line.145"></a>
-<span class="sourceLineNo">146</span><a id="line.146">    /**</a>
-<span class="sourceLineNo">147</span><a id="line.147">     * @return Returns the mode.</a>
-<span class="sourceLineNo">148</span><a id="line.148">     */</a>
-<span class="sourceLineNo">149</span><a id="line.149">    public int getMode()</a>
-<span class="sourceLineNo">150</span><a id="line.150">    {</a>
-<span class="sourceLineNo">151</span><a id="line.151">        return this.mode;</a>
-<span class="sourceLineNo">152</span><a id="line.152">    }</a>
-<span class="sourceLineNo">153</span><a id="line.153"></a>
-<span class="sourceLineNo">154</span><a id="line.154">        /**</a>
-<span class="sourceLineNo">155</span><a id="line.155">     * @see java.lang.Object#toString()</a>
-<span class="sourceLineNo">156</span><a id="line.156">     */</a>
-<span class="sourceLineNo">157</span><a id="line.157">    public String toString()</a>
-<span class="sourceLineNo">158</span><a id="line.158">    {</a>
-<span class="sourceLineNo">159</span><a id="line.159">        try</a>
-<span class="sourceLineNo">160</span><a id="line.160">        {</a>
-<span class="sourceLineNo">161</span><a id="line.161">            if( this.target == null )</a>
-<span class="sourceLineNo">162</span><a id="line.162">            {</a>
-<span class="sourceLineNo">163</span><a id="line.163">                this.buffer.append(NULL_STRING);</a>
-<span class="sourceLineNo">164</span><a id="line.164">            }</a>
-<span class="sourceLineNo">165</span><a id="line.165">            else if( this.target instanceof Object[] )</a>
-<span class="sourceLineNo">166</span><a id="line.166">            {</a>
-<span class="sourceLineNo">167</span><a id="line.167">                this.appendClassName(target);</a>
-<span class="sourceLineNo">168</span><a id="line.168">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">169</span><a id="line.169">                this.appendChar('[');</a>
-<span class="sourceLineNo">170</span><a id="line.170">                this.append( this.toString((Object[]) this.target) );</a>
-<span class="sourceLineNo">171</span><a id="line.171">                this.appendChar(']');</a>
-<span class="sourceLineNo">172</span><a id="line.172">            }</a>
-<span class="sourceLineNo">173</span><a id="line.173">            else if( this.target instanceof boolean[] )</a>
-<span class="sourceLineNo">174</span><a id="line.174">            {</a>
-<span class="sourceLineNo">175</span><a id="line.175">                this.appendClassName(target);</a>
-<span class="sourceLineNo">176</span><a id="line.176">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">177</span><a id="line.177">                this.appendChar('[');</a>
-<span class="sourceLineNo">178</span><a id="line.178">                this.append( this.toString((boolean[]) this.target) );</a>
-<span class="sourceLineNo">179</span><a id="line.179">                this.appendChar(']');</a>
-<span class="sourceLineNo">180</span><a id="line.180">            }</a>
-<span class="sourceLineNo">181</span><a id="line.181">            else if( this.target instanceof char[] )</a>
-<span class="sourceLineNo">182</span><a id="line.182">            {</a>
-<span class="sourceLineNo">183</span><a id="line.183">                this.appendClassName(target);</a>
-<span class="sourceLineNo">184</span><a id="line.184">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">185</span><a id="line.185">                this.appendChar('[');</a>
-<span class="sourceLineNo">186</span><a id="line.186">                this.append( this.toString((char[]) this.target) );</a>
-<span class="sourceLineNo">187</span><a id="line.187">                this.appendChar(']');</a>
-<span class="sourceLineNo">188</span><a id="line.188">            }</a>
-<span class="sourceLineNo">189</span><a id="line.189">            else if( this.target instanceof byte[] )</a>
-<span class="sourceLineNo">190</span><a id="line.190">            {</a>
-<span class="sourceLineNo">191</span><a id="line.191">                this.appendClassName(target);</a>
-<span class="sourceLineNo">192</span><a id="line.192">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">193</span><a id="line.193">                this.appendChar('[');</a>
-<span class="sourceLineNo">194</span><a id="line.194">                this.append( this.toString((byte[]) this.target) );</a>
-<span class="sourceLineNo">195</span><a id="line.195">                this.appendChar(']');</a>
-<span class="sourceLineNo">196</span><a id="line.196">            }</a>
-<span class="sourceLineNo">197</span><a id="line.197">            else if( this.target instanceof short[] )</a>
-<span class="sourceLineNo">198</span><a id="line.198">            {</a>
-<span class="sourceLineNo">199</span><a id="line.199">                this.appendClassName(target);</a>
-<span class="sourceLineNo">200</span><a id="line.200">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">201</span><a id="line.201">                this.appendChar('[');</a>
-<span class="sourceLineNo">202</span><a id="line.202">                this.append( this.toString((short[]) this.target) );</a>
-<span class="sourceLineNo">203</span><a id="line.203">                this.appendChar(']');</a>
-<span class="sourceLineNo">204</span><a id="line.204">            }</a>
-<span class="sourceLineNo">205</span><a id="line.205">            else if( this.target instanceof int[] )</a>
-<span class="sourceLineNo">206</span><a id="line.206">            {</a>
-<span class="sourceLineNo">207</span><a id="line.207">                this.appendClassName(target);</a>
-<span class="sourceLineNo">208</span><a id="line.208">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">209</span><a id="line.209">                this.appendChar('[');</a>
-<span class="sourceLineNo">210</span><a id="line.210">                this.append( this.toString((int[]) this.target) );</a>
-<span class="sourceLineNo">211</span><a id="line.211">                this.appendChar(']');</a>
-<span class="sourceLineNo">212</span><a id="line.212">            }</a>
-<span class="sourceLineNo">213</span><a id="line.213">            else if( this.target instanceof long[] )</a>
-<span class="sourceLineNo">214</span><a id="line.214">            {</a>
-<span class="sourceLineNo">215</span><a id="line.215">                this.appendClassName(target);</a>
-<span class="sourceLineNo">216</span><a id="line.216">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">217</span><a id="line.217">                this.appendChar('[');</a>
-<span class="sourceLineNo">218</span><a id="line.218">                this.append( this.toString((long[]) this.target) );</a>
-<span class="sourceLineNo">219</span><a id="line.219">                this.appendChar(']');</a>
-<span class="sourceLineNo">220</span><a id="line.220">            }</a>
-<span class="sourceLineNo">221</span><a id="line.221">            else if( this.target instanceof float[] )</a>
-<span class="sourceLineNo">222</span><a id="line.222">            {</a>
-<span class="sourceLineNo">223</span><a id="line.223">                this.appendClassName(target);</a>
-<span class="sourceLineNo">224</span><a id="line.224">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">225</span><a id="line.225">                this.appendChar('[');</a>
-<span class="sourceLineNo">226</span><a id="line.226">                this.append( this.toString((float[]) this.target) );</a>
-<span class="sourceLineNo">227</span><a id="line.227">                this.appendChar(']');</a>
-<span class="sourceLineNo">228</span><a id="line.228">            }</a>
-<span class="sourceLineNo">229</span><a id="line.229">            else if( this.target instanceof double[] )</a>
-<span class="sourceLineNo">230</span><a id="line.230">            {</a>
-<span class="sourceLineNo">231</span><a id="line.231">                this.appendClassName(target);</a>
-<span class="sourceLineNo">232</span><a id="line.232">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">233</span><a id="line.233">                this.appendChar('[');</a>
-<span class="sourceLineNo">234</span><a id="line.234">                this.append( this.toString((double[]) this.target) );</a>
-<span class="sourceLineNo">235</span><a id="line.235">                this.appendChar(']');</a>
-<span class="sourceLineNo">236</span><a id="line.236">            }</a>
-<span class="sourceLineNo">237</span><a id="line.237">            else if( this.target instanceof String )</a>
-<span class="sourceLineNo">238</span><a id="line.238">            {</a>
-<span class="sourceLineNo">239</span><a id="line.239">                this.appendClassName(target);</a>
-<span class="sourceLineNo">240</span><a id="line.240">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">241</span><a id="line.241">                this.appendChar('[');</a>
-<span class="sourceLineNo">242</span><a id="line.242">                this.append( this.toString((String) this.target) );</a>
-<span class="sourceLineNo">243</span><a id="line.243">                this.appendChar(']');</a>
-<span class="sourceLineNo">244</span><a id="line.244">            }</a>
-<span class="sourceLineNo">245</span><a id="line.245">            else if( this.target instanceof Collection )</a>
-<span class="sourceLineNo">246</span><a id="line.246">            {</a>
-<span class="sourceLineNo">247</span><a id="line.247">                this.appendClassName(target);</a>
-<span class="sourceLineNo">248</span><a id="line.248">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">249</span><a id="line.249">                this.appendChar('[');</a>
-<span class="sourceLineNo">250</span><a id="line.250">                this.append( this.toString((Collection&lt;?&gt;) this.target) );</a>
-<span class="sourceLineNo">251</span><a id="line.251">                this.appendChar(']');</a>
-<span class="sourceLineNo">252</span><a id="line.252">            }</a>
-<span class="sourceLineNo">253</span><a id="line.253">            else if( this.target instanceof Dictionary )</a>
-<span class="sourceLineNo">254</span><a id="line.254">            {</a>
-<span class="sourceLineNo">255</span><a id="line.255">                this.appendClassName(target);</a>
-<span class="sourceLineNo">256</span><a id="line.256">                this.appendHashCode(target);</a>
-<span class="sourceLineNo">257</span><a id="line.257">                this.appendChar('[');</a>
-<span class="sourceLineNo">258</span><a id="line.258">                this.append( this.toString((Dictionary&lt;?, ?&gt;) this.target) );</a>
-<span class="sourceLineNo">259</span><a id="line.259">                this.appendChar(']');</a>
-<span class="sourceLineNo">260</span><a id="line.260">            }</a>
-<span class="sourceLineNo">261</span><a id="line.261">            else if( this.target instanceof Throwable )</a>
-<span class="sourceLineNo">262</span><a id="line.262">            {</a>
-<span class="sourceLineNo">263</span><a id="line.263">                this.append( this.toString((Throwable) this.target) );</a>
-<span class="sourceLineNo">264</span><a id="line.264">            }</a>
-<span class="sourceLineNo">265</span><a id="line.265">            else</a>
-<span class="sourceLineNo">266</span><a id="line.266">            {</a>
-<span class="sourceLineNo">267</span><a id="line.267">                this.append( this.toString( (Object) this.target ) );</a>
-<span class="sourceLineNo">268</span><a id="line.268">            }</a>
-<span class="sourceLineNo">269</span><a id="line.269">        }</a>
-<span class="sourceLineNo">270</span><a id="line.270">        catch (Throwable t)</a>
-<span class="sourceLineNo">271</span><a id="line.271">        {</a>
-<span class="sourceLineNo">272</span><a id="line.272">            t.printStackTrace();</a>
-<span class="sourceLineNo">273</span><a id="line.273">            return "&lt;" + t + "&gt;";</a>
-<span class="sourceLineNo">274</span><a id="line.274">        }</a>
-<span class="sourceLineNo">275</span><a id="line.275"></a>
-<span class="sourceLineNo">276</span><a id="line.276">        return this.buffer.toString();</a>
-<span class="sourceLineNo">277</span><a id="line.277">    }</a>
-<span class="sourceLineNo">278</span><a id="line.278"></a>
-<span class="sourceLineNo">279</span><a id="line.279"></a>
-<span class="sourceLineNo">280</span><a id="line.280">    /**</a>
-<span class="sourceLineNo">281</span><a id="line.281">     * Create a String representation for a Throwable.</a>
-<span class="sourceLineNo">282</span><a id="line.282">     *</a>
-<span class="sourceLineNo">283</span><a id="line.283">     * @param throwable the Throwable</a>
-<span class="sourceLineNo">284</span><a id="line.284">     * @return the string representation</a>
-<span class="sourceLineNo">285</span><a id="line.285">     */</a>
-<span class="sourceLineNo">286</span><a id="line.286">    protected String toString(Throwable throwable)</a>
-<span class="sourceLineNo">287</span><a id="line.287">    {</a>
-<span class="sourceLineNo">288</span><a id="line.288">        String result = null;</a>
-<span class="sourceLineNo">289</span><a id="line.289"></a>
-<span class="sourceLineNo">290</span><a id="line.290">        if( throwable == null )</a>
-<span class="sourceLineNo">291</span><a id="line.291">        {</a>
-<span class="sourceLineNo">292</span><a id="line.292">            result = NULL_STRING;</a>
-<span class="sourceLineNo">293</span><a id="line.293">        }</a>
-<span class="sourceLineNo">294</span><a id="line.294">        else</a>
-<span class="sourceLineNo">295</span><a id="line.295">        {</a>
-<span class="sourceLineNo">296</span><a id="line.296">            result = this.getStackTrace(throwable);</a>
-<span class="sourceLineNo">297</span><a id="line.297">        }</a>
-<span class="sourceLineNo">298</span><a id="line.298"></a>
-<span class="sourceLineNo">299</span><a id="line.299">        return result;</a>
-<span class="sourceLineNo">300</span><a id="line.300">    }</a>
-<span class="sourceLineNo">301</span><a id="line.301"></a>
-<span class="sourceLineNo">302</span><a id="line.302">    /**</a>
-<span class="sourceLineNo">303</span><a id="line.303">     * Create a string representation of an object array.</a>
-<span class="sourceLineNo">304</span><a id="line.304">     *</a>
-<span class="sourceLineNo">305</span><a id="line.305">     * @param array the array to print</a>
-<span class="sourceLineNo">306</span><a id="line.306">     * @return the result</a>
-<span class="sourceLineNo">307</span><a id="line.307">     */</a>
-<span class="sourceLineNo">308</span><a id="line.308">    protected String toString(Object[] array)</a>
-<span class="sourceLineNo">309</span><a id="line.309">    {</a>
-<span class="sourceLineNo">310</span><a id="line.310">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">311</span><a id="line.311">        ArgumentToStringBuilderImpl toStringBuilder = null;</a>
-<span class="sourceLineNo">312</span><a id="line.312"></a>
-<span class="sourceLineNo">313</span><a id="line.313">        if( array == null )</a>
-<span class="sourceLineNo">314</span><a id="line.314">        {</a>
-<span class="sourceLineNo">315</span><a id="line.315">            return NULL_STRING;</a>
-<span class="sourceLineNo">316</span><a id="line.316">        }</a>
-<span class="sourceLineNo">317</span><a id="line.317">        else</a>
-<span class="sourceLineNo">318</span><a id="line.318">        {</a>
-<span class="sourceLineNo">319</span><a id="line.319">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">320</span><a id="line.320">            temp.append(array.length);</a>
-<span class="sourceLineNo">321</span><a id="line.321">            temp.append(',');</a>
-<span class="sourceLineNo">322</span><a id="line.322"></a>
-<span class="sourceLineNo">323</span><a id="line.323">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">324</span><a id="line.324">            {</a>
-<span class="sourceLineNo">325</span><a id="line.325">                temp.append('[');</a>
-<span class="sourceLineNo">326</span><a id="line.326">                temp.append(i);</a>
-<span class="sourceLineNo">327</span><a id="line.327">                temp.append(']');</a>
-<span class="sourceLineNo">328</span><a id="line.328">                temp.append('=');</a>
-<span class="sourceLineNo">329</span><a id="line.329">                toStringBuilder = new ArgumentToStringBuilderImpl(array[i],this.getMaxArgLength(),this.getMode());</a>
-<span class="sourceLineNo">330</span><a id="line.330">                temp.append(toStringBuilder.toString());</a>
-<span class="sourceLineNo">331</span><a id="line.331"></a>
-<span class="sourceLineNo">332</span><a id="line.332">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">333</span><a id="line.333">                {</a>
-<span class="sourceLineNo">334</span><a id="line.334">                    temp.append(',');</a>
-<span class="sourceLineNo">335</span><a id="line.335">                }</a>
-<span class="sourceLineNo">336</span><a id="line.336"></a>
-<span class="sourceLineNo">337</span><a id="line.337">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">338</span><a id="line.338">                {</a>
-<span class="sourceLineNo">339</span><a id="line.339">                    break;</a>
-<span class="sourceLineNo">340</span><a id="line.340">                }</a>
-<span class="sourceLineNo">341</span><a id="line.341">            }</a>
-<span class="sourceLineNo">342</span><a id="line.342">        }</a>
-<span class="sourceLineNo">343</span><a id="line.343"></a>
-<span class="sourceLineNo">344</span><a id="line.344">        return temp.toString();</a>
-<span class="sourceLineNo">345</span><a id="line.345">    }</a>
-<span class="sourceLineNo">346</span><a id="line.346"></a>
-<span class="sourceLineNo">347</span><a id="line.347">    /**</a>
-<span class="sourceLineNo">348</span><a id="line.348">     * Create a string representation of a boolean[].</a>
-<span class="sourceLineNo">349</span><a id="line.349">     *</a>
-<span class="sourceLineNo">350</span><a id="line.350">     * @param array the array to print</a>
-<span class="sourceLineNo">351</span><a id="line.351">     * @return the result</a>
-<span class="sourceLineNo">352</span><a id="line.352">     */</a>
-<span class="sourceLineNo">353</span><a id="line.353">    protected String toString(boolean[] array)</a>
-<span class="sourceLineNo">354</span><a id="line.354">    {</a>
-<span class="sourceLineNo">355</span><a id="line.355">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">356</span><a id="line.356"></a>
-<span class="sourceLineNo">357</span><a id="line.357">        if( array == null )</a>
-<span class="sourceLineNo">358</span><a id="line.358">        {</a>
-<span class="sourceLineNo">359</span><a id="line.359">            return NULL_STRING;</a>
-<span class="sourceLineNo">360</span><a id="line.360">        }</a>
-<span class="sourceLineNo">361</span><a id="line.361">        else</a>
-<span class="sourceLineNo">362</span><a id="line.362">        {</a>
-<span class="sourceLineNo">363</span><a id="line.363">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">364</span><a id="line.364">            temp.append(array.length);</a>
-<span class="sourceLineNo">365</span><a id="line.365">            temp.append(',');</a>
-<span class="sourceLineNo">366</span><a id="line.366">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">367</span><a id="line.367"></a>
-<span class="sourceLineNo">368</span><a id="line.368">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">369</span><a id="line.369">            {</a>
-<span class="sourceLineNo">370</span><a id="line.370">                temp.append(array[i]);</a>
-<span class="sourceLineNo">371</span><a id="line.371">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">372</span><a id="line.372">                {</a>
-<span class="sourceLineNo">373</span><a id="line.373">                    temp.append(',');</a>
-<span class="sourceLineNo">374</span><a id="line.374">                }</a>
-<span class="sourceLineNo">375</span><a id="line.375"></a>
-<span class="sourceLineNo">376</span><a id="line.376">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">377</span><a id="line.377">                {</a>
-<span class="sourceLineNo">378</span><a id="line.378">                    break;</a>
-<span class="sourceLineNo">379</span><a id="line.379">                }</a>
-<span class="sourceLineNo">380</span><a id="line.380">            }</a>
-<span class="sourceLineNo">381</span><a id="line.381">        }</a>
-<span class="sourceLineNo">382</span><a id="line.382"></a>
-<span class="sourceLineNo">383</span><a id="line.383">        return temp.toString();</a>
-<span class="sourceLineNo">384</span><a id="line.384">    }</a>
-<span class="sourceLineNo">385</span><a id="line.385"></a>
-<span class="sourceLineNo">386</span><a id="line.386">    /**</a>
-<span class="sourceLineNo">387</span><a id="line.387">     * Create a string representation of a char[].</a>
-<span class="sourceLineNo">388</span><a id="line.388">     *</a>
-<span class="sourceLineNo">389</span><a id="line.389">     * @param array the array to print</a>
-<span class="sourceLineNo">390</span><a id="line.390">     * @return the result</a>
-<span class="sourceLineNo">391</span><a id="line.391">     */</a>
-<span class="sourceLineNo">392</span><a id="line.392">    protected String toString(char[] array)</a>
-<span class="sourceLineNo">393</span><a id="line.393">    {</a>
-<span class="sourceLineNo">394</span><a id="line.394">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">395</span><a id="line.395"></a>
-<span class="sourceLineNo">396</span><a id="line.396">        if( array == null )</a>
-<span class="sourceLineNo">397</span><a id="line.397">        {</a>
-<span class="sourceLineNo">398</span><a id="line.398">            return NULL_STRING;</a>
-<span class="sourceLineNo">399</span><a id="line.399">        }</a>
-<span class="sourceLineNo">400</span><a id="line.400">        else</a>
-<span class="sourceLineNo">401</span><a id="line.401">        {</a>
-<span class="sourceLineNo">402</span><a id="line.402">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">403</span><a id="line.403">            temp.append(array.length);</a>
-<span class="sourceLineNo">404</span><a id="line.404">            temp.append(',');</a>
-<span class="sourceLineNo">405</span><a id="line.405">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">406</span><a id="line.406"></a>
-<span class="sourceLineNo">407</span><a id="line.407">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">408</span><a id="line.408">            {</a>
-<span class="sourceLineNo">409</span><a id="line.409">                temp.append(array[i]);</a>
-<span class="sourceLineNo">410</span><a id="line.410">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">411</span><a id="line.411">                {</a>
-<span class="sourceLineNo">412</span><a id="line.412">                    temp.append('.');</a>
-<span class="sourceLineNo">413</span><a id="line.413">                }</a>
-<span class="sourceLineNo">414</span><a id="line.414"></a>
-<span class="sourceLineNo">415</span><a id="line.415">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">416</span><a id="line.416">                {</a>
-<span class="sourceLineNo">417</span><a id="line.417">                    break;</a>
-<span class="sourceLineNo">418</span><a id="line.418">                }</a>
-<span class="sourceLineNo">419</span><a id="line.419">            }</a>
-<span class="sourceLineNo">420</span><a id="line.420">        }</a>
-<span class="sourceLineNo">421</span><a id="line.421"></a>
-<span class="sourceLineNo">422</span><a id="line.422">        return temp.toString();</a>
-<span class="sourceLineNo">423</span><a id="line.423">    }</a>
-<span class="sourceLineNo">424</span><a id="line.424"></a>
-<span class="sourceLineNo">425</span><a id="line.425">    /**</a>
-<span class="sourceLineNo">426</span><a id="line.426">     * Create a string representation of a short[].</a>
-<span class="sourceLineNo">427</span><a id="line.427">     *</a>
-<span class="sourceLineNo">428</span><a id="line.428">     * @param array the array to print</a>
-<span class="sourceLineNo">429</span><a id="line.429">     * @return the result</a>
-<span class="sourceLineNo">430</span><a id="line.430">     */</a>
-<span class="sourceLineNo">431</span><a id="line.431">    protected String toString(short[] array)</a>
-<span class="sourceLineNo">432</span><a id="line.432">    {</a>
-<span class="sourceLineNo">433</span><a id="line.433">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">434</span><a id="line.434"></a>
-<span class="sourceLineNo">435</span><a id="line.435">        if( array == null )</a>
-<span class="sourceLineNo">436</span><a id="line.436">        {</a>
-<span class="sourceLineNo">437</span><a id="line.437">            return NULL_STRING;</a>
-<span class="sourceLineNo">438</span><a id="line.438">        }</a>
-<span class="sourceLineNo">439</span><a id="line.439">        else</a>
-<span class="sourceLineNo">440</span><a id="line.440">        {</a>
-<span class="sourceLineNo">441</span><a id="line.441">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">442</span><a id="line.442">            temp.append(array.length);</a>
-<span class="sourceLineNo">443</span><a id="line.443">            temp.append(',');</a>
-<span class="sourceLineNo">444</span><a id="line.444">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">445</span><a id="line.445"></a>
-<span class="sourceLineNo">446</span><a id="line.446">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">447</span><a id="line.447">            {</a>
-<span class="sourceLineNo">448</span><a id="line.448">                temp.append(array[i]);</a>
-<span class="sourceLineNo">449</span><a id="line.449">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">450</span><a id="line.450">                {</a>
-<span class="sourceLineNo">451</span><a id="line.451">                    temp.append(',');</a>
-<span class="sourceLineNo">452</span><a id="line.452">                }</a>
-<span class="sourceLineNo">453</span><a id="line.453"></a>
-<span class="sourceLineNo">454</span><a id="line.454">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">455</span><a id="line.455">                {</a>
-<span class="sourceLineNo">456</span><a id="line.456">                    break;</a>
-<span class="sourceLineNo">457</span><a id="line.457">                }</a>
-<span class="sourceLineNo">458</span><a id="line.458">            }</a>
-<span class="sourceLineNo">459</span><a id="line.459">        }</a>
-<span class="sourceLineNo">460</span><a id="line.460"></a>
-<span class="sourceLineNo">461</span><a id="line.461">        return temp.toString();</a>
-<span class="sourceLineNo">462</span><a id="line.462">    }</a>
-<span class="sourceLineNo">463</span><a id="line.463"></a>
-<span class="sourceLineNo">464</span><a id="line.464">    /**</a>
-<span class="sourceLineNo">465</span><a id="line.465">     * Create a string representation of a int[].</a>
-<span class="sourceLineNo">466</span><a id="line.466">     *</a>
-<span class="sourceLineNo">467</span><a id="line.467">     * @param array the array to print</a>
-<span class="sourceLineNo">468</span><a id="line.468">     * @return the result</a>
-<span class="sourceLineNo">469</span><a id="line.469">     */</a>
-<span class="sourceLineNo">470</span><a id="line.470">    protected String toString(int[] array)</a>
-<span class="sourceLineNo">471</span><a id="line.471">    {</a>
-<span class="sourceLineNo">472</span><a id="line.472">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">473</span><a id="line.473"></a>
-<span class="sourceLineNo">474</span><a id="line.474">        if( array == null )</a>
-<span class="sourceLineNo">475</span><a id="line.475">        {</a>
-<span class="sourceLineNo">476</span><a id="line.476">            return NULL_STRING;</a>
-<span class="sourceLineNo">477</span><a id="line.477">        }</a>
-<span class="sourceLineNo">478</span><a id="line.478">        else</a>
-<span class="sourceLineNo">479</span><a id="line.479">        {</a>
-<span class="sourceLineNo">480</span><a id="line.480">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">481</span><a id="line.481">            temp.append(array.length);</a>
-<span class="sourceLineNo">482</span><a id="line.482">            temp.append(',');</a>
-<span class="sourceLineNo">483</span><a id="line.483">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">484</span><a id="line.484"></a>
-<span class="sourceLineNo">485</span><a id="line.485">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">486</span><a id="line.486">            {</a>
-<span class="sourceLineNo">487</span><a id="line.487">                temp.append(array[i]);</a>
-<span class="sourceLineNo">488</span><a id="line.488">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">489</span><a id="line.489">                {</a>
-<span class="sourceLineNo">490</span><a id="line.490">                    temp.append(',');</a>
-<span class="sourceLineNo">491</span><a id="line.491">                }</a>
-<span class="sourceLineNo">492</span><a id="line.492"></a>
-<span class="sourceLineNo">493</span><a id="line.493">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">494</span><a id="line.494">                {</a>
-<span class="sourceLineNo">495</span><a id="line.495">                    break;</a>
-<span class="sourceLineNo">496</span><a id="line.496">                }</a>
-<span class="sourceLineNo">497</span><a id="line.497">            }</a>
-<span class="sourceLineNo">498</span><a id="line.498">        }</a>
-<span class="sourceLineNo">499</span><a id="line.499"></a>
-<span class="sourceLineNo">500</span><a id="line.500">        return temp.toString();</a>
-<span class="sourceLineNo">501</span><a id="line.501">    }</a>
-<span class="sourceLineNo">502</span><a id="line.502"></a>
-<span class="sourceLineNo">503</span><a id="line.503">    /**</a>
-<span class="sourceLineNo">504</span><a id="line.504">     * Create a string representation of a char[].</a>
-<span class="sourceLineNo">505</span><a id="line.505">     *</a>
-<span class="sourceLineNo">506</span><a id="line.506">     * @param array the array to print</a>
-<span class="sourceLineNo">507</span><a id="line.507">     * @return the result</a>
-<span class="sourceLineNo">508</span><a id="line.508">     */</a>
-<span class="sourceLineNo">509</span><a id="line.509">    protected String toString(long[] array)</a>
-<span class="sourceLineNo">510</span><a id="line.510">    {</a>
-<span class="sourceLineNo">511</span><a id="line.511">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">512</span><a id="line.512"></a>
-<span class="sourceLineNo">513</span><a id="line.513">        if( array == null )</a>
-<span class="sourceLineNo">514</span><a id="line.514">        {</a>
-<span class="sourceLineNo">515</span><a id="line.515">            return NULL_STRING;</a>
-<span class="sourceLineNo">516</span><a id="line.516">        }</a>
-<span class="sourceLineNo">517</span><a id="line.517">        else</a>
-<span class="sourceLineNo">518</span><a id="line.518">        {</a>
-<span class="sourceLineNo">519</span><a id="line.519">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">520</span><a id="line.520">            temp.append(array.length);</a>
-<span class="sourceLineNo">521</span><a id="line.521">            temp.append(',');</a>
-<span class="sourceLineNo">522</span><a id="line.522">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">523</span><a id="line.523"></a>
-<span class="sourceLineNo">524</span><a id="line.524">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">525</span><a id="line.525">            {</a>
-<span class="sourceLineNo">526</span><a id="line.526">                temp.append(array[i]);</a>
-<span class="sourceLineNo">527</span><a id="line.527">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">528</span><a id="line.528">                {</a>
-<span class="sourceLineNo">529</span><a id="line.529">                    temp.append(',');</a>
-<span class="sourceLineNo">530</span><a id="line.530">                }</a>
-<span class="sourceLineNo">531</span><a id="line.531"></a>
-<span class="sourceLineNo">532</span><a id="line.532">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">533</span><a id="line.533">                {</a>
-<span class="sourceLineNo">534</span><a id="line.534">                    break;</a>
-<span class="sourceLineNo">535</span><a id="line.535">                }</a>
-<span class="sourceLineNo">536</span><a id="line.536">            }</a>
-<span class="sourceLineNo">537</span><a id="line.537">        }</a>
-<span class="sourceLineNo">538</span><a id="line.538"></a>
-<span class="sourceLineNo">539</span><a id="line.539">        return temp.toString();</a>
-<span class="sourceLineNo">540</span><a id="line.540">    }</a>
-<span class="sourceLineNo">541</span><a id="line.541"></a>
-<span class="sourceLineNo">542</span><a id="line.542">    /**</a>
-<span class="sourceLineNo">543</span><a id="line.543">     * Create a string representation of a float[].</a>
-<span class="sourceLineNo">544</span><a id="line.544">     *</a>
-<span class="sourceLineNo">545</span><a id="line.545">     * @param array the array to print</a>
-<span class="sourceLineNo">546</span><a id="line.546">     * @return the result</a>
-<span class="sourceLineNo">547</span><a id="line.547">     */</a>
-<span class="sourceLineNo">548</span><a id="line.548">    protected String toString(float[] array)</a>
-<span class="sourceLineNo">549</span><a id="line.549">    {</a>
-<span class="sourceLineNo">550</span><a id="line.550">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">551</span><a id="line.551"></a>
-<span class="sourceLineNo">552</span><a id="line.552">        if( array == null )</a>
-<span class="sourceLineNo">553</span><a id="line.553">        {</a>
-<span class="sourceLineNo">554</span><a id="line.554">            return NULL_STRING;</a>
-<span class="sourceLineNo">555</span><a id="line.555">        }</a>
-<span class="sourceLineNo">556</span><a id="line.556">        else</a>
-<span class="sourceLineNo">557</span><a id="line.557">        {</a>
-<span class="sourceLineNo">558</span><a id="line.558">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">559</span><a id="line.559">            temp.append(array.length);</a>
-<span class="sourceLineNo">560</span><a id="line.560">            temp.append(',');</a>
-<span class="sourceLineNo">561</span><a id="line.561">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">562</span><a id="line.562"></a>
-<span class="sourceLineNo">563</span><a id="line.563">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">564</span><a id="line.564">            {</a>
-<span class="sourceLineNo">565</span><a id="line.565">                temp.append(array[i]);</a>
-<span class="sourceLineNo">566</span><a id="line.566">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">567</span><a id="line.567">                {</a>
-<span class="sourceLineNo">568</span><a id="line.568">                    temp.append(',');</a>
-<span class="sourceLineNo">569</span><a id="line.569">                }</a>
-<span class="sourceLineNo">570</span><a id="line.570"></a>
-<span class="sourceLineNo">571</span><a id="line.571">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">572</span><a id="line.572">                {</a>
-<span class="sourceLineNo">573</span><a id="line.573">                    break;</a>
-<span class="sourceLineNo">574</span><a id="line.574">                }</a>
-<span class="sourceLineNo">575</span><a id="line.575">            }</a>
-<span class="sourceLineNo">576</span><a id="line.576">        }</a>
-<span class="sourceLineNo">577</span><a id="line.577"></a>
-<span class="sourceLineNo">578</span><a id="line.578">        return temp.toString();</a>
-<span class="sourceLineNo">579</span><a id="line.579">    }</a>
-<span class="sourceLineNo">580</span><a id="line.580"></a>
-<span class="sourceLineNo">581</span><a id="line.581">    /**</a>
-<span class="sourceLineNo">582</span><a id="line.582">     * Create a string representation of a double[].</a>
-<span class="sourceLineNo">583</span><a id="line.583">     *</a>
-<span class="sourceLineNo">584</span><a id="line.584">     * @param array the array to print</a>
-<span class="sourceLineNo">585</span><a id="line.585">     * @return the result</a>
-<span class="sourceLineNo">586</span><a id="line.586">     */</a>
-<span class="sourceLineNo">587</span><a id="line.587">    protected String toString(double[] array)</a>
-<span class="sourceLineNo">588</span><a id="line.588">    {</a>
-<span class="sourceLineNo">589</span><a id="line.589">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">590</span><a id="line.590"></a>
-<span class="sourceLineNo">591</span><a id="line.591">        if( array == null )</a>
-<span class="sourceLineNo">592</span><a id="line.592">        {</a>
-<span class="sourceLineNo">593</span><a id="line.593">            return NULL_STRING;</a>
-<span class="sourceLineNo">594</span><a id="line.594">        }</a>
-<span class="sourceLineNo">595</span><a id="line.595">        else</a>
-<span class="sourceLineNo">596</span><a id="line.596">        {</a>
-<span class="sourceLineNo">597</span><a id="line.597">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">598</span><a id="line.598">            temp.append(array.length);</a>
-<span class="sourceLineNo">599</span><a id="line.599">            temp.append(',');</a>
-<span class="sourceLineNo">600</span><a id="line.600">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">601</span><a id="line.601"></a>
-<span class="sourceLineNo">602</span><a id="line.602">            for( int i=0; i&lt;array.length; i++ )</a>
-<span class="sourceLineNo">603</span><a id="line.603">            {</a>
-<span class="sourceLineNo">604</span><a id="line.604">                temp.append(array[i]);</a>
-<span class="sourceLineNo">605</span><a id="line.605">                if( i&lt;array.length-1)</a>
-<span class="sourceLineNo">606</span><a id="line.606">                {</a>
-<span class="sourceLineNo">607</span><a id="line.607">                    temp.append(',');</a>
-<span class="sourceLineNo">608</span><a id="line.608">                }</a>
-<span class="sourceLineNo">609</span><a id="line.609"></a>
-<span class="sourceLineNo">610</span><a id="line.610">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">611</span><a id="line.611">                {</a>
-<span class="sourceLineNo">612</span><a id="line.612">                    break;</a>
-<span class="sourceLineNo">613</span><a id="line.613">                }</a>
-<span class="sourceLineNo">614</span><a id="line.614">            }</a>
-<span class="sourceLineNo">615</span><a id="line.615">        }</a>
-<span class="sourceLineNo">616</span><a id="line.616"></a>
-<span class="sourceLineNo">617</span><a id="line.617">        return temp.toString();</a>
-<span class="sourceLineNo">618</span><a id="line.618">    }</a>
-<span class="sourceLineNo">619</span><a id="line.619"></a>
-<span class="sourceLineNo">620</span><a id="line.620">    /**</a>
-<span class="sourceLineNo">621</span><a id="line.621">     * Create a string representation of a String.</a>
-<span class="sourceLineNo">622</span><a id="line.622">     *</a>
-<span class="sourceLineNo">623</span><a id="line.623">     * @param string the string to print</a>
-<span class="sourceLineNo">624</span><a id="line.624">     * @return the result</a>
-<span class="sourceLineNo">625</span><a id="line.625">     */</a>
-<span class="sourceLineNo">626</span><a id="line.626">    protected String toString(String string)</a>
-<span class="sourceLineNo">627</span><a id="line.627">    {</a>
-<span class="sourceLineNo">628</span><a id="line.628">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">629</span><a id="line.629"></a>
-<span class="sourceLineNo">630</span><a id="line.630">        if( string == null )</a>
-<span class="sourceLineNo">631</span><a id="line.631">        {</a>
-<span class="sourceLineNo">632</span><a id="line.632">            return NULL_STRING;</a>
-<span class="sourceLineNo">633</span><a id="line.633">        }</a>
-<span class="sourceLineNo">634</span><a id="line.634">        else</a>
-<span class="sourceLineNo">635</span><a id="line.635">        {</a>
-<span class="sourceLineNo">636</span><a id="line.636">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">637</span><a id="line.637">            temp.append(string.length());</a>
-<span class="sourceLineNo">638</span><a id="line.638">            temp.append(',');</a>
-<span class="sourceLineNo">639</span><a id="line.639">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">640</span><a id="line.640">            temp.append(string);</a>
-<span class="sourceLineNo">641</span><a id="line.641">        }</a>
-<span class="sourceLineNo">642</span><a id="line.642"></a>
-<span class="sourceLineNo">643</span><a id="line.643">        return temp.toString();</a>
-<span class="sourceLineNo">644</span><a id="line.644">    }</a>
-<span class="sourceLineNo">645</span><a id="line.645"></a>
-<span class="sourceLineNo">646</span><a id="line.646">    /**</a>
-<span class="sourceLineNo">647</span><a id="line.647">     * Create a string representation of a char[].</a>
-<span class="sourceLineNo">648</span><a id="line.648">     *</a>
-<span class="sourceLineNo">649</span><a id="line.649">     * @param array the array to print</a>
-<span class="sourceLineNo">650</span><a id="line.650">     * @return the result</a>
-<span class="sourceLineNo">651</span><a id="line.651">     */</a>
-<span class="sourceLineNo">652</span><a id="line.652">    protected String toString(byte[] array)</a>
-<span class="sourceLineNo">653</span><a id="line.653">    {</a>
-<span class="sourceLineNo">654</span><a id="line.654">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">655</span><a id="line.655"></a>
-<span class="sourceLineNo">656</span><a id="line.656">        if( array == null )</a>
-<span class="sourceLineNo">657</span><a id="line.657">        {</a>
-<span class="sourceLineNo">658</span><a id="line.658">            temp.append(NULL_STRING);</a>
-<span class="sourceLineNo">659</span><a id="line.659">        }</a>
-<span class="sourceLineNo">660</span><a id="line.660">        else</a>
-<span class="sourceLineNo">661</span><a id="line.661">        {</a>
-<span class="sourceLineNo">662</span><a id="line.662">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">663</span><a id="line.663">            temp.append(array.length);</a>
-<span class="sourceLineNo">664</span><a id="line.664">        }</a>
-<span class="sourceLineNo">665</span><a id="line.665"></a>
-<span class="sourceLineNo">666</span><a id="line.666">        return temp.toString();</a>
-<span class="sourceLineNo">667</span><a id="line.667">    }</a>
-<span class="sourceLineNo">668</span><a id="line.668"></a>
-<span class="sourceLineNo">669</span><a id="line.669">    /**</a>
-<span class="sourceLineNo">670</span><a id="line.670">     * Create a string representation of a java.util.Collection.</a>
-<span class="sourceLineNo">671</span><a id="line.671">     *</a>
-<span class="sourceLineNo">672</span><a id="line.672">     * @param collection the collection to print</a>
-<span class="sourceLineNo">673</span><a id="line.673">     * @return the result</a>
-<span class="sourceLineNo">674</span><a id="line.674">     */</a>
-<span class="sourceLineNo">675</span><a id="line.675">    protected String toString(Collection&lt;?&gt; collection)</a>
-<span class="sourceLineNo">676</span><a id="line.676">    {</a>
-<span class="sourceLineNo">677</span><a id="line.677">        int index = 0;</a>
-<span class="sourceLineNo">678</span><a id="line.678">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">679</span><a id="line.679">        ArgumentToStringBuilderImpl toStringBuilder = null;</a>
-<span class="sourceLineNo">680</span><a id="line.680"></a>
-<span class="sourceLineNo">681</span><a id="line.681">        if( collection == null )</a>
-<span class="sourceLineNo">682</span><a id="line.682">        {</a>
-<span class="sourceLineNo">683</span><a id="line.683">          return NULL_STRING;</a>
-<span class="sourceLineNo">684</span><a id="line.684">        }</a>
-<span class="sourceLineNo">685</span><a id="line.685">        else</a>
-<span class="sourceLineNo">686</span><a id="line.686">        {</a>
-<span class="sourceLineNo">687</span><a id="line.687">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">688</span><a id="line.688">            temp.append(collection.size());</a>
-<span class="sourceLineNo">689</span><a id="line.689">            temp.append(',');</a>
-<span class="sourceLineNo">690</span><a id="line.690"></a>
-<span class="sourceLineNo">691</span><a id="line.691">            Iterator&lt;?&gt; iterator = collection.iterator();</a>
-<span class="sourceLineNo">692</span><a id="line.692"></a>
-<span class="sourceLineNo">693</span><a id="line.693">            while (iterator.hasNext())</a>
-<span class="sourceLineNo">694</span><a id="line.694">            {</a>
-<span class="sourceLineNo">695</span><a id="line.695">                temp.append('[');</a>
-<span class="sourceLineNo">696</span><a id="line.696">                temp.append(index++);</a>
-<span class="sourceLineNo">697</span><a id="line.697">                temp.append(']');</a>
-<span class="sourceLineNo">698</span><a id="line.698">                temp.append('=');</a>
-<span class="sourceLineNo">699</span><a id="line.699"></a>
-<span class="sourceLineNo">700</span><a id="line.700">                toStringBuilder = new ArgumentToStringBuilderImpl(</a>
-<span class="sourceLineNo">701</span><a id="line.701">                    iterator.next(),</a>
-<span class="sourceLineNo">702</span><a id="line.702">                    this.getMaxArgLength(),</a>
-<span class="sourceLineNo">703</span><a id="line.703">                    this.getMode()</a>
-<span class="sourceLineNo">704</span><a id="line.704">                    );</a>
-<span class="sourceLineNo">705</span><a id="line.705"></a>
-<span class="sourceLineNo">706</span><a id="line.706">                temp.append(toStringBuilder.toString());</a>
-<span class="sourceLineNo">707</span><a id="line.707"></a>
-<span class="sourceLineNo">708</span><a id="line.708">                if( index&lt;collection.size()-1)</a>
-<span class="sourceLineNo">709</span><a id="line.709">                {</a>
-<span class="sourceLineNo">710</span><a id="line.710">                    temp.append(',');</a>
-<span class="sourceLineNo">711</span><a id="line.711">                }</a>
-<span class="sourceLineNo">712</span><a id="line.712"></a>
-<span class="sourceLineNo">713</span><a id="line.713">                if( temp.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">714</span><a id="line.714">                {</a>
-<span class="sourceLineNo">715</span><a id="line.715">                    break;</a>
-<span class="sourceLineNo">716</span><a id="line.716">                }</a>
-<span class="sourceLineNo">717</span><a id="line.717">            }</a>
-<span class="sourceLineNo">718</span><a id="line.718">        }</a>
-<span class="sourceLineNo">719</span><a id="line.719"></a>
-<span class="sourceLineNo">720</span><a id="line.720">        return temp.toString();</a>
-<span class="sourceLineNo">721</span><a id="line.721">    }</a>
-<span class="sourceLineNo">722</span><a id="line.722"></a>
-<span class="sourceLineNo">723</span><a id="line.723">    /**</a>
-<span class="sourceLineNo">724</span><a id="line.724">     * Create a string representation of a Dictionary.</a>
-<span class="sourceLineNo">725</span><a id="line.725">     *</a>
-<span class="sourceLineNo">726</span><a id="line.726">     * @param dictionary the collection to print</a>
-<span class="sourceLineNo">727</span><a id="line.727">     * @return the result</a>
-<span class="sourceLineNo">728</span><a id="line.728">     */</a>
-<span class="sourceLineNo">729</span><a id="line.729">    protected String toString(Dictionary&lt;?, ?&gt; dictionary)</a>
-<span class="sourceLineNo">730</span><a id="line.730">    {</a>
-<span class="sourceLineNo">731</span><a id="line.731">        StringBuilder temp = new StringBuilder();</a>
-<span class="sourceLineNo">732</span><a id="line.732"></a>
-<span class="sourceLineNo">733</span><a id="line.733">        if( dictionary == null )</a>
-<span class="sourceLineNo">734</span><a id="line.734">        {</a>
-<span class="sourceLineNo">735</span><a id="line.735">            return NULL_STRING;</a>
-<span class="sourceLineNo">736</span><a id="line.736">        }</a>
-<span class="sourceLineNo">737</span><a id="line.737">        else</a>
-<span class="sourceLineNo">738</span><a id="line.738">        {</a>
-<span class="sourceLineNo">739</span><a id="line.739">            temp.append(LENGTH_STRING);</a>
-<span class="sourceLineNo">740</span><a id="line.740">            temp.append(dictionary.size());</a>
-<span class="sourceLineNo">741</span><a id="line.741">            temp.append(',');</a>
-<span class="sourceLineNo">742</span><a id="line.742">            temp.append(VALUE_STRING);</a>
-<span class="sourceLineNo">743</span><a id="line.743">            temp.append(dictionary.toString());</a>
-<span class="sourceLineNo">744</span><a id="line.744">        }</a>
-<span class="sourceLineNo">745</span><a id="line.745"></a>
-<span class="sourceLineNo">746</span><a id="line.746">        return temp.toString();</a>
-<span class="sourceLineNo">747</span><a id="line.747">    }</a>
-<span class="sourceLineNo">748</span><a id="line.748"></a>
-<span class="sourceLineNo">749</span><a id="line.749">    /**</a>
-<span class="sourceLineNo">750</span><a id="line.750">     * Create a String representation for an arbitrary object.</a>
-<span class="sourceLineNo">751</span><a id="line.751">     *</a>
-<span class="sourceLineNo">752</span><a id="line.752">     * @param object the object</a>
-<span class="sourceLineNo">753</span><a id="line.753">     * @return string representation</a>
-<span class="sourceLineNo">754</span><a id="line.754">     */</a>
-<span class="sourceLineNo">755</span><a id="line.755">    protected String toString(Object object)</a>
-<span class="sourceLineNo">756</span><a id="line.756">    {</a>
-<span class="sourceLineNo">757</span><a id="line.757">        String result = null;</a>
-<span class="sourceLineNo">758</span><a id="line.758">        String temp = null;</a>
-<span class="sourceLineNo">759</span><a id="line.759">        String className = null;</a>
-<span class="sourceLineNo">760</span><a id="line.760"></a>
-<span class="sourceLineNo">761</span><a id="line.761">        if( object == null )</a>
-<span class="sourceLineNo">762</span><a id="line.762">        {</a>
-<span class="sourceLineNo">763</span><a id="line.763">            result = NULL_STRING;</a>
-<span class="sourceLineNo">764</span><a id="line.764">        }</a>
-<span class="sourceLineNo">765</span><a id="line.765">        else</a>
-<span class="sourceLineNo">766</span><a id="line.766">        {</a>
-<span class="sourceLineNo">767</span><a id="line.767">            temp = object.toString();</a>
-<span class="sourceLineNo">768</span><a id="line.768"></a>
-<span class="sourceLineNo">769</span><a id="line.769">            className = StringUtils.replace(</a>
-<span class="sourceLineNo">770</span><a id="line.770">                object.getClass().getName(),</a>
-<span class="sourceLineNo">771</span><a id="line.771">                "java.lang.", ""</a>
-<span class="sourceLineNo">772</span><a id="line.772">                );</a>
-<span class="sourceLineNo">773</span><a id="line.773"></a>
-<span class="sourceLineNo">774</span><a id="line.774">            if( temp.startsWith(className) == false )</a>
-<span class="sourceLineNo">775</span><a id="line.775">            {</a>
-<span class="sourceLineNo">776</span><a id="line.776">                int hashCode = object.hashCode();</a>
-<span class="sourceLineNo">777</span><a id="line.777">                StringBuilder tempBuffer = new StringBuilder();</a>
-<span class="sourceLineNo">778</span><a id="line.778">                tempBuffer.append(className);</a>
-<span class="sourceLineNo">779</span><a id="line.779">                tempBuffer.append('@');</a>
-<span class="sourceLineNo">780</span><a id="line.780">                tempBuffer.append(hashCode);</a>
-<span class="sourceLineNo">781</span><a id="line.781">                tempBuffer.append('[');</a>
-<span class="sourceLineNo">782</span><a id="line.782">                tempBuffer.append(temp);</a>
-<span class="sourceLineNo">783</span><a id="line.783">                tempBuffer.append(']');</a>
-<span class="sourceLineNo">784</span><a id="line.784"></a>
-<span class="sourceLineNo">785</span><a id="line.785">                result = tempBuffer.toString();</a>
-<span class="sourceLineNo">786</span><a id="line.786">            }</a>
-<span class="sourceLineNo">787</span><a id="line.787">            else</a>
-<span class="sourceLineNo">788</span><a id="line.788">            {</a>
-<span class="sourceLineNo">789</span><a id="line.789">                result = temp;</a>
-<span class="sourceLineNo">790</span><a id="line.790">            }</a>
-<span class="sourceLineNo">791</span><a id="line.791">        }</a>
-<span class="sourceLineNo">792</span><a id="line.792"></a>
-<span class="sourceLineNo">793</span><a id="line.793">        return result;</a>
-<span class="sourceLineNo">794</span><a id="line.794">    }</a>
-<span class="sourceLineNo">795</span><a id="line.795"></a>
-<span class="sourceLineNo">796</span><a id="line.796">    /**</a>
-<span class="sourceLineNo">797</span><a id="line.797">     * Append the hash code.</a>
-<span class="sourceLineNo">798</span><a id="line.798">     * @param target the object to print</a>
-<span class="sourceLineNo">799</span><a id="line.799">     */</a>
-<span class="sourceLineNo">800</span><a id="line.800">    protected void appendHashCode(Object target)</a>
-<span class="sourceLineNo">801</span><a id="line.801">    {</a>
-<span class="sourceLineNo">802</span><a id="line.802">            if ((this.mode &amp; INCLUDE_HASHCODE) == 0)</a>
-<span class="sourceLineNo">803</span><a id="line.803">            {</a>
-<span class="sourceLineNo">804</span><a id="line.804">                    return;</a>
-<span class="sourceLineNo">805</span><a id="line.805">            }</a>
-<span class="sourceLineNo">806</span><a id="line.806"></a>
-<span class="sourceLineNo">807</span><a id="line.807">        if( this.target != null )</a>
-<span class="sourceLineNo">808</span><a id="line.808">        {</a>
-<span class="sourceLineNo">809</span><a id="line.809">            this.buffer.append('@');</a>
-<span class="sourceLineNo">810</span><a id="line.810">            this.buffer.append(Integer.toHexString(target.hashCode()));</a>
-<span class="sourceLineNo">811</span><a id="line.811">        }</a>
-<span class="sourceLineNo">812</span><a id="line.812">    }</a>
-<span class="sourceLineNo">813</span><a id="line.813"></a>
-<span class="sourceLineNo">814</span><a id="line.814">    /**</a>
-<span class="sourceLineNo">815</span><a id="line.815">     * Append the class name.</a>
-<span class="sourceLineNo">816</span><a id="line.816">     * @param target the object to print</a>
-<span class="sourceLineNo">817</span><a id="line.817">     */</a>
-<span class="sourceLineNo">818</span><a id="line.818">    protected void appendClassName(Object target)</a>
-<span class="sourceLineNo">819</span><a id="line.819">    {</a>
-<span class="sourceLineNo">820</span><a id="line.820">        boolean skipClassName = true;</a>
-<span class="sourceLineNo">821</span><a id="line.821"></a>
-<span class="sourceLineNo">822</span><a id="line.822">        if ((this.mode &amp; INCLUDE_CLASSNAME) == 0)</a>
-<span class="sourceLineNo">823</span><a id="line.823">        {</a>
-<span class="sourceLineNo">824</span><a id="line.824">            return;</a>
-<span class="sourceLineNo">825</span><a id="line.825">        }</a>
-<span class="sourceLineNo">826</span><a id="line.826"></a>
-<span class="sourceLineNo">827</span><a id="line.827">        if( this.target != null )</a>
-<span class="sourceLineNo">828</span><a id="line.828">        {</a>
-<span class="sourceLineNo">829</span><a id="line.829">            String className = target.getClass().getName();</a>
-<span class="sourceLineNo">830</span><a id="line.830"></a>
-<span class="sourceLineNo">831</span><a id="line.831">            if( target instanceof boolean[] )</a>
-<span class="sourceLineNo">832</span><a id="line.832">            {</a>
-<span class="sourceLineNo">833</span><a id="line.833">                this.buffer.append("boolean[]");</a>
-<span class="sourceLineNo">834</span><a id="line.834">            }</a>
-<span class="sourceLineNo">835</span><a id="line.835">            else if( target instanceof byte[] )</a>
-<span class="sourceLineNo">836</span><a id="line.836">            {</a>
-<span class="sourceLineNo">837</span><a id="line.837">                this.buffer.append("byte[]");</a>
-<span class="sourceLineNo">838</span><a id="line.838">            }</a>
-<span class="sourceLineNo">839</span><a id="line.839">            else if( target instanceof char[] )</a>
-<span class="sourceLineNo">840</span><a id="line.840">            {</a>
-<span class="sourceLineNo">841</span><a id="line.841">                this.buffer.append("char[]");</a>
-<span class="sourceLineNo">842</span><a id="line.842">            }</a>
-<span class="sourceLineNo">843</span><a id="line.843">            else if( target instanceof short[] )</a>
-<span class="sourceLineNo">844</span><a id="line.844">            {</a>
-<span class="sourceLineNo">845</span><a id="line.845">                this.buffer.append("short[]");</a>
-<span class="sourceLineNo">846</span><a id="line.846">            }</a>
-<span class="sourceLineNo">847</span><a id="line.847">            else if( target instanceof int[] )</a>
-<span class="sourceLineNo">848</span><a id="line.848">            {</a>
-<span class="sourceLineNo">849</span><a id="line.849">                this.buffer.append("int[]");</a>
-<span class="sourceLineNo">850</span><a id="line.850">            }</a>
-<span class="sourceLineNo">851</span><a id="line.851">            else if( target instanceof long[] )</a>
-<span class="sourceLineNo">852</span><a id="line.852">            {</a>
-<span class="sourceLineNo">853</span><a id="line.853">                this.buffer.append("[ong[]");</a>
-<span class="sourceLineNo">854</span><a id="line.854">            }</a>
-<span class="sourceLineNo">855</span><a id="line.855">            else if( target instanceof float[] )</a>
-<span class="sourceLineNo">856</span><a id="line.856">            {</a>
-<span class="sourceLineNo">857</span><a id="line.857">                this.buffer.append("float[]");</a>
-<span class="sourceLineNo">858</span><a id="line.858">            }</a>
-<span class="sourceLineNo">859</span><a id="line.859">            else if( target instanceof double[] )</a>
-<span class="sourceLineNo">860</span><a id="line.860">            {</a>
-<span class="sourceLineNo">861</span><a id="line.861">                this.buffer.append("double[]");</a>
-<span class="sourceLineNo">862</span><a id="line.862">            }</a>
-<span class="sourceLineNo">863</span><a id="line.863">            else if( target instanceof Boolean )</a>
-<span class="sourceLineNo">864</span><a id="line.864">            {</a>
-<span class="sourceLineNo">865</span><a id="line.865">                this.buffer.append("Boolean");</a>
-<span class="sourceLineNo">866</span><a id="line.866">            }</a>
-<span class="sourceLineNo">867</span><a id="line.867">            else if( target instanceof Character )</a>
-<span class="sourceLineNo">868</span><a id="line.868">            {</a>
-<span class="sourceLineNo">869</span><a id="line.869">                this.buffer.append("Character");</a>
-<span class="sourceLineNo">870</span><a id="line.870">            }</a>
-<span class="sourceLineNo">871</span><a id="line.871">            else if( target instanceof Short )</a>
-<span class="sourceLineNo">872</span><a id="line.872">            {</a>
-<span class="sourceLineNo">873</span><a id="line.873">                this.buffer.append("Short");</a>
-<span class="sourceLineNo">874</span><a id="line.874">            }</a>
-<span class="sourceLineNo">875</span><a id="line.875">            else if( target instanceof Integer )</a>
-<span class="sourceLineNo">876</span><a id="line.876">            {</a>
-<span class="sourceLineNo">877</span><a id="line.877">                this.buffer.append("Integer");</a>
-<span class="sourceLineNo">878</span><a id="line.878">            }</a>
-<span class="sourceLineNo">879</span><a id="line.879">            else if( target instanceof Long )</a>
-<span class="sourceLineNo">880</span><a id="line.880">            {</a>
-<span class="sourceLineNo">881</span><a id="line.881">                this.buffer.append("Long");</a>
-<span class="sourceLineNo">882</span><a id="line.882">            }</a>
-<span class="sourceLineNo">883</span><a id="line.883">            else if( target instanceof Float )</a>
-<span class="sourceLineNo">884</span><a id="line.884">            {</a>
-<span class="sourceLineNo">885</span><a id="line.885">                this.buffer.append("Float");</a>
-<span class="sourceLineNo">886</span><a id="line.886">            }</a>
-<span class="sourceLineNo">887</span><a id="line.887">            else if( target instanceof Double )</a>
-<span class="sourceLineNo">888</span><a id="line.888">            {</a>
-<span class="sourceLineNo">889</span><a id="line.889">                this.buffer.append("Double");</a>
-<span class="sourceLineNo">890</span><a id="line.890">            }</a>
-<span class="sourceLineNo">891</span><a id="line.891">            else if( target instanceof String )</a>
-<span class="sourceLineNo">892</span><a id="line.892">            {</a>
-<span class="sourceLineNo">893</span><a id="line.893">                this.buffer.append("String");</a>
-<span class="sourceLineNo">894</span><a id="line.894">            }</a>
-<span class="sourceLineNo">895</span><a id="line.895">            else if( target instanceof Boolean[] )</a>
-<span class="sourceLineNo">896</span><a id="line.896">            {</a>
-<span class="sourceLineNo">897</span><a id="line.897">                this.buffer.append("Boolean[]");</a>
-<span class="sourceLineNo">898</span><a id="line.898">            }</a>
-<span class="sourceLineNo">899</span><a id="line.899">            else if( target instanceof Character[] )</a>
-<span class="sourceLineNo">900</span><a id="line.900">            {</a>
-<span class="sourceLineNo">901</span><a id="line.901">                this.buffer.append("Character[]");</a>
-<span class="sourceLineNo">902</span><a id="line.902">            }</a>
-<span class="sourceLineNo">903</span><a id="line.903">            else if( target instanceof Short[] )</a>
-<span class="sourceLineNo">904</span><a id="line.904">            {</a>
-<span class="sourceLineNo">905</span><a id="line.905">                this.buffer.append("Short[]");</a>
-<span class="sourceLineNo">906</span><a id="line.906">            }</a>
-<span class="sourceLineNo">907</span><a id="line.907">            else if( target instanceof Integer[] )</a>
-<span class="sourceLineNo">908</span><a id="line.908">            {</a>
-<span class="sourceLineNo">909</span><a id="line.909">                this.buffer.append("Integer[]");</a>
-<span class="sourceLineNo">910</span><a id="line.910">            }</a>
-<span class="sourceLineNo">911</span><a id="line.911">            else if( target instanceof Long[] )</a>
-<span class="sourceLineNo">912</span><a id="line.912">            {</a>
-<span class="sourceLineNo">913</span><a id="line.913">                this.buffer.append("Long[]");</a>
-<span class="sourceLineNo">914</span><a id="line.914">            }</a>
-<span class="sourceLineNo">915</span><a id="line.915">            else if( target instanceof Float[] )</a>
-<span class="sourceLineNo">916</span><a id="line.916">            {</a>
-<span class="sourceLineNo">917</span><a id="line.917">                this.buffer.append("Float[]");</a>
-<span class="sourceLineNo">918</span><a id="line.918">            }</a>
-<span class="sourceLineNo">919</span><a id="line.919">            else if( target instanceof Double[] )</a>
-<span class="sourceLineNo">920</span><a id="line.920">            {</a>
-<span class="sourceLineNo">921</span><a id="line.921">                this.buffer.append("Double[]");</a>
-<span class="sourceLineNo">922</span><a id="line.922">            }</a>
-<span class="sourceLineNo">923</span><a id="line.923">            else if( target instanceof String[] )</a>
-<span class="sourceLineNo">924</span><a id="line.924">            {</a>
-<span class="sourceLineNo">925</span><a id="line.925">                this.buffer.append("String[]");</a>
-<span class="sourceLineNo">926</span><a id="line.926">            }</a>
-<span class="sourceLineNo">927</span><a id="line.927">            else</a>
-<span class="sourceLineNo">928</span><a id="line.928">            {</a>
-<span class="sourceLineNo">929</span><a id="line.929">                skipClassName = false;</a>
-<span class="sourceLineNo">930</span><a id="line.930">            }</a>
-<span class="sourceLineNo">931</span><a id="line.931"></a>
-<span class="sourceLineNo">932</span><a id="line.932">            if( skipClassName == false )</a>
-<span class="sourceLineNo">933</span><a id="line.933">            {</a>
-<span class="sourceLineNo">934</span><a id="line.934">                className = StringUtils.replace(className, "java.lang.", "");</a>
-<span class="sourceLineNo">935</span><a id="line.935"></a>
-<span class="sourceLineNo">936</span><a id="line.936">                if( className.endsWith(";") )</a>
-<span class="sourceLineNo">937</span><a id="line.937">                {</a>
-<span class="sourceLineNo">938</span><a id="line.938">                    this.buffer.append(className.substring(0,className.length()-1));</a>
-<span class="sourceLineNo">939</span><a id="line.939">                }</a>
-<span class="sourceLineNo">940</span><a id="line.940">                else</a>
-<span class="sourceLineNo">941</span><a id="line.941">                {</a>
-<span class="sourceLineNo">942</span><a id="line.942">                    this.buffer.append(className);</a>
-<span class="sourceLineNo">943</span><a id="line.943">                }</a>
-<span class="sourceLineNo">944</span><a id="line.944">            }</a>
-<span class="sourceLineNo">945</span><a id="line.945">        }</a>
-<span class="sourceLineNo">946</span><a id="line.946">    }</a>
-<span class="sourceLineNo">947</span><a id="line.947"></a>
-<span class="sourceLineNo">948</span><a id="line.948">    /**</a>
-<span class="sourceLineNo">949</span><a id="line.949">     * Append the hash code.</a>
-<span class="sourceLineNo">950</span><a id="line.950">     * @param ch the object to print</a>
-<span class="sourceLineNo">951</span><a id="line.951">     */</a>
-<span class="sourceLineNo">952</span><a id="line.952">    protected void appendChar(char ch)</a>
-<span class="sourceLineNo">953</span><a id="line.953">    {</a>
-<span class="sourceLineNo">954</span><a id="line.954">        this.buffer.append(ch);</a>
-<span class="sourceLineNo">955</span><a id="line.955">    }</a>
-<span class="sourceLineNo">956</span><a id="line.956"></a>
-<span class="sourceLineNo">957</span><a id="line.957">    /**</a>
-<span class="sourceLineNo">958</span><a id="line.958">     * @return Returns the maxLineLength.</a>
-<span class="sourceLineNo">959</span><a id="line.959">     */</a>
-<span class="sourceLineNo">960</span><a id="line.960">    protected int getMaxArgLength()</a>
-<span class="sourceLineNo">961</span><a id="line.961">    {</a>
-<span class="sourceLineNo">962</span><a id="line.962">        return maxArgLength;</a>
-<span class="sourceLineNo">963</span><a id="line.963">    }</a>
-<span class="sourceLineNo">964</span><a id="line.964"></a>
-<span class="sourceLineNo">965</span><a id="line.965">    /**</a>
-<span class="sourceLineNo">966</span><a id="line.966">     * &lt;p&gt;Gets the stack trace from a Throwable as a String.&lt;/p&gt;</a>
-<span class="sourceLineNo">967</span><a id="line.967">     *</a>
-<span class="sourceLineNo">968</span><a id="line.968">     * @param throwable  the &lt;code&gt;Throwable&lt;/code&gt; to be examined</a>
-<span class="sourceLineNo">969</span><a id="line.969">     * @return the stack trace as generated by the exception's</a>
-<span class="sourceLineNo">970</span><a id="line.970">     *  &lt;code&gt;printStackTrace(PrintWriter)&lt;/code&gt; method</a>
-<span class="sourceLineNo">971</span><a id="line.971">     */</a>
-<span class="sourceLineNo">972</span><a id="line.972">    protected String getStackTrace(Throwable throwable)</a>
-<span class="sourceLineNo">973</span><a id="line.973">    {</a>
-<span class="sourceLineNo">974</span><a id="line.974">        StringWriter sw = new StringWriter();</a>
-<span class="sourceLineNo">975</span><a id="line.975">        PrintWriter pw = new PrintWriter( sw, true );</a>
-<span class="sourceLineNo">976</span><a id="line.976">        throwable.printStackTrace( pw );</a>
-<span class="sourceLineNo">977</span><a id="line.977">        return sw.getBuffer().toString();</a>
-<span class="sourceLineNo">978</span><a id="line.978">    }</a>
-<span class="sourceLineNo">979</span><a id="line.979"></a>
-<span class="sourceLineNo">980</span><a id="line.980">    /**</a>
-<span class="sourceLineNo">981</span><a id="line.981">     * Append a string to the internal buffer</a>
-<span class="sourceLineNo">982</span><a id="line.982">     * @param source the string to append</a>
-<span class="sourceLineNo">983</span><a id="line.983">     */</a>
-<span class="sourceLineNo">984</span><a id="line.984">    protected void append(String source)</a>
-<span class="sourceLineNo">985</span><a id="line.985">    {</a>
-<span class="sourceLineNo">986</span><a id="line.986">        String formattedSource = this.format(source);</a>
-<span class="sourceLineNo">987</span><a id="line.987">        this.buffer.append(formattedSource);</a>
-<span class="sourceLineNo">988</span><a id="line.988">    }</a>
-<span class="sourceLineNo">989</span><a id="line.989"></a>
-<span class="sourceLineNo">990</span><a id="line.990">    /**</a>
-<span class="sourceLineNo">991</span><a id="line.991">     * Format the buffer by replacing the whitespaces and cutting</a>
-<span class="sourceLineNo">992</span><a id="line.992">     * away excessive fluff.</a>
-<span class="sourceLineNo">993</span><a id="line.993">     *</a>
-<span class="sourceLineNo">994</span><a id="line.994">     * @param source the source string</a>
-<span class="sourceLineNo">995</span><a id="line.995">     * @return formatted string</a>
-<span class="sourceLineNo">996</span><a id="line.996">     */</a>
-<span class="sourceLineNo">997</span><a id="line.997">    protected String format( String source )</a>
-<span class="sourceLineNo">998</span><a id="line.998">    {</a>
-<span class="sourceLineNo">999</span><a id="line.999">        boolean isTruncated = false;</a>
-<span class="sourceLineNo">1000</span><a id="line.1000"></a>
-<span class="sourceLineNo">1001</span><a id="line.1001">        // test for null or empty string</a>
-<span class="sourceLineNo">1002</span><a id="line.1002">        if ( StringUtils.isEmpty(source) )</a>
-<span class="sourceLineNo">1003</span><a id="line.1003">                return "";</a>
-<span class="sourceLineNo">1004</span><a id="line.1004"></a>
-<span class="sourceLineNo">1005</span><a id="line.1005">        // remove the line breaks and tabs for logging output and replace</a>
-<span class="sourceLineNo">1006</span><a id="line.1006">        StringUtils.replace(source,  "\r",  " ");</a>
-<span class="sourceLineNo">1007</span><a id="line.1007">        StringUtils.replace(source,  "\n",  " ");</a>
-<span class="sourceLineNo">1008</span><a id="line.1008">        StringUtils.replace(source,  "\t",  " ");</a>
-<span class="sourceLineNo">1009</span><a id="line.1009">        StringUtils.replace(source,  SEPERATOR,  " ");</a>
-<span class="sourceLineNo">1010</span><a id="line.1010"></a>
-<span class="sourceLineNo">1011</span><a id="line.1011">        // Build the output</a>
-<span class="sourceLineNo">1012</span><a id="line.1012">        StringBuilder stringBuilder = new StringBuilder(source);</a>
-<span class="sourceLineNo">1013</span><a id="line.1013"></a>
-<span class="sourceLineNo">1014</span><a id="line.1014">        // trim the string to avoid dumping tons of data</a>
-<span class="sourceLineNo">1015</span><a id="line.1015">        if( stringBuilder.length() &gt; this.getMaxArgLength() )</a>
-<span class="sourceLineNo">1016</span><a id="line.1016">        {</a>
-<span class="sourceLineNo">1017</span><a id="line.1017">            stringBuilder.delete(this.getMaxArgLength()-1, stringBuilder.length());</a>
-<span class="sourceLineNo">1018</span><a id="line.1018">            isTruncated = true;</a>
-<span class="sourceLineNo">1019</span><a id="line.1019">        }</a>
-<span class="sourceLineNo">1020</span><a id="line.1020">        </a>
-<span class="sourceLineNo">1021</span><a id="line.1021">        // show the user that we truncated the ouptut</a>
-<span class="sourceLineNo">1022</span><a id="line.1022">        if( isTruncated )</a>
-<span class="sourceLineNo">1023</span><a id="line.1023">        {</a>
-<span class="sourceLineNo">1024</span><a id="line.1024">            if (source.endsWith("]"))</a>
-<span class="sourceLineNo">1025</span><a id="line.1025">            {</a>
-<span class="sourceLineNo">1026</span><a id="line.1026">                stringBuilder.append(" ...]");</a>
-<span class="sourceLineNo">1027</span><a id="line.1027">            }</a>
-<span class="sourceLineNo">1028</span><a id="line.1028">            else</a>
-<span class="sourceLineNo">1029</span><a id="line.1029">            {</a>
-<span class="sourceLineNo">1030</span><a id="line.1030">                stringBuilder.append(" ...");</a>
-<span class="sourceLineNo">1031</span><a id="line.1031">            }</a>
-<span class="sourceLineNo">1032</span><a id="line.1032">        }</a>
-<span class="sourceLineNo">1033</span><a id="line.1033">        return stringBuilder.toString();</a>
-<span class="sourceLineNo">1034</span><a id="line.1034">    }</a>
-<span class="sourceLineNo">1035</span><a id="line.1035">}</a>
+<pre><span class="sourceLineNo">001</span>/*<a name="line.1"></a>
+<span class="sourceLineNo">002</span> * Licensed to the Apache Software Foundation (ASF) under one<a name="line.2"></a>
+<span class="sourceLineNo">003</span> * or more contributor license agreements.  See the NOTICE file<a name="line.3"></a>
+<span class="sourceLineNo">004</span> * distributed with this work for additional information<a name="line.4"></a>
+<span class="sourceLineNo">005</span> * regarding copyright ownership.  The ASF licenses this file<a name="line.5"></a>
+<span class="sourceLineNo">006</span> * to you under the Apache License, Version 2.0 (the<a name="line.6"></a>
+<span class="sourceLineNo">007</span> * "License"); you may not use this file except in compliance<a name="line.7"></a>
+<span class="sourceLineNo">008</span> * with the License.  You may obtain a copy of the License at<a name="line.8"></a>
+<span class="sourceLineNo">009</span> *<a name="line.9"></a>
+<span class="sourceLineNo">010</span> *   http://www.apache.org/licenses/LICENSE-2.0<a name="line.10"></a>
+<span class="sourceLineNo">011</span> *<a name="line.11"></a>
+<span class="sourceLineNo">012</span> * Unless required by applicable law or agreed to in writing,<a name="line.12"></a>
+<span class="sourceLineNo">013</span> * software distributed under the License is distributed on an<a name="line.13"></a>
+<span class="sourceLineNo">014</span> * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY<a name="line.14"></a>
+<span class="sourceLineNo">015</span> * KIND, either express or implied.  See the License for the<a name="line.15"></a>
+<span class="sourceLineNo">016</span> * specific language governing permissions and limitations<a name="line.16"></a>
+<span class="sourceLineNo">017</span> * under the License.<a name="line.17"></a>
+<span class="sourceLineNo">018</span> */<a name="line.18"></a>
+<span class="sourceLineNo">019</span><a name="line.19"></a>
+<span class="sourceLineNo">020</span>package org.apache.fulcrum.yaafi.interceptor.util;<a name="line.20"></a>
+<span class="sourceLineNo">021</span><a name="line.21"></a>
+<span class="sourceLineNo">022</span>import java.io.PrintWriter;<a name="line.22"></a>
+<span class="sourceLineNo">023</span>import java.io.StringWriter;<a name="line.23"></a>
+<span class="sourceLineNo">024</span>import java.util.Collection;<a name="line.24"></a>
+<span class="sourceLineNo">025</span>import java.util.Dictionary;<a name="line.25"></a>
+<span class="sourceLineNo">026</span>import java.util.Iterator;<a name="line.26"></a>
+<span class="sourceLineNo">027</span><a name="line.27"></a>
+<span class="sourceLineNo">028</span>import org.apache.commons.lang3.StringUtils;<a name="line.28"></a>
+<span class="sourceLineNo">029</span><a name="line.29"></a>
+<span class="sourceLineNo">030</span>/**<a name="line.30"></a>
+<span class="sourceLineNo">031</span> * Creates a string representation of method argument.<a name="line.31"></a>
+<span class="sourceLineNo">032</span> *<a name="line.32"></a>
+<span class="sourceLineNo">033</span> * @author &lt;a href="mailto:siegfried.goeschl@it20one.at"&gt;Siegfried Goeschl&lt;/a&gt;<a name="line.33"></a>
+<span class="sourceLineNo">034</span> */<a name="line.34"></a>
+<span class="sourceLineNo">035</span>public class ArgumentToStringBuilderImpl implements InterceptorToStringBuilder<a name="line.35"></a>
+<span class="sourceLineNo">036</span>{<a name="line.36"></a>
+<span class="sourceLineNo">037</span>    /** include the class name in the result */<a name="line.37"></a>
+<span class="sourceLineNo">038</span>    public static final int INCLUDE_CLASSNAME = 0x1;<a name="line.38"></a>
+<span class="sourceLineNo">039</span><a name="line.39"></a>
+<span class="sourceLineNo">040</span>    /** include the hashcode in the result */<a name="line.40"></a>
+<span class="sourceLineNo">041</span>    public static final int INCLUDE_HASHCODE = 0x02;<a name="line.41"></a>
+<span class="sourceLineNo">042</span><a name="line.42"></a>
+<span class="sourceLineNo">043</span>    /** the default mode using class names and hashcode */<a name="line.43"></a>
+<span class="sourceLineNo">044</span>    private static int defaultMode = INCLUDE_CLASSNAME &amp; INCLUDE_HASHCODE;<a name="line.44"></a>
+<span class="sourceLineNo">045</span><a name="line.45"></a>
+<span class="sourceLineNo">046</span>    /** our current formatting mode */<a name="line.46"></a>
+<span class="sourceLineNo">047</span>    private int mode;<a name="line.47"></a>
+<span class="sourceLineNo">048</span><a name="line.48"></a>
+<span class="sourceLineNo">049</span>    /** the maximum length of a dumped argument */<a name="line.49"></a>
+<span class="sourceLineNo">050</span>    private static final int MAX_LINE_LENGTH = 2000;<a name="line.50"></a>
+<span class="sourceLineNo">051</span><a name="line.51"></a>
+<span class="sourceLineNo">052</span>    /** seperator for the arguments in the logfile */<a name="line.52"></a>
+<span class="sourceLineNo">053</span>    private static final String SEPERATOR = ";";<a name="line.53"></a>
+<span class="sourceLineNo">054</span><a name="line.54"></a>
+<span class="sourceLineNo">055</span>    /** the output for a NULL value **/<a name="line.55"></a>
+<span class="sourceLineNo">056</span>    private static final String NULL_STRING = "&lt;null&gt;";<a name="line.56"></a>
+<span class="sourceLineNo">057</span><a name="line.57"></a>
+<span class="sourceLineNo">058</span>    /** the output for a length string **/<a name="line.58"></a>
+<span class="sourceLineNo">059</span>    private static final String LENGTH_STRING = "length=";<a name="line.59"></a>
+<span class="sourceLineNo">060</span><a name="line.60"></a>
+<span class="sourceLineNo">061</span>    /** the output for a value string **/<a name="line.61"></a>
+<span class="sourceLineNo">062</span>    private static final String VALUE_STRING = "value=";<a name="line.62"></a>
+<span class="sourceLineNo">063</span><a name="line.63"></a>
+<span class="sourceLineNo">064</span>    /** maximum line length for dumping arguments */<a name="line.64"></a>
+<span class="sourceLineNo">065</span>    private int maxArgLength;<a name="line.65"></a>
+<span class="sourceLineNo">066</span><a name="line.66"></a>
+<span class="sourceLineNo">067</span>    /** the result of the invocation */<a name="line.67"></a>
+<span class="sourceLineNo">068</span>    private StringBuilder buffer;<a name="line.68"></a>
+<span class="sourceLineNo">069</span><a name="line.69"></a>
+<span class="sourceLineNo">070</span>    /** the target object */<a name="line.70"></a>
+<span class="sourceLineNo">071</span>    private Object target;<a name="line.71"></a>
+<span class="sourceLineNo">072</span><a name="line.72"></a>
+<span class="sourceLineNo">073</span>    /**<a name="line.73"></a>
+<span class="sourceLineNo">074</span>     * Constructor<a name="line.74"></a>
+<span class="sourceLineNo">075</span>     */<a name="line.75"></a>
+<span class="sourceLineNo">076</span>    public ArgumentToStringBuilderImpl()<a name="line.76"></a>
+<span class="sourceLineNo">077</span>    {<a name="line.77"></a>
+<span class="sourceLineNo">078</span>        this.mode = ArgumentToStringBuilderImpl.defaultMode;<a name="line.78"></a>
+<span class="sourceLineNo">079</span>        this.maxArgLength = MAX_LINE_LENGTH;<a name="line.79"></a>
+<span class="sourceLineNo">080</span>        this.buffer = new StringBuilder();<a name="line.80"></a>
+<span class="sourceLineNo">081</span>    }<a name="line.81"></a>
+<span class="sourceLineNo">082</span><a name="line.82"></a>
+<span class="sourceLineNo">083</span>    /**<a name="line.83"></a>
+<span class="sourceLineNo">084</span>     * Constructor<a name="line.84"></a>
+<span class="sourceLineNo">085</span>     *<a name="line.85"></a>
+<span class="sourceLineNo">086</span>     * @param target the object to print<a name="line.86"></a>
+<span class="sourceLineNo">087</span>     */<a name="line.87"></a>
+<span class="sourceLineNo">088</span>    public ArgumentToStringBuilderImpl(Object target)<a name="line.88"></a>
+<span class="sourceLineNo">089</span>    {<a name="line.89"></a>
+<span class="sourceLineNo">090</span>        this(target,MAX_LINE_LENGTH);<a name="line.90"></a>
+<span class="sourceLineNo">091</span>    }<a name="line.91"></a>
+<span class="sourceLineNo">092</span><a name="line.92"></a>
+<span class="sourceLineNo">093</span>    /**<a name="line.93"></a>
+<span class="sourceLineNo">094</span>     * Constructor<a name="line.94"></a>
+<span class="sourceLineNo">095</span>     *<a name="line.95"></a>
+<span class="sourceLineNo">096</span>     * @param target the object to print<a name="line.96"></a>
+<span class="sourceLineNo">097</span>     * @param maxArgLength the maximum length<a name="line.97"></a>
+<span class="sourceLineNo">098</span>     */<a name="line.98"></a>
+<span class="sourceLineNo">099</span>    public ArgumentToStringBuilderImpl(Object target, int maxArgLength)<a name="line.99"></a>
+<span class="sourceLineNo">100</span>    {<a name="line.100"></a>
+<span class="sourceLineNo">101</span>        this(target,<a name="line.101"></a>
+<span class="sourceLineNo">102</span>            maxArgLength,<a name="line.102"></a>
+<span class="sourceLineNo">103</span>            ArgumentToStringBuilderImpl.defaultMode<a name="line.103"></a>
+<span class="sourceLineNo">104</span>            );<a name="line.104"></a>
+<span class="sourceLineNo">105</span>    }<a name="line.105"></a>
+<span class="sourceLineNo">106</span><a name="line.106"></a>
+<span class="sourceLineNo">107</span>    /**<a name="line.107"></a>
+<span class="sourceLineNo">108</span>     * Constructor<a name="line.108"></a>
+<span class="sourceLineNo">109</span>     *<a name="line.109"></a>
+<span class="sourceLineNo">110</span>     * @param target the object to print<a name="line.110"></a>
+<span class="sourceLineNo">111</span>     * @param maxArgLength the maximum length<a name="line.111"></a>
+<span class="sourceLineNo">112</span>     * @param mode the formatting mode to use<a name="line.112"></a>
+<span class="sourceLineNo">113</span>     */<a name="line.113"></a>
+<span class="sourceLineNo">114</span>    public ArgumentToStringBuilderImpl(Object target, int maxArgLength, int mode)<a name="line.114"></a>
+<span class="sourceLineNo">115</span>    {<a name="line.115"></a>
+<span class="sourceLineNo">116</span>        this.buffer = new StringBuilder();<a name="line.116"></a>
+<span class="sourceLineNo">117</span>        this.target = target;<a name="line.117"></a>
+<span class="sourceLineNo">118</span>        this.maxArgLength = maxArgLength;<a name="line.118"></a>
+<span class="sourceLineNo">119</span>        this.mode = mode;<a name="line.119"></a>
+<span class="sourceLineNo">120</span>    }<a name="line.120"></a>
+<span class="sourceLineNo">121</span><a name="line.121"></a>
+<span class="sourceLineNo">122</span>    /**<a name="line.122"></a>
+<span class="sourceLineNo">123</span>     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMaxArgLength(int)<a name="line.123"></a>
+<span class="sourceLineNo">124</span>     */<a name="line.124"></a>
+<span class="sourceLineNo">125</span>    public void setMaxArgLength(int maxArgLength)<a name="line.125"></a>
+<span class="sourceLineNo">126</span>    {<a name="line.126"></a>
+<span class="sourceLineNo">127</span>        this.maxArgLength = maxArgLength;<a name="line.127"></a>
+<span class="sourceLineNo">128</span>    }<a name="line.128"></a>
+<span class="sourceLineNo">129</span><a name="line.129"></a>
+<span class="sourceLineNo">130</span>    /**<a name="line.130"></a>
+<span class="sourceLineNo">131</span>     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setTarget(java.lang.Object)<a name="line.131"></a>
+<span class="sourceLineNo">132</span>     */<a name="line.132"></a>
+<span class="sourceLineNo">133</span>    public void setTarget(Object target)<a name="line.133"></a>
+<span class="sourceLineNo">134</span>    {<a name="line.134"></a>
+<span class="sourceLineNo">135</span>        this.target = target;<a name="line.135"></a>
+<span class="sourceLineNo">136</span>    }<a name="line.136"></a>
+<span class="sourceLineNo">137</span><a name="line.137"></a>
+<span class="sourceLineNo">138</span>    /**<a name="line.138"></a>
+<span class="sourceLineNo">139</span>     * @see org.apache.fulcrum.yaafi.interceptor.util.InterceptorToStringBuilder#setMode(int)<a name="line.139"></a>
+<span class="sourceLineNo">140</span>     */<a name="line.140"></a>
+<span class="sourceLineNo">141</span>    public void setMode(int mode)<a name="line.141"></a>
+<span class="sourceLineNo">142</span>    {<a name="line.142"></a>
+<span class="sourceLineNo">143</span>        this.mode = mode;<a name="line.143"></a>
+<span class="sourceLineNo">144</span>    }<a name="line.144"></a>
+<span class="sourceLineNo">145</span><a name="line.145"></a>
+<span class="sourceLineNo">146</span>    /**<a name="line.146"></a>
+<span class="sourceLineNo">147</span>     * @return Returns the mode.<a name="line.147"></a>
+<span class="sourceLineNo">148</span>     */<a name="line.148"></a>
+<span class="sourceLineNo">149</span>    public int getMode()<a name="line.149"></a>
+<span class="sourceLineNo">150</span>    {<a name="line.150"></a>
+<span class="sourceLineNo">151</span>        return this.mode;<a name="line.151"></a>
+<span class="sourceLineNo">152</span>    }<a name="line.152"></a>
+<span class="sourceLineNo">153</span><a name="line.153"></a>
+<span class="sourceLineNo">154</span>        /**<a name="line.154"></a>
+<span class="sourceLineNo">155</span>     * @see java.lang.Object#toString()<a name="line.155"></a>
+<span class="sourceLineNo">156</span>     */<a name="line.156"></a>
+<span class="sourceLineNo">157</span>    public String toString()<a name="line.157"></a>
+<span class="sourceLineNo">158</span>    {<a name="line.158"></a>
+<span class="sourceLineNo">159</span>        try<a name="line.159"></a>
+<span class="sourceLineNo">160</span>        {<a name="line.160"></a>
+<span class="sourceLineNo">161</span>            if( this.target == null )<a name="line.161"></a>
+<span class="sourceLineNo">162</span>            {<a name="line.162"></a>
+<span class="sourceLineNo">163</span>                this.buffer.append(NULL_STRING);<a name="line.163"></a>
+<span class="sourceLineNo">164</span>            }<a name="line.164"></a>
+<span class="sourceLineNo">165</span>            else if( this.target instanceof Object[] )<a name="line.165"></a>
+<span class="sourceLineNo">166</span>            {<a name="line.166"></a>
+<span class="sourceLineNo">167</span>                this.appendClassName(target);<a name="line.167"></a>
+<span class="sourceLineNo">168</span>                this.appendHashCode(target);<a name="line.168"></a>
+<span class="sourceLineNo">169</span>                this.appendChar('[');<a name="line.169"></a>
+<span class="sourceLineNo">170</span>                this.append( this.toString((Object[]) this.target) );<a name="line.170"></a>
+<span class="sourceLineNo">171</span>                this.appendChar(']');<a name="line.171"></a>
+<span class="sourceLineNo">172</span>            }<a name="line.172"></a>
+<span class="sourceLineNo">173</span>            else if( this.target instanceof boolean[] )<a name="line.173"></a>
+<span class="sourceLineNo">174</span>            {<a name="line.174"></a>
+<span class="sourceLineNo">175</span>                this.appendClassName(target);<a name="line.175"></a>
+<span class="sourceLineNo">176</span>                this.appendHashCode(target);<a name="line.176"></a>
+<span class="sourceLineNo">177</span>                this.appendChar('[');<a name="line.177"></a>
+<span class="sourceLineNo">178</span>                this.append( this.toString((boolean[]) this.target) );<a name="line.178"></a>
+<span class="sourceLineNo">179</span>                this.appendChar(']');<a name="line.179"></a>
+<span class="sourceLineNo">180</span>            }<a name="line.180"></a>
+<span class="sourceLineNo">181</span>            else if( this.target instanceof char[] )<a name="line.181"></a>
+<span class="sourceLineNo">182</span>            {<a name="line.182"></a>
+<span class="sourceLineNo">183</span>                this.appendClassName(target);<a name="line.183"></a>
+<span class="sourceLineNo">184</span>                this.appendHashCode(target);<a name="line.184"></a>
+<span class="sourceLineNo">185</span>                this.appendChar('[');<a name="line.185"></a>
+<span class="sourceLineNo">186</span>                this.append( this.toString((char[]) this.target) );<a name="line.186"></a>
+<span class="sourceLineNo">187</span>                this.appendChar(']');<a name="line.187"></a>
+<span class="sourceLineNo">188</span>            }<a name="line.188"></a>
+<span class="sourceLineNo">189</span>            else if( this.target instanceof byte[] )<a name="line.189"></a>
+<span class="sourceLineNo">190</span>            {<a name="line.190"></a>
+<span class="sourceLineNo">191</span>                this.appendClassName(target);<a name="line.191"></a>
+<span class="sourceLineNo">192</span>                this.appendHashCode(target);<a name="line.192"></a>
+<span class="sourceLineNo">193</span>                this.appendChar('[');<a name="line.193"></a>
+<span class="sourceLineNo">194</span>                this.append( this.toString((byte[]) this.target) );<a name="line.194"></a>
+<span class="sourceLineNo">195</span>                this.appendChar(']');<a name="line.195"></a>
+<span class="sourceLineNo">196</span>            }<a name="line.196"></a>
+<span class="sourceLineNo">197</span>            else if( this.target instanceof short[] )<a name="line.197"></a>
+<span class="sourceLineNo">198</span>            {<a name="line.198"></a>
+<span class="sourceLineNo">199</span>                this.appendClassName(target);<a name="line.199"></a>
+<span class="sourceLineNo">200</span>                this.appendHashCode(target);<a name="line.200"></a>
+<span class="sourceLineNo">201</span>                this.appendChar('[');<a name="line.201"></a>
+<span class="sourceLineNo">202</span>                this.append( this.toString((short[]) this.target) );<a name="line.202"></a>
+<span class="sourceLineNo">203</span>                this.appendChar(']');<a name="line.203"></a>
+<span class="sourceLineNo">204</span>            }<a name="line.204"></a>
+<span class="sourceLineNo">205</span>            else if( this.target instanceof int[] )<a name="line.205"></a>
+<span class="sourceLineNo">206</span>            {<a name="line.206"></a>
+<span class="sourceLineNo">207</span>                this.appendClassName(target);<a name="line.207"></a>
+<span class="sourceLineNo">208</span>                this.appendHashCode(target);<a name="line.208"></a>
+<span class="sourceLineNo">209</span>                this.appendChar('[');<a name="line.209"></a>
+<span class="sourceLineNo">210</span>                this.append( this.toString((int[]) this.target) );<a name="line.210"></a>
+<span class="sourceLineNo">211</span>                this.appendChar(']');<a name="line.211"></a>
+<span class="sourceLineNo">212</span>            }<a name="line.212"></a>
+<span class="sourceLineNo">213</span>            else if( this.target instanceof long[] )<a name="line.213"></a>
+<span class="sourceLineNo">214</span>            {<a name="line.214"></a>
+<span class="sourceLineNo">215</span>                this.appendClassName(target);<a name="line.215"></a>
+<span class="sourceLineNo">216</span>                this.appendHashCode(target);<a name="line.216"></a>
+<span class="sourceLineNo">217</span>                this.appendChar('[');<a name="line.217"></a>
+<span class="sourceLineNo">218</span>                this.append( this.toString((long[]) this.target) );<a name="line.218"></a>
+<span class="sourceLineNo">219</span>                this.appendChar(']');<a name="line.219"></a>
+<span class="sourceLineNo">220</span>            }<a name="line.220"></a>
+<span class="sourceLineNo">221</span>            else if( this.target instanceof float[] )<a name="line.221"></a>
+<span class="sourceLineNo">222</span>            {<a name="line.222"></a>
+<span class="sourceLineNo">223</span>                this.appendClassName(target);<a name="line.223"></a>
+<span class="sourceLineNo">224</span>                this.appendHashCode(target);<a name="line.224"></a>
+<span class="sourceLineNo">225</span>                this.appendChar('[');<a name="line.225"></a>
+<span class="sourceLineNo">226</span>                this.append( this.toString((float[]) this.target) );<a name="line.226"></a>
+<span class="sourceLineNo">227</span>                this.appendChar(']');<a name="line.227"></a>
+<span class="sourceLineNo">228</span>            }<a name="line.228"></a>
+<span class="sourceLineNo">229</span>            else if( this.target instanceof double[] )<a name="line.229"></a>
+<span class="sourceLineNo">230</span>            {<a name="line.230"></a>
+<span class="sourceLineNo">231</span>                this.appendClassName(target);<a name="line.231"></a>
+<span class="sourceLineNo">232</span>                this.appendHashCode(target);<a name="line.232"></a>
+<span class="sourceLineNo">233</span>                this.appendChar('[');<a name="line.233"></a>
+<span class="sourceLineNo">234</span>                this.append( this.toString((double[]) this.target) );<a name="line.234"></a>
+<span class="sourceLineNo">235</span>                this.appendChar(']');<a name="line.235"></a>
+<span class="sourceLineNo">236</span>            }<a name="line.236"></a>
+<span class="sourceLineNo">237</span>            else if( this.target instanceof String )<a name="line.237"></a>
+<span class="sourceLineNo">238</span>            {<a name="line.238"></a>
+<span class="sourceLineNo">239</span>                this.appendClassName(target);<a name="line.239"></a>
+<span class="sourceLineNo">240</span>                this.appendHashCode(target);<a name="line.240"></a>
+<span class="sourceLineNo">241</span>                this.appendChar('[');<a name="line.241"></a>
+<span class="sourceLineNo">242</span>                this.append( this.toString((String) this.target) );<a name="line.242"></a>
+<span class="sourceLineNo">243</span>                this.appendChar(']');<a name="line.243"></a>
+<span class="sourceLineNo">244</span>            }<a name="line.244"></a>
+<span class="sourceLineNo">245</span>            else if( this.target instanceof Collection )<a name="line.245"></a>
+<span class="sourceLineNo">246</span>            {<a name="line.246"></a>
+<span class="sourceLineNo">247</span>                this.appendClassName(target);<a name="line.247"></a>
+<span class="sourceLineNo">248</span>                this.appendHashCode(target);<a name="line.248"></a>
+<span class="sourceLineNo">249</span>                this.appendChar('[');<a name="line.249"></a>
+<span class="sourceLineNo">250</span>                this.append( this.toString((Collection&lt;?&gt;) this.target) );<a name="line.250"></a>
+<span class="sourceLineNo">251</span>                this.appendChar(']');<a name="line.251"></a>
+<span class="sourceLineNo">252</span>            }<a name="line.252"></a>
+<span class="sourceLineNo">253</span>            else if( this.target instanceof Dictionary )<a name="line.253"></a>
+<span class="sourceLineNo">254</span>            {<a name="line.254"></a>
+<span class="sourceLineNo">255</span>                this.appendClassName(target);<a name="line.255"></a>
+<span class="sourceLineNo">256</span>                this.appendHashCode(target);<a name="line.256"></a>
+<span class="sourceLineNo">257</span>                this.appendChar('[');<a name="line.257"></a>
+<span class="sourceLineNo">258</span>                this.append( this.toString((Dictionary&lt;?, ?&gt;) this.target) );<a name="line.258"></a>
+<span class="sourceLineNo">259</span>                this.appendChar(']');<a name="line.259"></a>
+<span class="sourceLineNo">260</span>            }<a name="line.260"></a>
+<span class="sourceLineNo">261</span>            else if( this.target instanceof Throwable )<a name="line.261"></a>
+<span class="sourceLineNo">262</span>            {<a name="line.262"></a>
+<span class="sourceLineNo">263</span>                this.append( this.toString((Throwable) this.target) );<a name="line.263"></a>
+<span class="sourceLineNo">264</span>            }<a name="line.264"></a>
+<span class="sourceLineNo">265</span>            else<a name="line.265"></a>
+<span class="sourceLineNo">266</span>            {<a name="line.266"></a>
+<span class="sourceLineNo">267</span>                this.append( this.toString( (Object) this.target ) );<a name="line.267"></a>
+<span class="sourceLineNo">268</span>            }<a name="line.268"></a>
+<span class="sourceLineNo">269</span>        }<a name="line.269"></a>
+<span class="sourceLineNo">270</span>        catch (Throwable t)<a name="line.270"></a>
+<span class="sourceLineNo">271</span>        {<a name="line.271"></a>
+<span class="sourceLineNo">272</span>            t.printStackTrace();<a name="line.272"></a>
+<span class="sourceLineNo">273</span>            return "&lt;" + t + "&gt;";<a name="line.273"></a>
+<span class="sourceLineNo">274</span>        }<a name="line.274"></a>
+<span class="sourceLineNo">275</span><a name="line.275"></a>
+<span class="sourceLineNo">276</span>        return this.buffer.toString();<a name="line.276"></a>
+<span class="sourceLineNo">277</span>    }<a name="line.277"></a>
+<span class="sourceLineNo">278</span><a name="line.278"></a>
+<span class="sourceLineNo">279</span><a name="line.279"></a>
+<span class="sourceLineNo">280</span>    /**<a name="line.280"></a>
+<span class="sourceLineNo">281</span>     * Create a String representation for a Throwable.<a name="line.281"></a>
+<span class="sourceLineNo">282</span>     *<a name="line.282"></a>
+<span class="sourceLineNo">283</span>     * @param throwable the Throwable<a name="line.283"></a>
+<span class="sourceLineNo">284</span>     * @return the string representation<a name="line.284"></a>
+<span class="sourceLineNo">285</span>     */<a name="line.285"></a>
+<span class="sourceLineNo">286</span>    protected String toString(Throwable throwable)<a name="line.286"></a>
+<span class="sourceLineNo">287</span>    {<a name="line.287"></a>
+<span class="sourceLineNo">288</span>        String result = null;<a name="line.288"></a>
+<span class="sourceLineNo">289</span><a name="line.289"></a>
+<span class="sourceLineNo">290</span>        if( throwable == null )<a name="line.290"></a>
+<span class="sourceLineNo">291</span>        {<a name="line.291"></a>
+<span class="sourceLineNo">292</span>            result = NULL_STRING;<a name="line.292"></a>
+<span class="sourceLineNo">293</span>        }<a name="line.293"></a>
+<span class="sourceLineNo">294</span>        else<a name="line.294"></a>
+<span class="sourceLineNo">295</span>        {<a name="line.295"></a>
+<span class="sourceLineNo">296</span>            result = this.getStackTrace(throwable);<a name="line.296"></a>
+<span class="sourceLineNo">297</span>        }<a name="line.297"></a>
+<span class="sourceLineNo">298</span><a name="line.298"></a>
+<span class="sourceLineNo">299</span>        return result;<a name="line.299"></a>
+<span class="sourceLineNo">300</span>    }<a name="line.300"></a>
+<span class="sourceLineNo">301</span><a name="line.301"></a>
+<span class="sourceLineNo">302</span>    /**<a name="line.302"></a>
+<span class="sourceLineNo">303</span>     * Create a string representation of an object array.<a name="line.303"></a>
+<span class="sourceLineNo">304</span>     *<a name="line.304"></a>
+<span class="sourceLineNo">305</span>     * @param array the array to print<a name="line.305"></a>
+<span class="sourceLineNo">306</span>     * @return the result<a name="line.306"></a>
+<span class="sourceLineNo">307</span>     */<a name="line.307"></a>
+<span class="sourceLineNo">308</span>    protected String toString(Object[] array)<a name="line.308"></a>
+<span class="sourceLineNo">309</span>    {<a name="line.309"></a>
+<span class="sourceLineNo">310</span>        StringBuilder temp = new StringBuilder();<a name="line.310"></a>
+<span class="sourceLineNo">311</span>        ArgumentToStringBuilderImpl toStringBuilder = null;<a name="line.311"></a>
+<span class="sourceLineNo">312</span><a name="line.312"></a>
+<span class="sourceLineNo">313</span>        if( array == null )<a name="line.313"></a>
+<span class="sourceLineNo">314</span>        {<a name="line.314"></a>
+<span class="sourceLineNo">315</span>            return NULL_STRING;<a name="line.315"></a>
+<span class="sourceLineNo">316</span>        }<a name="line.316"></a>
+<span class="sourceLineNo">317</span>        else<a name="line.317"></a>
+<span class="sourceLineNo">318</span>        {<a name="line.318"></a>
+<span class="sourceLineNo">319</span>            temp.append(LENGTH_STRING);<a name="line.319"></a>
+<span class="sourceLineNo">320</span>            temp.append(array.length);<a name="line.320"></a>
+<span class="sourceLineNo">321</span>            temp.append(',');<a name="line.321"></a>
+<span class="sourceLineNo">322</span><a name="line.322"></a>
+<span class="sourceLineNo">323</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.323"></a>
+<span class="sourceLineNo">324</span>            {<a name="line.324"></a>
+<span class="sourceLineNo">325</span>                temp.append('[');<a name="line.325"></a>
+<span class="sourceLineNo">326</span>                temp.append(i);<a name="line.326"></a>
+<span class="sourceLineNo">327</span>                temp.append(']');<a name="line.327"></a>
+<span class="sourceLineNo">328</span>                temp.append('=');<a name="line.328"></a>
+<span class="sourceLineNo">329</span>                toStringBuilder = new ArgumentToStringBuilderImpl(array[i],this.getMaxArgLength(),this.getMode());<a name="line.329"></a>
+<span class="sourceLineNo">330</span>                temp.append(toStringBuilder.toString());<a name="line.330"></a>
+<span class="sourceLineNo">331</span><a name="line.331"></a>
+<span class="sourceLineNo">332</span>                if( i&lt;array.length-1)<a name="line.332"></a>
+<span class="sourceLineNo">333</span>                {<a name="line.333"></a>
+<span class="sourceLineNo">334</span>                    temp.append(',');<a name="line.334"></a>
+<span class="sourceLineNo">335</span>                }<a name="line.335"></a>
+<span class="sourceLineNo">336</span><a name="line.336"></a>
+<span class="sourceLineNo">337</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.337"></a>
+<span class="sourceLineNo">338</span>                {<a name="line.338"></a>
+<span class="sourceLineNo">339</span>                    break;<a name="line.339"></a>
+<span class="sourceLineNo">340</span>                }<a name="line.340"></a>
+<span class="sourceLineNo">341</span>            }<a name="line.341"></a>
+<span class="sourceLineNo">342</span>        }<a name="line.342"></a>
+<span class="sourceLineNo">343</span><a name="line.343"></a>
+<span class="sourceLineNo">344</span>        return temp.toString();<a name="line.344"></a>
+<span class="sourceLineNo">345</span>    }<a name="line.345"></a>
+<span class="sourceLineNo">346</span><a name="line.346"></a>
+<span class="sourceLineNo">347</span>    /**<a name="line.347"></a>
+<span class="sourceLineNo">348</span>     * Create a string representation of a boolean[].<a name="line.348"></a>
+<span class="sourceLineNo">349</span>     *<a name="line.349"></a>
+<span class="sourceLineNo">350</span>     * @param array the array to print<a name="line.350"></a>
+<span class="sourceLineNo">351</span>     * @return the result<a name="line.351"></a>
+<span class="sourceLineNo">352</span>     */<a name="line.352"></a>
+<span class="sourceLineNo">353</span>    protected String toString(boolean[] array)<a name="line.353"></a>
+<span class="sourceLineNo">354</span>    {<a name="line.354"></a>
+<span class="sourceLineNo">355</span>        StringBuilder temp = new StringBuilder();<a name="line.355"></a>
+<span class="sourceLineNo">356</span><a name="line.356"></a>
+<span class="sourceLineNo">357</span>        if( array == null )<a name="line.357"></a>
+<span class="sourceLineNo">358</span>        {<a name="line.358"></a>
+<span class="sourceLineNo">359</span>            return NULL_STRING;<a name="line.359"></a>
+<span class="sourceLineNo">360</span>        }<a name="line.360"></a>
+<span class="sourceLineNo">361</span>        else<a name="line.361"></a>
+<span class="sourceLineNo">362</span>        {<a name="line.362"></a>
+<span class="sourceLineNo">363</span>            temp.append(LENGTH_STRING);<a name="line.363"></a>
+<span class="sourceLineNo">364</span>            temp.append(array.length);<a name="line.364"></a>
+<span class="sourceLineNo">365</span>            temp.append(',');<a name="line.365"></a>
+<span class="sourceLineNo">366</span>            temp.append(VALUE_STRING);<a name="line.366"></a>
+<span class="sourceLineNo">367</span><a name="line.367"></a>
+<span class="sourceLineNo">368</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.368"></a>
+<span class="sourceLineNo">369</span>            {<a name="line.369"></a>
+<span class="sourceLineNo">370</span>                temp.append(array[i]);<a name="line.370"></a>
+<span class="sourceLineNo">371</span>                if( i&lt;array.length-1)<a name="line.371"></a>
+<span class="sourceLineNo">372</span>                {<a name="line.372"></a>
+<span class="sourceLineNo">373</span>                    temp.append(',');<a name="line.373"></a>
+<span class="sourceLineNo">374</span>                }<a name="line.374"></a>
+<span class="sourceLineNo">375</span><a name="line.375"></a>
+<span class="sourceLineNo">376</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.376"></a>
+<span class="sourceLineNo">377</span>                {<a name="line.377"></a>
+<span class="sourceLineNo">378</span>                    break;<a name="line.378"></a>
+<span class="sourceLineNo">379</span>                }<a name="line.379"></a>
+<span class="sourceLineNo">380</span>            }<a name="line.380"></a>
+<span class="sourceLineNo">381</span>        }<a name="line.381"></a>
+<span class="sourceLineNo">382</span><a name="line.382"></a>
+<span class="sourceLineNo">383</span>        return temp.toString();<a name="line.383"></a>
+<span class="sourceLineNo">384</span>    }<a name="line.384"></a>
+<span class="sourceLineNo">385</span><a name="line.385"></a>
+<span class="sourceLineNo">386</span>    /**<a name="line.386"></a>
+<span class="sourceLineNo">387</span>     * Create a string representation of a char[].<a name="line.387"></a>
+<span class="sourceLineNo">388</span>     *<a name="line.388"></a>
+<span class="sourceLineNo">389</span>     * @param array the array to print<a name="line.389"></a>
+<span class="sourceLineNo">390</span>     * @return the result<a name="line.390"></a>
+<span class="sourceLineNo">391</span>     */<a name="line.391"></a>
+<span class="sourceLineNo">392</span>    protected String toString(char[] array)<a name="line.392"></a>
+<span class="sourceLineNo">393</span>    {<a name="line.393"></a>
+<span class="sourceLineNo">394</span>        StringBuilder temp = new StringBuilder();<a name="line.394"></a>
+<span class="sourceLineNo">395</span><a name="line.395"></a>
+<span class="sourceLineNo">396</span>        if( array == null )<a name="line.396"></a>
+<span class="sourceLineNo">397</span>        {<a name="line.397"></a>
+<span class="sourceLineNo">398</span>            return NULL_STRING;<a name="line.398"></a>
+<span class="sourceLineNo">399</span>        }<a name="line.399"></a>
+<span class="sourceLineNo">400</span>        else<a name="line.400"></a>
+<span class="sourceLineNo">401</span>        {<a name="line.401"></a>
+<span class="sourceLineNo">402</span>            temp.append(LENGTH_STRING);<a name="line.402"></a>
+<span class="sourceLineNo">403</span>            temp.append(array.length);<a name="line.403"></a>
+<span class="sourceLineNo">404</span>            temp.append(',');<a name="line.404"></a>
+<span class="sourceLineNo">405</span>            temp.append(VALUE_STRING);<a name="line.405"></a>
+<span class="sourceLineNo">406</span><a name="line.406"></a>
+<span class="sourceLineNo">407</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.407"></a>
+<span class="sourceLineNo">408</span>            {<a name="line.408"></a>
+<span class="sourceLineNo">409</span>                temp.append(array[i]);<a name="line.409"></a>
+<span class="sourceLineNo">410</span>                if( i&lt;array.length-1)<a name="line.410"></a>
+<span class="sourceLineNo">411</span>                {<a name="line.411"></a>
+<span class="sourceLineNo">412</span>                    temp.append('.');<a name="line.412"></a>
+<span class="sourceLineNo">413</span>                }<a name="line.413"></a>
+<span class="sourceLineNo">414</span><a name="line.414"></a>
+<span class="sourceLineNo">415</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.415"></a>
+<span class="sourceLineNo">416</span>                {<a name="line.416"></a>
+<span class="sourceLineNo">417</span>                    break;<a name="line.417"></a>
+<span class="sourceLineNo">418</span>                }<a name="line.418"></a>
+<span class="sourceLineNo">419</span>            }<a name="line.419"></a>
+<span class="sourceLineNo">420</span>        }<a name="line.420"></a>
+<span class="sourceLineNo">421</span><a name="line.421"></a>
+<span class="sourceLineNo">422</span>        return temp.toString();<a name="line.422"></a>
+<span class="sourceLineNo">423</span>    }<a name="line.423"></a>
+<span class="sourceLineNo">424</span><a name="line.424"></a>
+<span class="sourceLineNo">425</span>    /**<a name="line.425"></a>
+<span class="sourceLineNo">426</span>     * Create a string representation of a short[].<a name="line.426"></a>
+<span class="sourceLineNo">427</span>     *<a name="line.427"></a>
+<span class="sourceLineNo">428</span>     * @param array the array to print<a name="line.428"></a>
+<span class="sourceLineNo">429</span>     * @return the result<a name="line.429"></a>
+<span class="sourceLineNo">430</span>     */<a name="line.430"></a>
+<span class="sourceLineNo">431</span>    protected String toString(short[] array)<a name="line.431"></a>
+<span class="sourceLineNo">432</span>    {<a name="line.432"></a>
+<span class="sourceLineNo">433</span>        StringBuilder temp = new StringBuilder();<a name="line.433"></a>
+<span class="sourceLineNo">434</span><a name="line.434"></a>
+<span class="sourceLineNo">435</span>        if( array == null )<a name="line.435"></a>
+<span class="sourceLineNo">436</span>        {<a name="line.436"></a>
+<span class="sourceLineNo">437</span>            return NULL_STRING;<a name="line.437"></a>
+<span class="sourceLineNo">438</span>        }<a name="line.438"></a>
+<span class="sourceLineNo">439</span>        else<a name="line.439"></a>
+<span class="sourceLineNo">440</span>        {<a name="line.440"></a>
+<span class="sourceLineNo">441</span>            temp.append(LENGTH_STRING);<a name="line.441"></a>
+<span class="sourceLineNo">442</span>            temp.append(array.length);<a name="line.442"></a>
+<span class="sourceLineNo">443</span>            temp.append(',');<a name="line.443"></a>
+<span class="sourceLineNo">444</span>            temp.append(VALUE_STRING);<a name="line.444"></a>
+<span class="sourceLineNo">445</span><a name="line.445"></a>
+<span class="sourceLineNo">446</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.446"></a>
+<span class="sourceLineNo">447</span>            {<a name="line.447"></a>
+<span class="sourceLineNo">448</span>                temp.append(array[i]);<a name="line.448"></a>
+<span class="sourceLineNo">449</span>                if( i&lt;array.length-1)<a name="line.449"></a>
+<span class="sourceLineNo">450</span>                {<a name="line.450"></a>
+<span class="sourceLineNo">451</span>                    temp.append(',');<a name="line.451"></a>
+<span class="sourceLineNo">452</span>                }<a name="line.452"></a>
+<span class="sourceLineNo">453</span><a name="line.453"></a>
+<span class="sourceLineNo">454</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.454"></a>
+<span class="sourceLineNo">455</span>                {<a name="line.455"></a>
+<span class="sourceLineNo">456</span>                    break;<a name="line.456"></a>
+<span class="sourceLineNo">457</span>                }<a name="line.457"></a>
+<span class="sourceLineNo">458</span>            }<a name="line.458"></a>
+<span class="sourceLineNo">459</span>        }<a name="line.459"></a>
+<span class="sourceLineNo">460</span><a name="line.460"></a>
+<span class="sourceLineNo">461</span>        return temp.toString();<a name="line.461"></a>
+<span class="sourceLineNo">462</span>    }<a name="line.462"></a>
+<span class="sourceLineNo">463</span><a name="line.463"></a>
+<span class="sourceLineNo">464</span>    /**<a name="line.464"></a>
+<span class="sourceLineNo">465</span>     * Create a string representation of a int[].<a name="line.465"></a>
+<span class="sourceLineNo">466</span>     *<a name="line.466"></a>
+<span class="sourceLineNo">467</span>     * @param array the array to print<a name="line.467"></a>
+<span class="sourceLineNo">468</span>     * @return the result<a name="line.468"></a>
+<span class="sourceLineNo">469</span>     */<a name="line.469"></a>
+<span class="sourceLineNo">470</span>    protected String toString(int[] array)<a name="line.470"></a>
+<span class="sourceLineNo">471</span>    {<a name="line.471"></a>
+<span class="sourceLineNo">472</span>        StringBuilder temp = new StringBuilder();<a name="line.472"></a>
+<span class="sourceLineNo">473</span><a name="line.473"></a>
+<span class="sourceLineNo">474</span>        if( array == null )<a name="line.474"></a>
+<span class="sourceLineNo">475</span>        {<a name="line.475"></a>
+<span class="sourceLineNo">476</span>            return NULL_STRING;<a name="line.476"></a>
+<span class="sourceLineNo">477</span>        }<a name="line.477"></a>
+<span class="sourceLineNo">478</span>        else<a name="line.478"></a>
+<span class="sourceLineNo">479</span>        {<a name="line.479"></a>
+<span class="sourceLineNo">480</span>            temp.append(LENGTH_STRING);<a name="line.480"></a>
+<span class="sourceLineNo">481</span>            temp.append(array.length);<a name="line.481"></a>
+<span class="sourceLineNo">482</span>            temp.append(',');<a name="line.482"></a>
+<span class="sourceLineNo">483</span>            temp.append(VALUE_STRING);<a name="line.483"></a>
+<span class="sourceLineNo">484</span><a name="line.484"></a>
+<span class="sourceLineNo">485</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.485"></a>
+<span class="sourceLineNo">486</span>            {<a name="line.486"></a>
+<span class="sourceLineNo">487</span>                temp.append(array[i]);<a name="line.487"></a>
+<span class="sourceLineNo">488</span>                if( i&lt;array.length-1)<a name="line.488"></a>
+<span class="sourceLineNo">489</span>                {<a name="line.489"></a>
+<span class="sourceLineNo">490</span>                    temp.append(',');<a name="line.490"></a>
+<span class="sourceLineNo">491</span>                }<a name="line.491"></a>
+<span class="sourceLineNo">492</span><a name="line.492"></a>
+<span class="sourceLineNo">493</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.493"></a>
+<span class="sourceLineNo">494</span>                {<a name="line.494"></a>
+<span class="sourceLineNo">495</span>                    break;<a name="line.495"></a>
+<span class="sourceLineNo">496</span>                }<a name="line.496"></a>
+<span class="sourceLineNo">497</span>            }<a name="line.497"></a>
+<span class="sourceLineNo">498</span>        }<a name="line.498"></a>
+<span class="sourceLineNo">499</span><a name="line.499"></a>
+<span class="sourceLineNo">500</span>        return temp.toString();<a name="line.500"></a>
+<span class="sourceLineNo">501</span>    }<a name="line.501"></a>
+<span class="sourceLineNo">502</span><a name="line.502"></a>
+<span class="sourceLineNo">503</span>    /**<a name="line.503"></a>
+<span class="sourceLineNo">504</span>     * Create a string representation of a char[].<a name="line.504"></a>
+<span class="sourceLineNo">505</span>     *<a name="line.505"></a>
+<span class="sourceLineNo">506</span>     * @param array the array to print<a name="line.506"></a>
+<span class="sourceLineNo">507</span>     * @return the result<a name="line.507"></a>
+<span class="sourceLineNo">508</span>     */<a name="line.508"></a>
+<span class="sourceLineNo">509</span>    protected String toString(long[] array)<a name="line.509"></a>
+<span class="sourceLineNo">510</span>    {<a name="line.510"></a>
+<span class="sourceLineNo">511</span>        StringBuilder temp = new StringBuilder();<a name="line.511"></a>
+<span class="sourceLineNo">512</span><a name="line.512"></a>
+<span class="sourceLineNo">513</span>        if( array == null )<a name="line.513"></a>
+<span class="sourceLineNo">514</span>        {<a name="line.514"></a>
+<span class="sourceLineNo">515</span>            return NULL_STRING;<a name="line.515"></a>
+<span class="sourceLineNo">516</span>        }<a name="line.516"></a>
+<span class="sourceLineNo">517</span>        else<a name="line.517"></a>
+<span class="sourceLineNo">518</span>        {<a name="line.518"></a>
+<span class="sourceLineNo">519</span>            temp.append(LENGTH_STRING);<a name="line.519"></a>
+<span class="sourceLineNo">520</span>            temp.append(array.length);<a name="line.520"></a>
+<span class="sourceLineNo">521</span>            temp.append(',');<a name="line.521"></a>
+<span class="sourceLineNo">522</span>            temp.append(VALUE_STRING);<a name="line.522"></a>
+<span class="sourceLineNo">523</span><a name="line.523"></a>
+<span class="sourceLineNo">524</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.524"></a>
+<span class="sourceLineNo">525</span>            {<a name="line.525"></a>
+<span class="sourceLineNo">526</span>                temp.append(array[i]);<a name="line.526"></a>
+<span class="sourceLineNo">527</span>                if( i&lt;array.length-1)<a name="line.527"></a>
+<span class="sourceLineNo">528</span>                {<a name="line.528"></a>
+<span class="sourceLineNo">529</span>                    temp.append(',');<a name="line.529"></a>
+<span class="sourceLineNo">530</span>                }<a name="line.530"></a>
+<span class="sourceLineNo">531</span><a name="line.531"></a>
+<span class="sourceLineNo">532</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.532"></a>
+<span class="sourceLineNo">533</span>                {<a name="line.533"></a>
+<span class="sourceLineNo">534</span>                    break;<a name="line.534"></a>
+<span class="sourceLineNo">535</span>                }<a name="line.535"></a>
+<span class="sourceLineNo">536</span>            }<a name="line.536"></a>
+<span class="sourceLineNo">537</span>        }<a name="line.537"></a>
+<span class="sourceLineNo">538</span><a name="line.538"></a>
+<span class="sourceLineNo">539</span>        return temp.toString();<a name="line.539"></a>
+<span class="sourceLineNo">540</span>    }<a name="line.540"></a>
+<span class="sourceLineNo">541</span><a name="line.541"></a>
+<span class="sourceLineNo">542</span>    /**<a name="line.542"></a>
+<span class="sourceLineNo">543</span>     * Create a string representation of a float[].<a name="line.543"></a>
+<span class="sourceLineNo">544</span>     *<a name="line.544"></a>
+<span class="sourceLineNo">545</span>     * @param array the array to print<a name="line.545"></a>
+<span class="sourceLineNo">546</span>     * @return the result<a name="line.546"></a>
+<span class="sourceLineNo">547</span>     */<a name="line.547"></a>
+<span class="sourceLineNo">548</span>    protected String toString(float[] array)<a name="line.548"></a>
+<span class="sourceLineNo">549</span>    {<a name="line.549"></a>
+<span class="sourceLineNo">550</span>        StringBuilder temp = new StringBuilder();<a name="line.550"></a>
+<span class="sourceLineNo">551</span><a name="line.551"></a>
+<span class="sourceLineNo">552</span>        if( array == null )<a name="line.552"></a>
+<span class="sourceLineNo">553</span>        {<a name="line.553"></a>
+<span class="sourceLineNo">554</span>            return NULL_STRING;<a name="line.554"></a>
+<span class="sourceLineNo">555</span>        }<a name="line.555"></a>
+<span class="sourceLineNo">556</span>        else<a name="line.556"></a>
+<span class="sourceLineNo">557</span>        {<a name="line.557"></a>
+<span class="sourceLineNo">558</span>            temp.append(LENGTH_STRING);<a name="line.558"></a>
+<span class="sourceLineNo">559</span>            temp.append(array.length);<a name="line.559"></a>
+<span class="sourceLineNo">560</span>            temp.append(',');<a name="line.560"></a>
+<span class="sourceLineNo">561</span>            temp.append(VALUE_STRING);<a name="line.561"></a>
+<span class="sourceLineNo">562</span><a name="line.562"></a>
+<span class="sourceLineNo">563</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.563"></a>
+<span class="sourceLineNo">564</span>            {<a name="line.564"></a>
+<span class="sourceLineNo">565</span>                temp.append(array[i]);<a name="line.565"></a>
+<span class="sourceLineNo">566</span>                if( i&lt;array.length-1)<a name="line.566"></a>
+<span class="sourceLineNo">567</span>                {<a name="line.567"></a>
+<span class="sourceLineNo">568</span>                    temp.append(',');<a name="line.568"></a>
+<span class="sourceLineNo">569</span>                }<a name="line.569"></a>
+<span class="sourceLineNo">570</span><a name="line.570"></a>
+<span class="sourceLineNo">571</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.571"></a>
+<span class="sourceLineNo">572</span>                {<a name="line.572"></a>
+<span class="sourceLineNo">573</span>                    break;<a name="line.573"></a>
+<span class="sourceLineNo">574</span>                }<a name="line.574"></a>
+<span class="sourceLineNo">575</span>            }<a name="line.575"></a>
+<span class="sourceLineNo">576</span>        }<a name="line.576"></a>
+<span class="sourceLineNo">577</span><a name="line.577"></a>
+<span class="sourceLineNo">578</span>        return temp.toString();<a name="line.578"></a>
+<span class="sourceLineNo">579</span>    }<a name="line.579"></a>
+<span class="sourceLineNo">580</span><a name="line.580"></a>
+<span class="sourceLineNo">581</span>    /**<a name="line.581"></a>
+<span class="sourceLineNo">582</span>     * Create a string representation of a double[].<a name="line.582"></a>
+<span class="sourceLineNo">583</span>     *<a name="line.583"></a>
+<span class="sourceLineNo">584</span>     * @param array the array to print<a name="line.584"></a>
+<span class="sourceLineNo">585</span>     * @return the result<a name="line.585"></a>
+<span class="sourceLineNo">586</span>     */<a name="line.586"></a>
+<span class="sourceLineNo">587</span>    protected String toString(double[] array)<a name="line.587"></a>
+<span class="sourceLineNo">588</span>    {<a name="line.588"></a>
+<span class="sourceLineNo">589</span>        StringBuilder temp = new StringBuilder();<a name="line.589"></a>
+<span class="sourceLineNo">590</span><a name="line.590"></a>
+<span class="sourceLineNo">591</span>        if( array == null )<a name="line.591"></a>
+<span class="sourceLineNo">592</span>        {<a name="line.592"></a>
+<span class="sourceLineNo">593</span>            return NULL_STRING;<a name="line.593"></a>
+<span class="sourceLineNo">594</span>        }<a name="line.594"></a>
+<span class="sourceLineNo">595</span>        else<a name="line.595"></a>
+<span class="sourceLineNo">596</span>        {<a name="line.596"></a>
+<span class="sourceLineNo">597</span>            temp.append(LENGTH_STRING);<a name="line.597"></a>
+<span class="sourceLineNo">598</span>            temp.append(array.length);<a name="line.598"></a>
+<span class="sourceLineNo">599</span>            temp.append(',');<a name="line.599"></a>
+<span class="sourceLineNo">600</span>            temp.append(VALUE_STRING);<a name="line.600"></a>
+<span class="sourceLineNo">601</span><a name="line.601"></a>
+<span class="sourceLineNo">602</span>            for( int i=0; i&lt;array.length; i++ )<a name="line.602"></a>
+<span class="sourceLineNo">603</span>            {<a name="line.603"></a>
+<span class="sourceLineNo">604</span>                temp.append(array[i]);<a name="line.604"></a>
+<span class="sourceLineNo">605</span>                if( i&lt;array.length-1)<a name="line.605"></a>
+<span class="sourceLineNo">606</span>                {<a name="line.606"></a>
+<span class="sourceLineNo">607</span>                    temp.append(',');<a name="line.607"></a>
+<span class="sourceLineNo">608</span>                }<a name="line.608"></a>
+<span class="sourceLineNo">609</span><a name="line.609"></a>
+<span class="sourceLineNo">610</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.610"></a>
+<span class="sourceLineNo">611</span>                {<a name="line.611"></a>
+<span class="sourceLineNo">612</span>                    break;<a name="line.612"></a>
+<span class="sourceLineNo">613</span>                }<a name="line.613"></a>
+<span class="sourceLineNo">614</span>            }<a name="line.614"></a>
+<span class="sourceLineNo">615</span>        }<a name="line.615"></a>
+<span class="sourceLineNo">616</span><a name="line.616"></a>
+<span class="sourceLineNo">617</span>        return temp.toString();<a name="line.617"></a>
+<span class="sourceLineNo">618</span>    }<a name="line.618"></a>
+<span class="sourceLineNo">619</span><a name="line.619"></a>
+<span class="sourceLineNo">620</span>    /**<a name="line.620"></a>
+<span class="sourceLineNo">621</span>     * Create a string representation of a String.<a name="line.621"></a>
+<span class="sourceLineNo">622</span>     *<a name="line.622"></a>
+<span class="sourceLineNo">623</span>     * @param string the string to print<a name="line.623"></a>
+<span class="sourceLineNo">624</span>     * @return the result<a name="line.624"></a>
+<span class="sourceLineNo">625</span>     */<a name="line.625"></a>
+<span class="sourceLineNo">626</span>    protected String toString(String string)<a name="line.626"></a>
+<span class="sourceLineNo">627</span>    {<a name="line.627"></a>
+<span class="sourceLineNo">628</span>        StringBuilder temp = new StringBuilder();<a name="line.628"></a>
+<span class="sourceLineNo">629</span><a name="line.629"></a>
+<span class="sourceLineNo">630</span>        if( string == null )<a name="line.630"></a>
+<span class="sourceLineNo">631</span>        {<a name="line.631"></a>
+<span class="sourceLineNo">632</span>            return NULL_STRING;<a name="line.632"></a>
+<span class="sourceLineNo">633</span>        }<a name="line.633"></a>
+<span class="sourceLineNo">634</span>        else<a name="line.634"></a>
+<span class="sourceLineNo">635</span>        {<a name="line.635"></a>
+<span class="sourceLineNo">636</span>            temp.append(LENGTH_STRING);<a name="line.636"></a>
+<span class="sourceLineNo">637</span>            temp.append(string.length());<a name="line.637"></a>
+<span class="sourceLineNo">638</span>            temp.append(',');<a name="line.638"></a>
+<span class="sourceLineNo">639</span>            temp.append(VALUE_STRING);<a name="line.639"></a>
+<span class="sourceLineNo">640</span>            temp.append(string);<a name="line.640"></a>
+<span class="sourceLineNo">641</span>        }<a name="line.641"></a>
+<span class="sourceLineNo">642</span><a name="line.642"></a>
+<span class="sourceLineNo">643</span>        return temp.toString();<a name="line.643"></a>
+<span class="sourceLineNo">644</span>    }<a name="line.644"></a>
+<span class="sourceLineNo">645</span><a name="line.645"></a>
+<span class="sourceLineNo">646</span>    /**<a name="line.646"></a>
+<span class="sourceLineNo">647</span>     * Create a string representation of a char[].<a name="line.647"></a>
+<span class="sourceLineNo">648</span>     *<a name="line.648"></a>
+<span class="sourceLineNo">649</span>     * @param array the array to print<a name="line.649"></a>
+<span class="sourceLineNo">650</span>     * @return the result<a name="line.650"></a>
+<span class="sourceLineNo">651</span>     */<a name="line.651"></a>
+<span class="sourceLineNo">652</span>    protected String toString(byte[] array)<a name="line.652"></a>
+<span class="sourceLineNo">653</span>    {<a name="line.653"></a>
+<span class="sourceLineNo">654</span>        StringBuilder temp = new StringBuilder();<a name="line.654"></a>
+<span class="sourceLineNo">655</span><a name="line.655"></a>
+<span class="sourceLineNo">656</span>        if( array == null )<a name="line.656"></a>
+<span class="sourceLineNo">657</span>        {<a name="line.657"></a>
+<span class="sourceLineNo">658</span>            temp.append(NULL_STRING);<a name="line.658"></a>
+<span class="sourceLineNo">659</span>        }<a name="line.659"></a>
+<span class="sourceLineNo">660</span>        else<a name="line.660"></a>
+<span class="sourceLineNo">661</span>        {<a name="line.661"></a>
+<span class="sourceLineNo">662</span>            temp.append(LENGTH_STRING);<a name="line.662"></a>
+<span class="sourceLineNo">663</span>            temp.append(array.length);<a name="line.663"></a>
+<span class="sourceLineNo">664</span>        }<a name="line.664"></a>
+<span class="sourceLineNo">665</span><a name="line.665"></a>
+<span class="sourceLineNo">666</span>        return temp.toString();<a name="line.666"></a>
+<span class="sourceLineNo">667</span>    }<a name="line.667"></a>
+<span class="sourceLineNo">668</span><a name="line.668"></a>
+<span class="sourceLineNo">669</span>    /**<a name="line.669"></a>
+<span class="sourceLineNo">670</span>     * Create a string representation of a java.util.Collection.<a name="line.670"></a>
+<span class="sourceLineNo">671</span>     *<a name="line.671"></a>
+<span class="sourceLineNo">672</span>     * @param collection the collection to print<a name="line.672"></a>
+<span class="sourceLineNo">673</span>     * @return the result<a name="line.673"></a>
+<span class="sourceLineNo">674</span>     */<a name="line.674"></a>
+<span class="sourceLineNo">675</span>    protected String toString(Collection&lt;?&gt; collection)<a name="line.675"></a>
+<span class="sourceLineNo">676</span>    {<a name="line.676"></a>
+<span class="sourceLineNo">677</span>        int index = 0;<a name="line.677"></a>
+<span class="sourceLineNo">678</span>        StringBuilder temp = new StringBuilder();<a name="line.678"></a>
+<span class="sourceLineNo">679</span>        ArgumentToStringBuilderImpl toStringBuilder = null;<a name="line.679"></a>
+<span class="sourceLineNo">680</span><a name="line.680"></a>
+<span class="sourceLineNo">681</span>        if( collection == null )<a name="line.681"></a>
+<span class="sourceLineNo">682</span>        {<a name="line.682"></a>
+<span class="sourceLineNo">683</span>          return NULL_STRING;<a name="line.683"></a>
+<span class="sourceLineNo">684</span>        }<a name="line.684"></a>
+<span class="sourceLineNo">685</span>        else<a name="line.685"></a>
+<span class="sourceLineNo">686</span>        {<a name="line.686"></a>
+<span class="sourceLineNo">687</span>            temp.append(LENGTH_STRING);<a name="line.687"></a>
+<span class="sourceLineNo">688</span>            temp.append(collection.size());<a name="line.688"></a>
+<span class="sourceLineNo">689</span>            temp.append(',');<a name="line.689"></a>
+<span class="sourceLineNo">690</span><a name="line.690"></a>
+<span class="sourceLineNo">691</span>            Iterator&lt;?&gt; iterator = collection.iterator();<a name="line.691"></a>
+<span class="sourceLineNo">692</span><a name="line.692"></a>
+<span class="sourceLineNo">693</span>            while (iterator.hasNext())<a name="line.693"></a>
+<span class="sourceLineNo">694</span>            {<a name="line.694"></a>
+<span class="sourceLineNo">695</span>                temp.append('[');<a name="line.695"></a>
+<span class="sourceLineNo">696</span>                temp.append(index++);<a name="line.696"></a>
+<span class="sourceLineNo">697</span>                temp.append(']');<a name="line.697"></a>
+<span class="sourceLineNo">698</span>                temp.append('=');<a name="line.698"></a>
+<span class="sourceLineNo">699</span><a name="line.699"></a>
+<span class="sourceLineNo">700</span>                toStringBuilder = new ArgumentToStringBuilderImpl(<a name="line.700"></a>
+<span class="sourceLineNo">701</span>                    iterator.next(),<a name="line.701"></a>
+<span class="sourceLineNo">702</span>                    this.getMaxArgLength(),<a name="line.702"></a>
+<span class="sourceLineNo">703</span>                    this.getMode()<a name="line.703"></a>
+<span class="sourceLineNo">704</span>                    );<a name="line.704"></a>
+<span class="sourceLineNo">705</span><a name="line.705"></a>
+<span class="sourceLineNo">706</span>                temp.append(toStringBuilder.toString());<a name="line.706"></a>
+<span class="sourceLineNo">707</span><a name="line.707"></a>
+<span class="sourceLineNo">708</span>                if( index&lt;collection.size()-1)<a name="line.708"></a>
+<span class="sourceLineNo">709</span>                {<a name="line.709"></a>
+<span class="sourceLineNo">710</span>                    temp.append(',');<a name="line.710"></a>
+<span class="sourceLineNo">711</span>                }<a name="line.711"></a>
+<span class="sourceLineNo">712</span><a name="line.712"></a>
+<span class="sourceLineNo">713</span>                if( temp.length() &gt; this.getMaxArgLength() )<a name="line.713"></a>
+<span class="sourceLineNo">714</span>                {<a name="line.714"></a>
+<span class="sourceLineNo">715</span>                    break;<a name="line.715"></a>
+<span class="sourceLineNo">716</span>                }<a name="line.716"></a>
+<span class="sourceLineNo">717</span>            }<a name="line.717"></a>
+<span class="sourceLineNo">718</span>        }<a name="line.718"></a>
+<span class="sourceLineNo">719</span><a name="line.719"></a>
+<span class="sourceLineNo">720</span>        return temp.toString();<a name="line.720"></a>
+<span class="sourceLineNo">721</span>    }<a name="line.721"></a>
+<span class="sourceLineNo">722</span><a name="line.722"></a>
+<span class="sourceLineNo">723</span>    /**<a name="line.723"></a>
+<span class="sourceLineNo">724</span>     * Create a string representation of a Dictionary.<a name="line.724"></a>
+<span class="sourceLineNo">725</span>     *<a name="line.725"></a>
+<span class="sourceLineNo">726</span>     * @param dictionary the collection to print<a name="line.726"></a>
+<span class="sourceLineNo">727</span>     * @return the result<a name="line.727"></a>
+<span class="sourceLineNo">728</span>     */<a name="line.728"></a>
+<span class="sourceLineNo">729</span>    protected String toString(Dictionary&lt;?, ?&gt; dictionary)<a name="line.729"></a>
+<span class="sourceLineNo">730</span>    {<a name="line.730"></a>
+<span class="sourceLineNo">731</span>        StringBuilder temp = new StringBuilder();<a name="line.731"></a>
+<span class="sourceLineNo">732</span><a name="line.732"></a>
+<span class="sourceLineNo">733</span>        if( dictionary == null )<a name="line.733"></a>
+<span class="sourceLineNo">734</span>        {<a name="line.734"></a>
+<span class="sourceLineNo">735</span>            return NULL_STRING;<a name="line.735"></a>
+<span class="sourceLineNo">736</span>        }<a name="line.736"></a>
+<span class="sourceLineNo">737</span>        else<a name="line.737"></a>
+<span class="sourceLineNo">738</span>        {<a name="line.738"></a>
+<span class="sourceLineNo">739</span>            temp.append(LENGTH_STRING);<a name="line.739"></a>
+<span class="sourceLineNo">740</span>            temp.append(dictionary.size());<a name="line.740"></a>
+<span class="sourceLineNo">741</span>            temp.append(',');<a name="line.741"></a>
+<span class="sourceLineNo">742</span>            temp.append(VALUE_STRING);<a name="line.742"></a>
+<span class="sourceLineNo">743</span>            temp.append(dictionary.toString());<a name="line.743"></a>
+<span class="sourceLineNo">744</span>        }<a name="line.744"></a>
+<span class="sourceLineNo">745</span><a name="line.745"></a>
+<span class="sourceLineNo">746</span>        return temp.toString();<a name="line.746"></a>
+<span class="sourceLineNo">747</span>    }<a name="line.747"></a>
+<span class="sourceLineNo">748</span><a name="line.748"></a>
+<span class="sourceLineNo">749</span>    /**<a name="line.749"></a>
+<span class="sourceLineNo">750</span>     * Create a String representation for an arbitrary object.<a name="line.750"></a>
+<span class="sourceLineNo">751</span>     *<a name="line.751"></a>
+<span class="sourceLineNo">752</span>     * @param object the object<a name="line.752"></a>
+<span class="sourceLineNo">753</span>     * @return string representation<a name="line.753"></a>
+<span class="sourceLineNo">754</span>     */<a name="line.754"></a>
+<span class="sourceLineNo">755</span>    protected String toString(Object object)<a name="line.755"></a>
+<span class="sourceLineNo">756</span>    {<a name="line.756"></a>
+<span class="sourceLineNo">757</span>        String result = null;<a name="line.757"></a>
+<span class="sourceLineNo">758</span>        String temp = null;<a name="line.758"></a>
+<span class="sourceLineNo">759</span>        String className = null;<a name="line.759"></a>
+<span class="sourceLineNo">760</span><a name="line.760"></a>
+<span class="sourceLineNo">761</span>        if( object == null )<a name="line.761"></a>
+<span class="sourceLineNo">762</span>        {<a name="line.762"></a>
+<span class="sourceLineNo">763</span>            result = NULL_STRING;<a name="line.763"></a>
+<span class="sourceLineNo">764</span>        }<a name="line.764"></a>
+<span class="sourceLineNo">765</span>        else<a name="line.765"></a>
+<span class="sourceLineNo">766</span>        {<a name="line.766"></a>
+<span class="sourceLineNo">767</span>            temp = object.toString();<a name="line.767"></a>
+<span class="sourceLineNo">768</span><a name="line.768"></a>
+<span class="sourceLineNo">769</span>            className = StringUtils.replace(<a name="line.769"></a>
+<span class="sourceLineNo">770</span>                object.getClass().getName(),<a name="line.770"></a>
+<span class="sourceLineNo">771</span>                "java.lang.", ""<a name="line.771"></a>
+<span class="sourceLineNo">772</span>                );<a name="line.772"></a>
+<span class="sourceLineNo">773</span><a name="line.773"></a>
+<span class="sourceLineNo">774</span>            if( temp.startsWith(className) == false )<a name="line.774"></a>
+<span class="sourceLineNo">775</span>            {<a name="line.775"></a>
+<span class="sourceLineNo">776</span>                int hashCode = object.hashCode();<a name="line.776"></a>
+<span class="sourceLineNo">777</span>                StringBuilder tempBuffer = new StringBuilder();<a name="line.777"></a>
+<span class="sourceLineNo">778</span>                tempBuffer.append(className);<a name="line.778"></a>
+<span class="sourceLineNo">779</span>                tempBuffer.append('@');<a name="line.779"></a>
+<span class="sourceLineNo">780</span>                tempBuffer.append(hashCode);<a name="line.780"></a>
+<span class="sourceLineNo">781</span>                tempBuffer.append('[');<a name="line.781"></a>
+<span class="sourceLineNo">782</span>                tempBuffer.append(temp);<a name="line.782"></a>
+<span class="sourceLineNo">783</span>                tempBuffer.append(']');<a name="line.783"></a>
+<span class="sourceLineNo">784</span><a name="line.784"></a>
+<span class="sourceLineNo">785</span>                result = tempBuffer.toString();<a name="line.785"></a>
+<span class="sourceLineNo">786</span>            }<a name="line.786"></a>
+<span class="sourceLineNo">787</span>            else<a name="line.787"></a>
+<span class="sourceLineNo">788</span>            {<a name="line.788"></a>
+<span class="sourceLineNo">789</span>                result = temp;<a name="line.789"></a>
+<span class="sourceLineNo">790</span>            }<a name="line.790"></a>
+<span class="sourceLineNo">791</span>        }<a name="line.791"></a>
+<span class="sourceLineNo">792</span><a name="line.792"></a>
+<span class="sourceLineNo">793</span>        return result;<a name="line.793"></a>
+<span class="sourceLineNo">794</span>    }<a name="line.794"></a>
+<span class="sourceLineNo">795</span><a name="line.795"></a>
+<span class="sourceLineNo">796</span>    /**<a name="line.796"></a>
+<span class="sourceLineNo">797</span>     * Append the hash code.<a name="line.797"></a>
+<span class="sourceLineNo">798</span>     * @param target the object to print<a name="line.798"></a>
+<span class="sourceLineNo">799</span>     */<a name="line.799"></a>
+<span class="sourceLineNo">800</span>    protected void appendHashCode(Object target)<a name="line.800"></a>
+<span class="sourceLineNo">801</span>    {<a name="line.801"></a>
+<span class="sourceLineNo">802</span>            if ((this.mode &amp; INCLUDE_HASHCODE) == 0)<a name="line.802"></a>
+<span class="sourceLineNo">803</span>            {<a name="line.803"></a>
+<span class="sourceLineNo">804</span>                    return;<a name="line.804"></a>
+<span class="sourceLineNo">805</span>            }<a name="line.805"></a>
+<span class="sourceLineNo">806</span><a name="line.806"></a>
+<span class="sourceLineNo">807</span>        if( this.target != null )<a name="line.807"></a>
+<span class="sourceLineNo">808</span>        {<a name="line.808"></a>
+<span class="sourceLineNo">809</span>            this.buffer.append('@');<a name="line.809"></a>
+<span class="sourceLineNo">810</span>            this.buffer.append(Integer.toHexString(target.hashCode()));<a name="line.810"></a>
+<span class="sourceLineNo">811</span>        }<a name="line.811"></a>
+<span class="sourceLineNo">812</span>    }<a name="line.812"></a>
+<span class="sourceLineNo">813</span><a name="line.813"></a>
+<span class="sourceLineNo">814</span>    /**<a name="line.814"></a>
+<span class="sourceLineNo">815</span>     * Append the class name.<a name="line.815"></a>
+<span class="sourceLineNo">816</span>     * @param target the object to print<a name="line.816"></a>
+<span class="sourceLineNo">817</span>     */<a name="line.817"></a>
+<span class="sourceLineNo">818</span>    protected void appendClassName(Object target)<a name="line.818"></a>
+<span class="sourceLineNo">819</span>    {<a name="line.819"></a>
+<span class="sourceLineNo">820</span>        boolean skipClassName = true;<a name="line.820"></a>
+<span class="sourceLineNo">821</span><a name="line.821"></a>
+<span class="sourceLineNo">822</span>        if ((this.mode &amp; INCLUDE_CLASSNAME) == 0)<a name="line.822"></a>
+<span class="sourceLineNo">823</span>        {<a name="line.823"></a>
+<span class="sourceLineNo">824</span>            return;<a name="line.824"></a>
+<span class="sourceLineNo">825</span>        }<a name="line.825"></a>
+<span class="sourceLineNo">826</span><a name="line.826"></a>
+<span class="sourceLineNo">827</span>        if( this.target != null )<a name="line.827"></a>
+<span class="sourceLineNo">828</span>        {<a name="line.828"></a>
+<span class="sourceLineNo">829</span>            String className = target.getClass().getName();<a name="line.829"></a>
+<span class="sourceLineNo">830</span><a name="line.830"></a>
+<span class="sourceLineNo">831</span>            if( target instanceof boolean[] )<a name="line.831"></a>
+<span class="sourceLineNo">832</span>            {<a name="line.832"></a>
+<span class="sourceLineNo">833</span>                this.buffer.append("boolean[]");<a name="line.833"></a>
+<span class="sourceLineNo">834</span>            }<a name="line.834"></a>
+<span class="sourceLineNo">835</span>            else if( target instanceof byte[] )<a name="line.835"></a>
+<span class="sourceLineNo">836</span>            {<a name="line.836"></a>
+<span class="sourceLineNo">837</span>                this.buffer.append("byte[]");<a name="line.837"></a>
+<span class="sourceLineNo">838</span>            }<a name="line.838"></a>
+<span class="sourceLineNo">839</span>            else if( target instanceof char[] )<a name="line.839"></a>
+<span class="sourceLineNo">840</span>            {<a name="line.840"></a>
+<span class="sourceLineNo">841</span>                this.buffer.append("char[]");<a name="line.841"></a>
+<span class="sourceLineNo">842</span>            }<a name="line.842"></a>
+<span class="sourceLineNo">843</span>            else if( target instanceof short[] )<a name="line.843"></a>
+<span class="sourceLineNo">844</span>            {<a name="line.844"></a>
+<span class="sourceLineNo">845</span>                this.buffer.append("short[]");<a name="line.845"></a>
+<span class="sourceLineNo">846</span>            }<a name="line.846"></a>
+<span class="sourceLineNo">847</span>            else if( target instanceof int[] )<a name="line.847"></a>
+<span class="sourceLineNo">848</span>            {<a name="line.848"></a>
+<span class="sourceLineNo">849</span>                this.buffer.append("int[]");<a name="line.849"></a>
+<span class="sourceLineNo">850</span>            }<a name="line.850"></a>
+<span class="sourceLineNo">851</span>            else if( target instanceof long[] )<a name="line.851"></a>
+<span class="sourceLineNo">852</span>            {<a name="line.852"></a>
+<span class="sourceLineNo">853</span>                this.buffer.append("[ong[]");<a name="line.853"></a>
+<span class="sourceLineNo">854</span>            }<a name="line.854"></a>
+<span class="sourceLineNo">855</span>            else if( target instanceof float[] )<a name="line.855"></a>
+<span class="sourceLineNo">856</span>            {<a name="line.856"></a>
+<span class="sourceLineNo">857</span>                this.buffer.append("float[]");<a name="line.857"></a>
+<span class="sourceLineNo">858</span>            }<a name="line.858"></a>
+<span class="sourceLineNo">859</span>            else if( target instanceof double[] )<a name="line.859"></a>
+<span class="sourceLineNo">860</span>            {<a name="line.860"></a>
+<span class="sourceLineNo">861</span>                this.buffer.append("double[]");<a name="line.861"></a>
+<span class="sourceLineNo">862</span>            }<a name="line.862"></a>
+<span class="sourceLineNo">863</span>            else if( target instanceof Boolean )<a name="line.863"></a>
+<span class="sourceLineNo">864</span>            {<a name="line.864"></a>
+<span class="sourceLineNo">865</span>                this.buffer.append("Boolean");<a name="line.865"></a>
+<span class="sourceLineNo">866</span>            }<a name="line.866"></a>
+<span class="sourceLineNo">867</span>            else if( target instanceof Character )<a name="line.867"></a>
+<span class="sourceLineNo">868</span>            {<a name="line.868"></a>
+<span class="sourceLineNo">869</span>                this.buffer.append("Character");<a name="line.869"></a>
+<span class="sourceLineNo">870</span>            }<a name="line.870"></a>
+<span class="sourceLineNo">871</span>            else if( target instanceof Short )<a name="line.871"></a>
+<span class="sourceLineNo">872</span>            {<a name="line.872"></a>
+<span class="sourceLineNo">873</span>                this.buffer.append("Short");<a name="line.873"></a>
+<span class="sourceLineNo">874</span>            }<a name="line.874"></a>
+<span class="sourceLineNo">875</span>            else if( target instanceof Integer )<a name="line.875"></a>
+<span class="sourceLineNo">876</span>            {<a name="line.876"></a>
+<span class="sourceLineNo">877</span>                this.buffer.append("Integer");<a name="line.877"></a>
+<span class="sourceLineNo">878</span>            }<a name="line.878"></a>
+<span class="sourceLineNo">879</span>            else if( target instanceof Long )<a name="line.879"></a>
+<span class="sourceLineNo">880</span>            {<a name="line.880"></a>
+<span class="sourceLineNo">881</span>                this.buffer.append("Long");<a name="line.881"></a>
+<span class="sourceLineNo">882</span>            }<a name="line.882"></a>
+<span class="sourceLineNo">883</span>            else if( target instanceof Float )<a name="line.883"></a>
+<span class="sourceLineNo">884</span>            {<a name="line.884"></a>
+<span class="sourceLineNo">885</span>                this.buffer.append("Float");<a name="line.885"></a>
+<span class="sourceLineNo">886</span>            }<a name="line.886"></a>
+<span class="sourceLineNo">887</span>            else if( target instanceof Double )<a name="line.887"></a>
+<span class="sourceLineNo">888</span>            {<a name="line.888"></a>
+<span class="sourceLineNo">889</span>                this.buffer.append("Double");<a name="line.889"></a>
+<span class="sourceLineNo">890</span>            }<a name="line.890"></a>
+<span class="sourceLineNo">891</span>            else if( target instanceof String )<a name="line.891"></a>
+<span class="sourceLineNo">892</span>            {<a name="line.892"></a>
+<span class="sourceLineNo">893</span>                this.buffer.append("String");<a name="line.893"></a>
+<span class="sourceLineNo">894</span>            }<a name="line.894"></a>
+<span class="sourceLineNo">895</span>            else if( target instanceof Boolean[] )<a name="line.895"></a>
+<span class="sourceLineNo">896</span>            {<a name="line.896"></a>
+<span class="sourceLineNo">897</span>                this.buffer.append("Boolean[]");<a name="line.897"></a>
+<span class="sourceLineNo">898</span>            }<a name="line.898"></a>
+<span class="sourceLineNo">899</span>            else if( target instanceof Character[] )<a name="line.899"></a>
+<span class="sourceLineNo">900</span>            {<a name="line.900"></a>
+<span class="sourceLineNo">901</span>                this.buffer.append("Character[]");<a name="line.901"></a>
+<span class="sourceLineNo">902</span>            }<a name="line.902"></a>
+<span class="sourceLineNo">903</span>            else if( target instanceof Short[] )<a name="line.903"></a>
+<span class="sourceLineNo">904</span>            {<a name="line.904"></a>
+<span class="sourceLineNo">905</span>                this.buffer.append("Short[]");<a name="line.905"></a>
+<span class="sourceLineNo">906</span>            }<a name="line.906"></a>
+<span class="sourceLineNo">907</span>            else if( target instanceof Integer[] )<a name="line.907"></a>
+<span class="sourceLineNo">908</span>            {<a name="line.908"></a>
+<span class="sourceLineNo">909</span>                this.buffer.append("Integer[]");<a name="line.909"></a>
+<span class="sourceLineNo">910</span>            }<a name="line.910"></a>
+<span class="sourceLineNo">911</span>            else if( target instanceof Long[] )<a name="line.911"></a>
+<span class="sourceLineNo">912</span>            {<a name="line.912"></a>
+<span class="sourceLineNo">913</span>                this.buffer.append("Long[]");<a name="line.913"></a>
+<span class="sourceLineNo">914</span>            }<a name="line.914"></a>
+<span class="sourceLineNo">915</span>            else if( target instanceof Float[] )<a name="line.915"></a>
+<span class="sourceLineNo">916</span>            {<a name="line.916"></a>
+<span class="sourceLineNo">917</span>                this.buffer.append("Float[]");<a name="line.917"></a>
+<span class="sourceLineNo">918</span>            }<a name="line.918"></a>
+<span class="sourceLineNo">919</span>            else if( target instanceof Double[] )<a name="line.919"></a>
+<span class="sourceLineNo">920</span>            {<a name="line.920"></a>
+<span class="sourceLineNo">921</span>                this.buffer.append("Double[]");<a name="line.921"></a>
+<span class="sourceLineNo">922</span>            }<a name="line.922"></a>
+<span class="sourceLineNo">923</span>            else if( target instanceof String[] )<a name="line.923"></a>
+<span class="sourceLineNo">924</span>            {<a name="line.924"></a>
+<span class="sourceLineNo">925</span>                this.buffer.append("String[]");<a name="line.925"></a>
+<span class="sourceLineNo">926</span>            }<a name="line.926"></a>
+<span class="sourceLineNo">927</span>            else<a name="line.927"></a>
+<span class="sourceLineNo">928</span>            {<a name="line.928"></a>
+<span class="sourceLineNo">929</span>                skipClassName = false;<a name="line.929"></a>
+<span class="sourceLineNo">930</span>            }<a name="line.930"></a>
+<span class="sourceLineNo">931</span><a name="line.931"></a>
+<span class="sourceLineNo">932</span>            if( skipClassName == false )<a name="line.932"></a>
+<span class="sourceLineNo">933</span>            {<a name="line.933"></a>
+<span class="sourceLineNo">934</span>                className = StringUtils.replace(className, "java.lang.", "");<a name="line.934"></a>
+<span class="sourceLineNo">935</span><a name="line.935"></a>
+<span class="sourceLineNo">936</span>                if( className.endsWith(";") )<a name="line.936"></a>
+<span class="sourceLineNo">937</span>                {<a name="line.937"></a>
+<span class="sourceLineNo">938</span>                    this.buffer.append(className.substring(0,className.length()-1));<a name="line.938"></a>
+<span class="sourceLineNo">939</span>                }<a name="line.939"></a>
+<span class="sourceLineNo">940</span>                else<a name="line.940"></a>
+<span class="sourceLineNo">941</span>                {<a name="line.941"></a>
+<span class="sourceLineNo">942</span>                    this.buffer.append(className);<a name="line.942"></a>
+<span class="sourceLineNo">943</span>                }<a name="line.943"></a>
+<span class="sourceLineNo">944</span>            }<a name="line.944"></a>
+<span class="sourceLineNo">945</span>        }<a name="line.945"></a>
+<span class="sourceLineNo">946</span>    }<a name="line.946"></a>
+<span class="sourceLineNo">947</span><a name="line.947"></a>
+<span class="sourceLineNo">948</span>    /**<a name="line.948"></a>
+<span class="sourceLineNo">949</span>     * Append the hash code.<a name="line.949"></a>
+<span class="sourceLineNo">950</span>     * @param ch the object to print<a name="line.950"></a>
+<span class="sourceLineNo">951</span>     */<a name="line.951"></a>
+<span class="sourceLineNo">952</span>    protected void appendChar(char ch)<a name="line.952"></a>
+<span class="sourceLineNo">953</span>    {<a name="line.953"></a>
+<span class="sourceLineNo">954</span>        this.buffer.append(ch);<a name="line.954"></a>
+<span class="sourceLineNo">955</span>    }<a name="line.955"></a>
+<span class="sourceLineNo">956</span><a name="line.956"></a>
+<span class="sourceLineNo">957</span>    /**<a name="line.957"></a>
+<span class="sourceLineNo">958</span>     * @return Returns the maxLineLength.<a name="line.958"></a>
+<span class="sourceLineNo">959</span>     */<a name="line.959"></a>
+<span class="sourceLineNo">960</span>    protected int getMaxArgLength()<a name="line.960"></a>
+<span class="sourceLineNo">961</span>    {<a name="line.961"></a>
+<span class="sourceLineNo">962</span>        return maxArgLength;<a name="line.962"></a>
+<span class="sourceLineNo">963</span>    }<a name="line.963"></a>
+<span class="sourceLineNo">964</span><a name="line.964"></a>
+<span class="sourceLineNo">965</span>    /**<a name="line.965"></a>
+<span class="sourceLineNo">966</span>     * &lt;p&gt;Gets the stack trace from a Throwable as a String.&lt;/p&gt;<a name="line.966"></a>
+<span class="sourceLineNo">967</span>     *<a name="line.967"></a>
+<span class="sourceLineNo">968</span>     * @param throwable  the &lt;code&gt;Throwable&lt;/code&gt; to be examined<a name="line.968"></a>
+<span class="sourceLineNo">969</span>     * @return the stack trace as generated by the exception's<a name="line.969"></a>
+<span class="sourceLineNo">970</span>     *  &lt;code&gt;printStackTrace(PrintWriter)&lt;/code&gt; method<a name="line.970"></a>
+<span class="sourceLineNo">971</span>     */<a name="line.971"></a>
+<span class="sourceLineNo">972</span>    protected String getStackTrace(Throwable throwable)<a name="line.972"></a>
+<span class="sourceLineNo">973</span>    {<a name="line.973"></a>
+<span class="sourceLineNo">974</span>        StringWriter sw = new StringWriter();<a name="line.974"></a>
+<span class="sourceLineNo">975</span>        PrintWriter pw = new PrintWriter( sw, true );<a name="line.975"></a>
+<span class="sourceLineNo">976</span>        throwable.printStackTrace( pw );<a name="line.976"></a>
+<span class="sourceLineNo">977</span>        return sw.getBuffer().toString();<a name="line.977"></a>
+<span class="sourceLineNo">978</span>    }<a name="line.978"></a>
+<span class="sourceLineNo">979</span><a name="line.979"></a>
+<span class="sourceLineNo">980</span>    /**<a name="line.980"></a>
+<span class="sourceLineNo">981</span>     * Append a string to the internal buffer<a name="line.981"></a>
+<span class="sourceLineNo">982</span>     * @param source the string to append<a name="line.982"></a>
+<span class="sourceLineNo">983</span>     */<a name="line.983"></a>
+<span class="sourceLineNo">984</span>    protected void append(String source)<a name="line.984"></a>
+<span class="sourceLineNo">985</span>    {<a name="line.985"></a>
+<span class="sourceLineNo">986</span>        String formattedSource = this.format(source);<a name="line.986"></a>
+<span class="sourceLineNo">987</span>        this.buffer.append(formattedSource);<a name="line.987"></a>
+<span class="sourceLineNo">988</span>    }<a name="line.988"></a>
+<span class="sourceLineNo">989</span><a name="line.989"></a>
+<span class="sourceLineNo">990</span>    /**<a name="line.990"></a>
+<span class="sourceLineNo">991</span>     * Format the buffer by replacing the whitespaces and cutting<a name="line.991"></a>
+<span class="sourceLineNo">992</span>     * away excessive fluff.<a name="line.992"></a>
+<span class="sourceLineNo">993</span>     *<a name="line.993"></a>
+<span class="sourceLineNo">994</span>     * @param source the source string<a name="line.994"></a>
+<span class="sourceLineNo">995</span>     * @return formatted string<a name="line.995"></a>
+<span class="sourceLineNo">996</span>     */<a name="line.996"></a>
+<span class="sourceLineNo">997</span>    protected String format( String source )<a name="line.997"></a>
+<span class="sourceLineNo">998</span>    {<a name="line.998"></a>
+<span class="sourceLineNo">999</span>        boolean isTruncated = false;<a name="line.999"></a>
+<span class="sourceLineNo">1000</span><a name="line.1000"></a>
+<span class="sourceLineNo">1001</span>        // test for null or empty string<a name="line.1001"></a>
+<span class="sourceLineNo">1002</span>        if ( StringUtils.isEmpty(source) )<a name="line.1002"></a>
+<span class="sourceLineNo">1003</span>                return "";<a name="line.1003"></a>
+<span class="sourceLineNo">1004</span><a name="line.1004"></a>
+<span class="sourceLineNo">1005</span>        // remove the line breaks and tabs for logging output and replace<a name="line.1005"></a>
+<span class="sourceLineNo">1006</span>        StringUtils.replace(source,  "\r",  " ");<a name="line.1006"></a>
+<span class="sourceLineNo">1007</span>        StringUtils.replace(source,  "\n",  " ");<a name="line.1007"></a>
+<span class="sourceLineNo">1008</span>        StringUtils.replace(source,  "\t",  " ");<a name="line.1008"></a>
+<span class="sourceLineNo">1009</span>        StringUtils.replace(source,  SEPERATOR,  " ");<a name="line.1009"></a>
+<span class="sourceLineNo">1010</span><a name="line.1010"></a>
+<span class="sourceLineNo">1011</span>        // Build the output<a name="line.1011"></a>
+<span class="sourceLineNo">1012</span>        StringBuilder stringBuilder = new StringBuilder(source);<a name="line.1012"></a>
+<span class="sourceLineNo">1013</span><a name="line.1013"></a>
+<span class="sourceLineNo">1014</span>        // trim the string to avoid dumping tons of data<a name="line.1014"></a>
+<span class="sourceLineNo">1015</span>        if( stringBuilder.length() &gt; this.getMaxArgLength() )<a name="line.1015"></a>
+<span class="sourceLineNo">1016</span>        {<a name="line.1016"></a>
+<span class="sourceLineNo">1017</span>            stringBuilder.delete(this.getMaxArgLength()-1, stringBuilder.length());<a name="line.1017"></a>
+<span class="sourceLineNo">1018</span>            isTruncated = true;<a name="line.1018"></a>
+<span class="sourceLineNo">1019</span>        }<a name="line.1019"></a>
+<span class="sourceLineNo">1020</span>        <a name="line.1020"></a>
+<span class="sourceLineNo">1021</span>        // show the user that we truncated the ouptut<a name="line.1021"></a>
+<span class="sourceLineNo">1022</span>        if( isTruncated )<a name="line.1022"></a>
+<span class="sourceLineNo">1023</span>        {<a name="line.1023"></a>
+<span class="sourceLineNo">1024</span>            if (source.endsWith("]"))<a name="line.1024"></a>
+<span class="sourceLineNo">1025</span>            {<a name="line.1025"></a>
+<span class="sourceLineNo">1026</span>                stringBuilder.append(" ...]");<a name="line.1026"></a>
+<span class="sourceLineNo">1027</span>            }<a name="line.1027"></a>
+<span class="sourceLineNo">1028</span>            else<a name="line.1028"></a>
+<span class="sourceLineNo">1029</span>            {<a name="line.1029"></a>
+<span class="sourceLineNo">1030</span>                stringBuilder.append(" ...");<a name="line.1030"></a>
+<span class="sourceLineNo">1031</span>            }<a name="line.1031"></a>
+<span class="sourceLineNo">1032</span>        }<a name="line.1032"></a>
+<span class="sourceLineNo">1033</span>        return stringBuilder.toString();<a name="line.1033"></a>
+<span class="sourceLineNo">1034</span>    }<a name="line.1034"></a>
+<span class="sourceLineNo">1035</span>}<a name="line.1035"></a>
 
 
 
@@ -1104,6 +1103,5 @@
 
 </pre>
 </div>
-</main>
 </body>
 </html>

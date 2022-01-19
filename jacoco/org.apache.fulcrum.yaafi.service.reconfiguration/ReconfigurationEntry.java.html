@@ -93,12 +93,12 @@ public class ReconfigurationEntry {
 <span class="fc" id="L93">				is.close();</span>
 <span class="fc" id="L94">				is = null;</span>
 
-<span class="pc bpc" id="L96" title="1 of 2 branches missed.">				if (this.isFirstInvocation() == true) {</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">				if (this.isFirstInvocation() == true) {</span>
 <span class="fc" id="L97">					isFirstInvocation = false;</span>
 <span class="fc" id="L98">					this.logger.debug(&quot;Storing SHA-1 digest of &quot; + this.getLocation());</span>
 <span class="fc" id="L99">					this.setDigest(currDigest);</span>
 				} else {
-<span class="nc bnc" id="L101" title="All 2 branches missed.">					if (equals(this.digest, currDigest) == false) {</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">					if (equals(this.digest, currDigest) == false) {</span>
 <span class="nc" id="L102">						this.logger.debug(&quot;The following resource has changed : &quot; + this.getLocation());</span>
 <span class="nc" id="L103">						this.setDigest(currDigest);</span>
 <span class="nc" id="L104">						result = true;</span>
@@ -192,8 +192,8 @@ public class ReconfigurationEntry {
 	 */
 	private static boolean equals(byte[] lhs, byte[] rhs) {
 		// JDK provided method
-<span class="nc" id="L195">		return Arrays.equals(lhs, rhs);</span>
+<span class="fc" id="L195">		return Arrays.equals(lhs, rhs);</span>
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

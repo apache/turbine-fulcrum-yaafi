@@ -105,7 +105,7 @@ public class InputStreamLocator {
 
 <span class="fc" id="L106">			this.logger.debug(&quot;Looking for &quot; + location + &quot; as absolute file location&quot;);</span>
 
-<span class="pc bpc" id="L108" title="3 of 4 branches missed.">			if (file.isAbsolute() &amp;&amp; file.exists()) {</span>
+<span class="pc bpc" id="L108" title="1 of 4 branches missed.">			if (file.isAbsolute() &amp;&amp; file.exists()) {</span>
 <span class="nc" id="L109">				is = new FileInputStream(file);</span>
 <span class="nc" id="L110">				this.logger.debug(&quot;Found &quot; + location + &quot; as &quot; + file.getAbsolutePath());</span>
 			}
@@ -150,4 +150,4 @@ public class InputStreamLocator {
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

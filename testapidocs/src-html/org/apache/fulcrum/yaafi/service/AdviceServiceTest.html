@@ -1,175 +1,174 @@
-<!DOCTYPE HTML>
-<html lang="de">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
 <head>
 <title>Source code</title>
 <link rel="stylesheet" type="text/css" href="../../../../../../stylesheet.css" title="Style">
 </head>
 <body>
-<main role="main">
 <div class="sourceContainer">
-<pre><span class="sourceLineNo">001</span><a id="line.1">package org.apache.fulcrum.yaafi.service;</a>
-<span class="sourceLineNo">002</span><a id="line.2"></a>
-<span class="sourceLineNo">003</span><a id="line.3">import static org.junit.jupiter.api.Assertions.assertEquals;</a>
-<span class="sourceLineNo">004</span><a id="line.4">import static org.junit.jupiter.api.Assertions.assertFalse;</a>
-<span class="sourceLineNo">005</span><a id="line.5">import static org.junit.jupiter.api.Assertions.assertTrue;</a>
-<span class="sourceLineNo">006</span><a id="line.6"></a>
-<span class="sourceLineNo">007</span><a id="line.7">/*</a>
-<span class="sourceLineNo">008</span><a id="line.8"> * Licensed to the Apache Software Foundation (ASF) under one</a>
-<span class="sourceLineNo">009</span><a id="line.9"> * or more contributor license agreements.  See the NOTICE file</a>
-<span class="sourceLineNo">010</span><a id="line.10"> * distributed with this work for additional information</a>
-<span class="sourceLineNo">011</span><a id="line.11"> * regarding copyright ownership.  The ASF licenses this file</a>
-<span class="sourceLineNo">012</span><a id="line.12"> * to you under the Apache License, Version 2.0 (the</a>
-<span class="sourceLineNo">013</span><a id="line.13"> * "License"); you may not use this file except in compliance</a>
-<span class="sourceLineNo">014</span><a id="line.14"> * with the License.  You may obtain a copy of the License at</a>
-<span class="sourceLineNo">015</span><a id="line.15"> *</a>
-<span class="sourceLineNo">016</span><a id="line.16"> *   http://www.apache.org/licenses/LICENSE-2.0</a>
-<span class="sourceLineNo">017</span><a id="line.17"> *</a>
-<span class="sourceLineNo">018</span><a id="line.18"> * Unless required by applicable law or agreed to in writing,</a>
-<span class="sourceLineNo">019</span><a id="line.19"> * software distributed under the License is distributed on an</a>
-<span class="sourceLineNo">020</span><a id="line.20"> * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</a>
-<span class="sourceLineNo">021</span><a id="line.21"> * KIND, either express or implied.  See the License for the</a>
-<span class="sourceLineNo">022</span><a id="line.22"> * specific language governing permissions and limitations</a>
-<span class="sourceLineNo">023</span><a id="line.23"> * under the License.</a>
-<span class="sourceLineNo">024</span><a id="line.24"> */</a>
-<span class="sourceLineNo">025</span><a id="line.25"></a>
-<span class="sourceLineNo">026</span><a id="line.26"></a>
-<span class="sourceLineNo">027</span><a id="line.27">import org.apache.avalon.framework.service.ServiceException;</a>
-<span class="sourceLineNo">028</span><a id="line.28">import org.apache.fulcrum.yaafi.DependentTestComponent;</a>
-<span class="sourceLineNo">029</span><a id="line.29">import org.apache.fulcrum.yaafi.framework.container.ServiceContainer;</a>
-<span class="sourceLineNo">030</span><a id="line.30">import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerConfiguration;</a>
-<span class="sourceLineNo">031</span><a id="line.31">import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerFactory;</a>
-<span class="sourceLineNo">032</span><a id="line.32">import org.apache.fulcrum.yaafi.interceptor.logging.LoggingInterceptorService;</a>
-<span class="sourceLineNo">033</span><a id="line.33">import org.apache.fulcrum.yaafi.service.advice.AdviceService;</a>
-<span class="sourceLineNo">034</span><a id="line.34">import org.junit.jupiter.api.AfterEach;</a>
-<span class="sourceLineNo">035</span><a id="line.35">import org.junit.jupiter.api.BeforeEach;</a>
-<span class="sourceLineNo">036</span><a id="line.36">import org.junit.jupiter.api.Test;</a>
-<span class="sourceLineNo">037</span><a id="line.37"></a>
-<span class="sourceLineNo">038</span><a id="line.38">/**</a>
-<span class="sourceLineNo">039</span><a id="line.39"> * Test suite for the ServiceManagereService.</a>
-<span class="sourceLineNo">040</span><a id="line.40"> *</a>
-<span class="sourceLineNo">041</span><a id="line.41"> * @author &lt;a href="mailto:siegfried.goeschl@it20one.at"&gt;Siegfried Goeschl&lt;/a&gt;</a>
-<span class="sourceLineNo">042</span><a id="line.42"> */</a>
-<span class="sourceLineNo">043</span><a id="line.43"></a>
-<span class="sourceLineNo">044</span><a id="line.44">public class AdviceServiceTest  implements DependentTestComponent</a>
-<span class="sourceLineNo">045</span><a id="line.45">{</a>
-<span class="sourceLineNo">046</span><a id="line.46">    private AdviceService service;</a>
-<span class="sourceLineNo">047</span><a id="line.47">    private DependentTestComponent advisedThis;</a>
-<span class="sourceLineNo">048</span><a id="line.48">    private ServiceContainer container;</a>
-<span class="sourceLineNo">049</span><a id="line.49"></a>
-<span class="sourceLineNo">050</span><a id="line.50"></a>
-<span class="sourceLineNo">051</span><a id="line.51">    @BeforeEach</a>
-<span class="sourceLineNo">052</span><a id="line.52">    protected void setUp() throws Exception</a>
-<span class="sourceLineNo">053</span><a id="line.53">    {</a>
-<span class="sourceLineNo">054</span><a id="line.54">        ServiceContainerConfiguration config = new ServiceContainerConfiguration();</a>
-<span class="sourceLineNo">055</span><a id="line.55">        config.loadContainerConfiguration( "./src/test/TestYaafiContainerConfig.xml" );</a>
-<span class="sourceLineNo">056</span><a id="line.56">        this.container = ServiceContainerFactory.create( config );</a>
-<span class="sourceLineNo">057</span><a id="line.57">        service = (AdviceService) this.container.lookup(AdviceService.class.getName());</a>
-<span class="sourceLineNo">058</span><a id="line.58">    }</a>
-<span class="sourceLineNo">059</span><a id="line.59"></a>
-<span class="sourceLineNo">060</span><a id="line.60">    @AfterEach</a>
-<span class="sourceLineNo">061</span><a id="line.61">    protected void tearDown() throws Exception</a>
-<span class="sourceLineNo">062</span><a id="line.62">    {</a>
-<span class="sourceLineNo">063</span><a id="line.63">        ServiceContainerFactory.dispose(this.container);</a>
-<span class="sourceLineNo">064</span><a id="line.64">    }</a>
-<span class="sourceLineNo">065</span><a id="line.65"></a>
-<span class="sourceLineNo">066</span><a id="line.66">    /**</a>
-<span class="sourceLineNo">067</span><a id="line.67">     *  Advice a StringBuilder based on the CharSequence interface</a>
-<span class="sourceLineNo">068</span><a id="line.68">     * @throws Exception generic exception</a>
-<span class="sourceLineNo">069</span><a id="line.69">     */</a>
-<span class="sourceLineNo">070</span><a id="line.70">    @Test</a>
-<span class="sourceLineNo">071</span><a id="line.71">    public void testSimpleAdvice() throws Exception</a>
-<span class="sourceLineNo">072</span><a id="line.72">    {</a>
-<span class="sourceLineNo">073</span><a id="line.73">        String[] interceptorList = { LoggingInterceptorService.class.getName() };</a>
-<span class="sourceLineNo">074</span><a id="line.74">        StringBuilder unadvicedObject = new StringBuilder("foo");</a>
-<span class="sourceLineNo">075</span><a id="line.75">        CharSequence advicedObject = (CharSequence) this.service.advice(unadvicedObject );</a>
-<span class="sourceLineNo">076</span><a id="line.76"></a>
-<span class="sourceLineNo">077</span><a id="line.77">        int length = advicedObject.length();</a>
-<span class="sourceLineNo">078</span><a id="line.78">        assertTrue(this.service.isAdviced(advicedObject));</a>
-<span class="sourceLineNo">079</span><a id="line.79">        assertFalse(this.service.isAdviced(unadvicedObject));</a>
-<span class="sourceLineNo">080</span><a id="line.80">        assertTrue(unadvicedObject.length() == length);</a>
-<span class="sourceLineNo">081</span><a id="line.81">    }</a>
-<span class="sourceLineNo">082</span><a id="line.82"></a>
-<span class="sourceLineNo">083</span><a id="line.83">    /**</a>
-<span class="sourceLineNo">084</span><a id="line.84">     * Advice a StringBuilder based on the CharSequence interface</a>
-<span class="sourceLineNo">085</span><a id="line.85">     * @throws Exception generic exception</a>
-<span class="sourceLineNo">086</span><a id="line.86">     */</a>
-<span class="sourceLineNo">087</span><a id="line.87">    @Test</a>
-<span class="sourceLineNo">088</span><a id="line.88">    public void testSimpleObject() throws Exception</a>
-<span class="sourceLineNo">089</span><a id="line.89">    {</a>
-<span class="sourceLineNo">090</span><a id="line.90">        String[] interceptorList = { LoggingInterceptorService.class.getName() };</a>
-<span class="sourceLineNo">091</span><a id="line.91">        StringBuilder unadvicedObject = new StringBuilder("foo");</a>
-<span class="sourceLineNo">092</span><a id="line.92">        CharSequence advicedObject = (CharSequence) this.service.advice("adviced", interceptorList, unadvicedObject );</a>
-<span class="sourceLineNo">093</span><a id="line.93"></a>
-<span class="sourceLineNo">094</span><a id="line.94">        int length = advicedObject.length();</a>
-<span class="sourceLineNo">095</span><a id="line.95">        assertTrue(this.service.isAdviced(advicedObject));</a>
-<span class="sourceLineNo">096</span><a id="line.96">        assertFalse(this.service.isAdviced(unadvicedObject));</a>
-<span class="sourceLineNo">097</span><a id="line.97">        assertTrue(unadvicedObject.length() == length);</a>
-<span class="sourceLineNo">098</span><a id="line.98">    }</a>
-<span class="sourceLineNo">099</span><a id="line.99"></a>
-<span class="sourceLineNo">100</span><a id="line.100">    /**</a>
-<span class="sourceLineNo">101</span><a id="line.101">     * Advice a StringBuilder based on the CharSequenceInterface with default interceptors</a>
-<span class="sourceLineNo">102</span><a id="line.102">     * @throws Exception generic exception</a>
-<span class="sourceLineNo">103</span><a id="line.103">     */</a>
-<span class="sourceLineNo">104</span><a id="line.104">    @Test</a>
-<span class="sourceLineNo">105</span><a id="line.105">    public void testDefaultAdvice() throws Exception</a>
-<span class="sourceLineNo">106</span><a id="line.106">    {</a>
-<span class="sourceLineNo">107</span><a id="line.107">        StringBuilder unadvicedObject = new StringBuilder("foo");</a>
-<span class="sourceLineNo">108</span><a id="line.108">        CharSequence advicedObject = (CharSequence) this.service.advice("default adviced", unadvicedObject );</a>
-<span class="sourceLineNo">109</span><a id="line.109"></a>
-<span class="sourceLineNo">110</span><a id="line.110">        advicedObject.length();</a>
-<span class="sourceLineNo">111</span><a id="line.111">    }</a>
-<span class="sourceLineNo">112</span><a id="line.112"></a>
-<span class="sourceLineNo">113</span><a id="line.113">    /**</a>
-<span class="sourceLineNo">114</span><a id="line.114">     * The test implements the DependentTestComponent interface therefore we</a>
-<span class="sourceLineNo">115</span><a id="line.115">     * are able to intercept the invocation of test(). Whereas test() invokes</a>
-<span class="sourceLineNo">116</span><a id="line.116">     * another advised component.</a>
-<span class="sourceLineNo">117</span><a id="line.117">     * @throws Exception generic exception</a>
-<span class="sourceLineNo">118</span><a id="line.118">     */</a>
-<span class="sourceLineNo">119</span><a id="line.119">    @Test</a>
-<span class="sourceLineNo">120</span><a id="line.120">    public void testChainedAdvices() throws Exception</a>
-<span class="sourceLineNo">121</span><a id="line.121">    {</a>
-<span class="sourceLineNo">122</span><a id="line.122">        String[] interceptorList = { LoggingInterceptorService.class.getName() };</a>
-<span class="sourceLineNo">123</span><a id="line.123">        this.advisedThis = (DependentTestComponent) this.service.advice(interceptorList, this);</a>
-<span class="sourceLineNo">124</span><a id="line.124">        this.advisedThis.test();</a>
-<span class="sourceLineNo">125</span><a id="line.125">    }</a>
-<span class="sourceLineNo">126</span><a id="line.126"></a>
-<span class="sourceLineNo">127</span><a id="line.127">    /**</a>
-<span class="sourceLineNo">128</span><a id="line.128">     * Advice a StringBuilder based on the CharSequenceInterface</a>
-<span class="sourceLineNo">129</span><a id="line.129">     * @throws Exception generic exception</a>
-<span class="sourceLineNo">130</span><a id="line.130">     */</a>
-<span class="sourceLineNo">131</span><a id="line.131">    @Test</a>
-<span class="sourceLineNo">132</span><a id="line.132">    public void testMultipleProxies() throws Exception</a>
-<span class="sourceLineNo">133</span><a id="line.133">    {</a>
-<span class="sourceLineNo">134</span><a id="line.134">        String[] interceptorList = { LoggingInterceptorService.class.getName() };</a>
-<span class="sourceLineNo">135</span><a id="line.135">        StringBuilder unadvicedObject = new StringBuilder("foo");</a>
-<span class="sourceLineNo">136</span><a id="line.136">        CharSequence advicedObject = (CharSequence) this.service.advice("first advice", interceptorList, unadvicedObject);</a>
-<span class="sourceLineNo">137</span><a id="line.137">        CharSequence advicedAdvicedObject = (CharSequence) this.service.advice("second advice", interceptorList, advicedObject );</a>
-<span class="sourceLineNo">138</span><a id="line.138"></a>
-<span class="sourceLineNo">139</span><a id="line.139">        assertEquals(3, advicedAdvicedObject.length());</a>
-<span class="sourceLineNo">140</span><a id="line.140">        assertTrue(this.service.isAdviced(advicedAdvicedObject));</a>
-<span class="sourceLineNo">141</span><a id="line.141">    }</a>
-<span class="sourceLineNo">142</span><a id="line.142"></a>
-<span class="sourceLineNo">143</span><a id="line.143">    /* (non-Javadoc)</a>
-<span class="sourceLineNo">144</span><a id="line.144">     * Advice a StringBuilder based on the CharSequenceInterface</a>
-<span class="sourceLineNo">145</span><a id="line.145">     * @see org.apache.fulcrum.yaafi.DependentTestComponent#test()</a>
-<span class="sourceLineNo">146</span><a id="line.146">     */</a>
-<span class="sourceLineNo">147</span><a id="line.147">    @Test</a>
-<span class="sourceLineNo">148</span><a id="line.148">    public void test()</a>
-<span class="sourceLineNo">149</span><a id="line.149">    {</a>
-<span class="sourceLineNo">150</span><a id="line.150">        try</a>
-<span class="sourceLineNo">151</span><a id="line.151">        {</a>
-<span class="sourceLineNo">152</span><a id="line.152">            DependentTestComponent testComponent = (DependentTestComponent) this.container.lookup(</a>
-<span class="sourceLineNo">153</span><a id="line.153">                DependentTestComponent.class.getName()</a>
-<span class="sourceLineNo">154</span><a id="line.154">                );</a>
-<span class="sourceLineNo">155</span><a id="line.155"></a>
-<span class="sourceLineNo">156</span><a id="line.156">            testComponent.test();</a>
-<span class="sourceLineNo">157</span><a id="line.157">        }</a>
-<span class="sourceLineNo">158</span><a id="line.158">        catch (ServiceException e)</a>
-<span class="sourceLineNo">159</span><a id="line.159">        {</a>
-<span class="sourceLineNo">160</span><a id="line.160">            throw new RuntimeException(e.getMessage());</a>
-<span class="sourceLineNo">161</span><a id="line.161">        }</a>
-<span class="sourceLineNo">162</span><a id="line.162">    }</a>
-<span class="sourceLineNo">163</span><a id="line.163">}</a>
+<pre><span class="sourceLineNo">001</span>package org.apache.fulcrum.yaafi.service;<a name="line.1"></a>
+<span class="sourceLineNo">002</span><a name="line.2"></a>
+<span class="sourceLineNo">003</span>import static org.junit.jupiter.api.Assertions.assertEquals;<a name="line.3"></a>
+<span class="sourceLineNo">004</span>import static org.junit.jupiter.api.Assertions.assertFalse;<a name="line.4"></a>
+<span class="sourceLineNo">005</span>import static org.junit.jupiter.api.Assertions.assertTrue;<a name="line.5"></a>
+<span class="sourceLineNo">006</span><a name="line.6"></a>
+<span class="sourceLineNo">007</span>/*<a name="line.7"></a>
+<span class="sourceLineNo">008</span> * Licensed to the Apache Software Foundation (ASF) under one<a name="line.8"></a>
+<span class="sourceLineNo">009</span> * or more contributor license agreements.  See the NOTICE file<a name="line.9"></a>
+<span class="sourceLineNo">010</span> * distributed with this work for additional information<a name="line.10"></a>
+<span class="sourceLineNo">011</span> * regarding copyright ownership.  The ASF licenses this file<a name="line.11"></a>
+<span class="sourceLineNo">012</span> * to you under the Apache License, Version 2.0 (the<a name="line.12"></a>
+<span class="sourceLineNo">013</span> * "License"); you may not use this file except in compliance<a name="line.13"></a>
+<span class="sourceLineNo">014</span> * with the License.  You may obtain a copy of the License at<a name="line.14"></a>
+<span class="sourceLineNo">015</span> *<a name="line.15"></a>
+<span class="sourceLineNo">016</span> *   http://www.apache.org/licenses/LICENSE-2.0<a name="line.16"></a>
+<span class="sourceLineNo">017</span> *<a name="line.17"></a>
+<span class="sourceLineNo">018</span> * Unless required by applicable law or agreed to in writing,<a name="line.18"></a>
+<span class="sourceLineNo">019</span> * software distributed under the License is distributed on an<a name="line.19"></a>
+<span class="sourceLineNo">020</span> * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY<a name="line.20"></a>
+<span class="sourceLineNo">021</span> * KIND, either express or implied.  See the License for the<a name="line.21"></a>
+<span class="sourceLineNo">022</span> * specific language governing permissions and limitations<a name="line.22"></a>
+<span class="sourceLineNo">023</span> * under the License.<a name="line.23"></a>
+<span class="sourceLineNo">024</span> */<a name="line.24"></a>
+<span class="sourceLineNo">025</span><a name="line.25"></a>
+<span class="sourceLineNo">026</span><a name="line.26"></a>
+<span class="sourceLineNo">027</span>import org.apache.avalon.framework.service.ServiceException;<a name="line.27"></a>
+<span class="sourceLineNo">028</span>import org.apache.fulcrum.yaafi.DependentTestComponent;<a name="line.28"></a>
+<span class="sourceLineNo">029</span>import org.apache.fulcrum.yaafi.framework.container.ServiceContainer;<a name="line.29"></a>
+<span class="sourceLineNo">030</span>import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerConfiguration;<a name="line.30"></a>
+<span class="sourceLineNo">031</span>import org.apache.fulcrum.yaafi.framework.factory.ServiceContainerFactory;<a name="line.31"></a>
+<span class="sourceLineNo">032</span>import org.apache.fulcrum.yaafi.interceptor.logging.LoggingInterceptorService;<a name="line.32"></a>
+<span class="sourceLineNo">033</span>import org.apache.fulcrum.yaafi.service.advice.AdviceService;<a name="line.33"></a>
+<span class="sourceLineNo">034</span>import org.junit.jupiter.api.AfterEach;<a name="line.34"></a>
+<span class="sourceLineNo">035</span>import org.junit.jupiter.api.BeforeEach;<a name="line.35"></a>
+<span class="sourceLineNo">036</span>import org.junit.jupiter.api.Test;<a name="line.36"></a>
+<span class="sourceLineNo">037</span><a name="line.37"></a>
+<span class="sourceLineNo">038</span>/**<a name="line.38"></a>
+<span class="sourceLineNo">039</span> * Test suite for the ServiceManagereService.<a name="line.39"></a>
+<span class="sourceLineNo">040</span> *<a name="line.40"></a>
+<span class="sourceLineNo">041</span> * @author &lt;a href="mailto:siegfried.goeschl@it20one.at"&gt;Siegfried Goeschl&lt;/a&gt;<a name="line.41"></a>
+<span class="sourceLineNo">042</span> */<a name="line.42"></a>
+<span class="sourceLineNo">043</span><a name="line.43"></a>
+<span class="sourceLineNo">044</span>public class AdviceServiceTest  implements DependentTestComponent<a name="line.44"></a>
+<span class="sourceLineNo">045</span>{<a name="line.45"></a>
+<span class="sourceLineNo">046</span>    private AdviceService service;<a name="line.46"></a>
+<span class="sourceLineNo">047</span>    private DependentTestComponent advisedThis;<a name="line.47"></a>
+<span class="sourceLineNo">048</span>    private ServiceContainer container;<a name="line.48"></a>
+<span class="sourceLineNo">049</span><a name="line.49"></a>
+<span class="sourceLineNo">050</span><a name="line.50"></a>
+<span class="sourceLineNo">051</span>    @BeforeEach<a name="line.51"></a>
+<span class="sourceLineNo">052</span>    protected void setUp() throws Exception<a name="line.52"></a>
+<span class="sourceLineNo">053</span>    {<a name="line.53"></a>
+<span class="sourceLineNo">054</span>        ServiceContainerConfiguration config = new ServiceContainerConfiguration();<a name="line.54"></a>
+<span class="sourceLineNo">055</span>        config.loadContainerConfiguration( "./src/test/TestYaafiContainerConfig.xml" );<a name="line.55"></a>
+<span class="sourceLineNo">056</span>        this.container = ServiceContainerFactory.create( config );<a name="line.56"></a>
+<span class="sourceLineNo">057</span>        service = (AdviceService) this.container.lookup(AdviceService.class.getName());<a name="line.57"></a>
+<span class="sourceLineNo">058</span>    }<a name="line.58"></a>
+<span class="sourceLineNo">059</span><a name="line.59"></a>
+<span class="sourceLineNo">060</span>    @AfterEach<a name="line.60"></a>
+<span class="sourceLineNo">061</span>    protected void tearDown() throws Exception<a name="line.61"></a>
+<span class="sourceLineNo">062</span>    {<a name="line.62"></a>
+<span class="sourceLineNo">063</span>        ServiceContainerFactory.dispose(this.container);<a name="line.63"></a>
+<span class="sourceLineNo">064</span>    }<a name="line.64"></a>
+<span class="sourceLineNo">065</span><a name="line.65"></a>
+<span class="sourceLineNo">066</span>    /**<a name="line.66"></a>
+<span class="sourceLineNo">067</span>     *  Advice a StringBuilder based on the CharSequence interface<a name="line.67"></a>
+<span class="sourceLineNo">068</span>     * @throws Exception generic exception<a name="line.68"></a>
+<span class="sourceLineNo">069</span>     */<a name="line.69"></a>
+<span class="sourceLineNo">070</span>    @Test<a name="line.70"></a>
+<span class="sourceLineNo">071</span>    public void testSimpleAdvice() throws Exception<a name="line.71"></a>
+<span class="sourceLineNo">072</span>    {<a name="line.72"></a>
+<span class="sourceLineNo">073</span>        String[] interceptorList = { LoggingInterceptorService.class.getName() };<a name="line.73"></a>
+<span class="sourceLineNo">074</span>        StringBuilder unadvicedObject = new StringBuilder("foo");<a name="line.74"></a>
+<span class="sourceLineNo">075</span>        CharSequence advicedObject = (CharSequence) this.service.advice(unadvicedObject );<a name="line.75"></a>
+<span class="sourceLineNo">076</span><a name="line.76"></a>
+<span class="sourceLineNo">077</span>        int length = advicedObject.length();<a name="line.77"></a>
+<span class="sourceLineNo">078</span>        assertTrue(this.service.isAdviced(advicedObject));<a name="line.78"></a>
+<span class="sourceLineNo">079</span>        assertFalse(this.service.isAdviced(unadvicedObject));<a name="line.79"></a>
+<span class="sourceLineNo">080</span>        assertTrue(unadvicedObject.length() == length);<a name="line.80"></a>
+<span class="sourceLineNo">081</span>    }<a name="line.81"></a>
+<span class="sourceLineNo">082</span><a name="line.82"></a>
+<span class="sourceLineNo">083</span>    /**<a name="line.83"></a>
+<span class="sourceLineNo">084</span>     * Advice a StringBuilder based on the CharSequence interface<a name="line.84"></a>
+<span class="sourceLineNo">085</span>     * @throws Exception generic exception<a name="line.85"></a>
+<span class="sourceLineNo">086</span>     */<a name="line.86"></a>
+<span class="sourceLineNo">087</span>    @Test<a name="line.87"></a>
+<span class="sourceLineNo">088</span>    public void testSimpleObject() throws Exception<a name="line.88"></a>
+<span class="sourceLineNo">089</span>    {<a name="line.89"></a>
+<span class="sourceLineNo">090</span>        String[] interceptorList = { LoggingInterceptorService.class.getName() };<a name="line.90"></a>
+<span class="sourceLineNo">091</span>        StringBuilder unadvicedObject = new StringBuilder("foo");<a name="line.91"></a>
+<span class="sourceLineNo">092</span>        CharSequence advicedObject = (CharSequence) this.service.advice("adviced", interceptorList, unadvicedObject );<a name="line.92"></a>
+<span class="sourceLineNo">093</span><a name="line.93"></a>
+<span class="sourceLineNo">094</span>        int length = advicedObject.length();<a name="line.94"></a>
+<span class="sourceLineNo">095</span>        assertTrue(this.service.isAdviced(advicedObject));<a name="line.95"></a>
+<span class="sourceLineNo">096</span>        assertFalse(this.service.isAdviced(unadvicedObject));<a name="line.96"></a>
+<span class="sourceLineNo">097</span>        assertTrue(unadvicedObject.length() == length);<a name="line.97"></a>
+<span class="sourceLineNo">098</span>    }<a name="line.98"></a>
+<span class="sourceLineNo">099</span><a name="line.99"></a>
+<span class="sourceLineNo">100</span>    /**<a name="line.100"></a>
+<span class="sourceLineNo">101</span>     * Advice a StringBuilder based on the CharSequenceInterface with default interceptors<a name="line.101"></a>
+<span class="sourceLineNo">102</span>     * @throws Exception generic exception<a name="line.102"></a>
+<span class="sourceLineNo">103</span>     */<a name="line.103"></a>
+<span class="sourceLineNo">104</span>    @Test<a name="line.104"></a>
+<span class="sourceLineNo">105</span>    public void testDefaultAdvice() throws Exception<a name="line.105"></a>
+<span class="sourceLineNo">106</span>    {<a name="line.106"></a>
+<span class="sourceLineNo">107</span>        StringBuilder unadvicedObject = new StringBuilder("foo");<a name="line.107"></a>
+<span class="sourceLineNo">108</span>        CharSequence advicedObject = (CharSequence) this.service.advice("default adviced", unadvicedObject );<a name="line.108"></a>
+<span class="sourceLineNo">109</span><a name="line.109"></a>
+<span class="sourceLineNo">110</span>        advicedObject.length();<a name="line.110"></a>
+<span class="sourceLineNo">111</span>    }<a name="line.111"></a>
+<span class="sourceLineNo">112</span><a name="line.112"></a>
+<span class="sourceLineNo">113</span>    /**<a name="line.113"></a>
+<span class="sourceLineNo">114</span>     * The test implements the DependentTestComponent interface therefore we<a name="line.114"></a>
+<span class="sourceLineNo">115</span>     * are able to intercept the invocation of test(). Whereas test() invokes<a name="line.115"></a>
+<span class="sourceLineNo">116</span>     * another advised component.<a name="line.116"></a>
+<span class="sourceLineNo">117</span>     * @throws Exception generic exception<a name="line.117"></a>
+<span class="sourceLineNo">118</span>     */<a name="line.118"></a>
+<span class="sourceLineNo">119</span>    @Test<a name="line.119"></a>
+<span class="sourceLineNo">120</span>    public void testChainedAdvices() throws Exception<a name="line.120"></a>
+<span class="sourceLineNo">121</span>    {<a name="line.121"></a>
+<span class="sourceLineNo">122</span>        String[] interceptorList = { LoggingInterceptorService.class.getName() };<a name="line.122"></a>
+<span class="sourceLineNo">123</span>        this.advisedThis = (DependentTestComponent) this.service.advice(interceptorList, this);<a name="line.123"></a>
+<span class="sourceLineNo">124</span>        this.advisedThis.test();<a name="line.124"></a>
+<span class="sourceLineNo">125</span>    }<a name="line.125"></a>
+<span class="sourceLineNo">126</span><a name="line.126"></a>
+<span class="sourceLineNo">127</span>    /**<a name="line.127"></a>
+<span class="sourceLineNo">128</span>     * Advice a StringBuilder based on the CharSequenceInterface<a name="line.128"></a>
+<span class="sourceLineNo">129</span>     * @throws Exception generic exception<a name="line.129"></a>
+<span class="sourceLineNo">130</span>     */<a name="line.130"></a>
+<span class="sourceLineNo">131</span>    @Test<a name="line.131"></a>
+<span class="sourceLineNo">132</span>    public void testMultipleProxies() throws Exception<a name="line.132"></a>
+<span class="sourceLineNo">133</span>    {<a name="line.133"></a>
+<span class="sourceLineNo">134</span>        String[] interceptorList = { LoggingInterceptorService.class.getName() };<a name="line.134"></a>
+<span class="sourceLineNo">135</span>        StringBuilder unadvicedObject = new StringBuilder("foo");<a name="line.135"></a>
+<span class="sourceLineNo">136</span>        CharSequence advicedObject = (CharSequence) this.service.advice("first advice", interceptorList, unadvicedObject);<a name="line.136"></a>
+<span class="sourceLineNo">137</span>        CharSequence advicedAdvicedObject = (CharSequence) this.service.advice("second advice", interceptorList, advicedObject );<a name="line.137"></a>
+<span class="sourceLineNo">138</span><a name="line.138"></a>
+<span class="sourceLineNo">139</span>        assertEquals(3, advicedAdvicedObject.length());<a name="line.139"></a>
+<span class="sourceLineNo">140</span>        assertTrue(this.service.isAdviced(advicedAdvicedObject));<a name="line.140"></a>
+<span class="sourceLineNo">141</span>    }<a name="line.141"></a>
+<span class="sourceLineNo">142</span><a name="line.142"></a>
+<span class="sourceLineNo">143</span>    /* (non-Javadoc)<a name="line.143"></a>
+<span class="sourceLineNo">144</span>     * Advice a StringBuilder based on the CharSequenceInterface<a name="line.144"></a>
+<span class="sourceLineNo">145</span>     * @see org.apache.fulcrum.yaafi.DependentTestComponent#test()<a name="line.145"></a>
+<span class="sourceLineNo">146</span>     */<a name="line.146"></a>
+<span class="sourceLineNo">147</span>    @Test<a name="line.147"></a>
+<span class="sourceLineNo">148</span>    public void test()<a name="line.148"></a>
+<span class="sourceLineNo">149</span>    {<a name="line.149"></a>
+<span class="sourceLineNo">150</span>        try<a name="line.150"></a>
+<span class="sourceLineNo">151</span>        {<a name="line.151"></a>
+<span class="sourceLineNo">152</span>            DependentTestComponent testComponent = (DependentTestComponent) this.container.lookup(<a name="line.152"></a>
+<span class="sourceLineNo">153</span>                DependentTestComponent.class.getName()<a name="line.153"></a>
+<span class="sourceLineNo">154</span>                );<a name="line.154"></a>
+<span class="sourceLineNo">155</span><a name="line.155"></a>
+<span class="sourceLineNo">156</span>            testComponent.test();<a name="line.156"></a>
+<span class="sourceLineNo">157</span>        }<a name="line.157"></a>
+<span class="sourceLineNo">158</span>        catch (ServiceException e)<a name="line.158"></a>
+<span class="sourceLineNo">159</span>        {<a name="line.159"></a>
+<span class="sourceLineNo">160</span>            throw new RuntimeException(e.getMessage());<a name="line.160"></a>
+<span class="sourceLineNo">161</span>        }<a name="line.161"></a>
+<span class="sourceLineNo">162</span>    }<a name="line.162"></a>
+<span class="sourceLineNo">163</span>}<a name="line.163"></a>
 
 
 
@@ -232,6 +231,5 @@
 
 </pre>
 </div>
-</main>
 </body>
 </html>

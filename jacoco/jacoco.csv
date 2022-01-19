@@ -11,7 +11,7 @@ Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.role,RoleEntryImpl,8,188,2,6,3,
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.role,RoleConfigurationParserImpl,61,157,6,4,11,38,6,4,2,3
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.performance,PerformanceInterceptorServiceImpl,60,361,15,17,12,77,11,16,0,11
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.util,StopWatch,153,53,22,4,38,18,20,4,7,4
-Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.util,ArgumentToStringBuilderImpl,482,1057,73,107,116,272,63,58,6,25
+Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.util,ArgumentToStringBuilderImpl,486,1062,73,107,116,272,63,58,6,25
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.util,MethodToStringBuilderImpl,30,104,0,6,10,26,4,7,4,4
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.interceptor.util,DefaultToStringBuilderImpl,44,0,2,0,18,0,7,0,6,0
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.service.advice,AdviceServiceImpl,39,155,5,9,8,41,4,16,0,13
@@ -32,14 +32,14 @@ Fulcrum YAAFI,org.apache.fulcrum.yaafi.service.systemproperty,SystemPropertyServ
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.logger,Log4j2Logger,98,0,0,0,29,0,17,0,17,0
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.interceptor,AvalonInterceptorContextImpl,63,145,2,6,14,42,5,17,3,15
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.interceptor,AvalonInterceptorInvocationHandler,38,170,0,10,10,49,2,16,2,11
-Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.interceptor,AvalonInterceptorFactory,18,79,1,3,3,20,2,3,1,2
+Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.interceptor,AvalonInterceptorFactory,18,80,1,3,3,20,2,3,1,2
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.context,YaafiToAvalonContextMapper,144,104,4,4,35,29,7,6,3,6
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.context,AvalonToYaafiContextMapper,18,221,2,6,3,58,2,10,0,8
-Fulcrum YAAFI,org.apache.fulcrum.yaafi.service.reconfiguration,ReconfigurationEntry,67,103,5,3,18,33,6,7,2,7
+Fulcrum YAAFI,org.apache.fulcrum.yaafi.service.reconfiguration,ReconfigurationEntry,58,112,3,5,16,35,4,9,1,8
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.service.reconfiguration,ReconfigurationServiceImpl,101,263,10,12,28,67,7,17,1,12
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,Validate,286,28,59,7,70,12,49,6,17,5
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,ExceptionUtils,20,0,0,0,6,0,2,0,2,0
-Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,InputStreamLocator,69,179,8,20,10,32,9,10,2,3
+Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,InputStreamLocator,66,182,6,22,10,32,8,11,2,3
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,ToStringBuilder,38,122,3,5,13,33,8,10,5,9
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.util,ConfigurationUtil,147,106,19,13,28,29,13,6,1,2
 Fulcrum YAAFI,org.apache.fulcrum.yaafi.framework.component,ServiceComponentImpl,64,200,1,13,15,69,2,32,1,26
