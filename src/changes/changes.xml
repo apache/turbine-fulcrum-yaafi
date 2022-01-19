@@ -42,7 +42,7 @@
          Make YAAFI less chatty
       </action>
      <action dev="gk" type="update">
-         git patch 1 merged to svn repo (w/o maven.xml), thanks to Jimmy Casey <casey.jimmy@gmail.com>.
+         git patch 1 merged to svn repo (w/o maven.xml), thanks to Jimmy Casey &lt;casey.jimmy@gmail.com&gt;.
       </action>
       <action dev="painter" type="update">
         Updating dependencies
