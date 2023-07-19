@@ -24,7 +24,7 @@
   </properties>
 
   <body>
-    <release version="1.0.9-SNAPSHOT" date="as in GIT">
+    <release version="2.0.0-SNAPSHOT" date="as in GIT">
        <action dev="gk" type="update">
          Update scm to git and configure project
       </action>
