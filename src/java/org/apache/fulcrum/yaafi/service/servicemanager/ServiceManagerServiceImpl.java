@@ -73,7 +73,7 @@ public class ServiceManagerServiceImpl
     /**
      * @return the one and only instance of this class
      */
-    public static synchronized ServiceManagerService getInstance()
+    public static ServiceManagerService getInstance()
     {
         return instance;
     }

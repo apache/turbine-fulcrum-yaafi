@@ -68,7 +68,7 @@ public class TurbineYaafiComponentService
 
     public TurbineYaafiComponentService()
     {
-        this.logger = Logger.getLogger(TurbineYaafiComponentService.class);
+        this.logger = LogManager.getLogger(TurbineYaafiComponentService.class);
     }
 
     /**

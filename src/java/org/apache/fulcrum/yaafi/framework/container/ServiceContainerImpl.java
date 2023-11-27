@@ -22,9 +22,12 @@ package org.apache.fulcrum.yaafi.framework.container;
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.avalon.framework.configuration.Configuration;
 import org.apache.avalon.framework.configuration.ConfigurationException;
@@ -39,6 +42,7 @@ import org.apache.avalon.framework.parameters.ParameterException;
 import org.apache.avalon.framework.parameters.Parameters;
 import org.apache.avalon.framework.service.ServiceException;
 import org.apache.avalon.framework.service.ServiceManager;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.fulcrum.yaafi.framework.component.AvalonServiceComponentImpl;
 import org.apache.fulcrum.yaafi.framework.component.ServiceComponent;
 import org.apache.fulcrum.yaafi.framework.configuration.ComponentConfigurationPropertiesResolver;
@@ -54,8 +58,6 @@ import org.apache.fulcrum.yaafi.framework.util.ConfigurationUtil;
 import org.apache.fulcrum.yaafi.framework.util.InputStreamLocator;
 import org.apache.fulcrum.yaafi.framework.util.ToStringBuilder;
 import org.apache.fulcrum.yaafi.framework.util.Validate;
-
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * Yet another avalon framework implementation (YAAFI).
@@ -107,7 +109,7 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 	private List<ServiceComponent> serviceList;
 
 	/** The map of services used for the lookup */
-	private HashMap<String, ServiceComponent> serviceMap;
+	private Map<String, ServiceComponent> serviceMap;
 
 	/** The Avalon role configuration loaded by this class */
 	private Configuration roleConfiguration;
@@ -146,15 +148,20 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 	private boolean hasDynamicProxies;
 
 	/** The list of interceptor services applied to all services */
-	private ArrayList<String> defaultInterceptorServiceList;
+	private List<String> defaultInterceptorServiceList;
 
 	/** The list of ServiceManagers as fallback service lookup */
-	private ArrayList<String> fallbackServiceManagerList;
+	private List<String> fallbackServiceManagerList;
 
 	/**
 	 * the configuration for running the ComponentConfigurationPropertiesResolver
 	 */
 	private Configuration componentConfigurationPropertiesResolverConfig;
+	
+	/**
+     * Lock access during service initialization
+     */
+    private final ReentrantLock serviceLock = new ReentrantLock();
 
 	/////////////////////////////////////////////////////////////////////////
 	// Avalon Service Lifecycle
@@ -180,14 +187,14 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 		this.isAlreadyDisposed = false;
 		this.isCurrentlyDisposing = false;
 
-		this.serviceList = new ArrayList<ServiceComponent>();
-		this.serviceMap = new HashMap<String, ServiceComponent>();
+		this.serviceList = Collections.synchronizedList(new ArrayList<ServiceComponent>());
+		this.serviceMap = new ConcurrentHashMap<String, ServiceComponent>();
 
 		this.applicationRootDir = new File(new File("").getAbsolutePath());
 		this.tempRootDir = new File(System.getProperty("java.io.tmpdir", "."));
 
-		this.fallbackServiceManagerList = new ArrayList<String>();
-		this.defaultInterceptorServiceList = new ArrayList<String>();
+		this.fallbackServiceManagerList = Collections.synchronizedList(new ArrayList<String>());
+		this.defaultInterceptorServiceList = Collections.synchronizedList(new ArrayList<String>());
 
 		this.disposalDelay = DISPOSAL_DELAY_DEFAULT;
 		this.reconfigurationDelay = RECONFIGURATION_DELAY_DEFAULT;
@@ -530,14 +537,14 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 	/**
 	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager#getRoleEntry(java.lang.String)
 	 */
-	public synchronized RoleEntry getRoleEntry(String name) throws ServiceException {
+	public RoleEntry getRoleEntry(String name) throws ServiceException {
 		return this.getServiceComponentEx(name).getRoleEntry();
 	}
 
 	/**
 	 * @see org.apache.fulcrum.yaafi.framework.container.ServiceLifecycleManager#getRoleEntries()
 	 */
-	public synchronized RoleEntry[] getRoleEntries() {
+	public RoleEntry[] getRoleEntries() {
 		ServiceComponent serviceComponent;
 		List<ServiceComponent> serviceList = this.getServiceList();
 		RoleEntry[] result = new RoleEntry[serviceList.size()];
@@ -581,14 +588,12 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 			return false;
 		}
 
-		synchronized (this) {
-			// look at our available service
-			result = this.getLocalServiceComponent(name) != null;
+		// look at our available service
+		result = this.getLocalServiceComponent(name) != null;
 
-			// look at fallback service managers
-			if (!result)
-				result = this.hasFallbackService(name);
-		}
+		// look at fallback service managers
+		if (!result)
+			result = this.hasFallbackService(name);
 
 		// if we haven't found anything ask the parent ServiceManager
 		if (!result && this.hasParentServiceManager())
@@ -613,14 +618,15 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 		Object result = null;
 		ServiceComponent serviceManagerComponent;
 
-		if (this.isAlreadyDisposed()) {
+		if (this.isAlreadyDisposed()) 
+		{
 			String msg = "The container is disposed an no services are available";
 			this.getLogger().error(msg);
 			throw new ServiceException(name, msg);
 		}
 
+        serviceLock.lock();
 		try {
-			synchronized (this) {
 				// 1) check our local services
 				serviceManagerComponent = this.getLocalServiceComponent(name);
 
@@ -637,22 +643,28 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 				if (result == null) {
 					result = this.getFallbackService(name);
 				}
-			}
-		} catch (ServiceException e) {
+		} catch (ServiceException e) 
+		{
 			String msg = "Failed to lookup a service " + name;
 			this.getLogger().error(msg, e);
 			throw e;
-		} catch (Throwable t) {
+		} catch (Throwable t) 
+		{
 			String msg = "Failed to lookup a service " + name;
 			this.getLogger().error(msg, t);
 			throw new ServiceException(name, msg, t);
-		}
+		} finally
+        {
+            serviceLock.unlock();
+        }
 
 		// 3) if we haven't found anything ask the parent ServiceManager
-		if (result == null && this.hasParentServiceManager()) {
+		if (result == null && this.hasParentServiceManager()) 
+		{
 			result = this.getParentServiceManager().lookup(name);
 
-			if (result != null && this.getLogger().isDebugEnabled()) {
+			if (result != null && this.getLogger().isDebugEnabled()) 
+			{
 				String msg = "Located the service '" + name + "' using the parent service manager";
 				this.getLogger().debug(msg);
 			}
@@ -660,7 +672,8 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 
 		// if we still haven't found anything then complain
 
-		if (result == null) {
+		if (result == null) 
+		{
 			String msg = "The following component does not exist : " + name;
 			this.getLogger().error(msg);
 			throw new ServiceException(AvalonYaafiConstants.AVALON_CONTAINER_YAAFI, name);
@@ -886,7 +899,7 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 	/**
 	 * @return Returns the serviceMap.
 	 */
-	private HashMap<String, ServiceComponent> getServiceMap() {
+	private Map<String, ServiceComponent> getServiceMap() {
 		return this.serviceMap;
 	}
 
@@ -1078,7 +1091,7 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 
 		// get the default interceptors defined for the container
 
-		ArrayList<String> defaultInterceptorList = this.getDefaultInterceptorServiceList();
+		List<String> defaultInterceptorList = this.getDefaultInterceptorServiceList();
 
 		// create the service components based on the role entries
 
@@ -1366,7 +1379,7 @@ public class ServiceContainerImpl implements ServiceContainer, ServiceConstants 
 	/**
 	 * @return Returns the defaultInterceptorServiceList.
 	 */
-	private ArrayList<String> getDefaultInterceptorServiceList() {
+	private List<String> getDefaultInterceptorServiceList() {
 		return defaultInterceptorServiceList;
 	}
 
