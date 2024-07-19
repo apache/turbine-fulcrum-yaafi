@@ -103,7 +103,7 @@ public class ServiceContainerFactory
                 "Instantiating the service container class " + clazzName
                 );
 
-            result = (ServiceContainer) clazz.newInstance();
+            result = (ServiceContainer) clazz.getDeclaredConstructor().newInstance();
         }
         catch (Exception e)
         {

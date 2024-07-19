@@ -21,7 +21,10 @@ package org.apache.fulcrum.yaafi.testcontainer;
 
 import org.apache.avalon.framework.component.Component;
 import org.apache.avalon.framework.component.ComponentException;
+import org.apache.avalon.framework.logger.ConsoleLogger;
+import org.apache.avalon.framework.logger.Logger;
 import org.apache.avalon.framework.service.ServiceException;
+import org.apache.fulcrum.yaafi.container.Container;
 import org.junit.jupiter.api.AfterEach;
 
 /**
@@ -121,7 +124,8 @@ public abstract class BaseUnit5Test {
 	 */
 	protected Object lookup(String roleName) throws ComponentException {
 		if (this.container == null) {
-			this.container = new Container();
+		    Logger logger = new ConsoleLogger();
+		    this.container = new TestContainer(logger);
 			this.container.startup(getConfigurationFileName(), getRoleFileName(), getParameterFileName());
 		}
 		return this.container.lookup(roleName);
@@ -156,8 +160,10 @@ public abstract class BaseUnit5Test {
 	 * @throws ServiceException if the service is not found
 	 */
 	protected void decommision(String name) throws ServiceException {
-		if (this.container != null) {
-			this.container.decommission(name);
+		if (this.container != null && this.container instanceof TestContainer) {
+			((TestContainer)this.container).decommission(name);
+		} else {
+		   // no 
 		}
 	}
 }
