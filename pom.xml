@@ -25,7 +25,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.apache.fulcrum</groupId>
 	<artifactId>fulcrum-yaafi</artifactId>
-	<version>2.0.1-SNAPSHOT</version>
+	<version>2.0.1</version>
 	<name>Fulcrum YAAFI</name>
 	<inceptionYear>2004</inceptionYear>
 	<description>A light-weight Avalon container</description>
@@ -37,7 +37,7 @@
 		<connection>scm:git:https://gitbox.apache.org/repos/asf/turbine-fulcrum-yaafi.git</connection>
 		<developerConnection>scm:git:https://gitbox.apache.org/repos/asf/turbine-fulcrum-yaafi.git</developerConnection>
         <url>https://github.com/apache/${turbine.site.path}/tree/${project.scm.tag}</url>
-        <tag>fulcrum-yaafi-2.0.0</tag>
+        <tag>fulcrum-yaafi-2.0.1</tag>
 	</scm>
 
 	<developers>
